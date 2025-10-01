@@ -8,7 +8,7 @@ import dailyActivitiesImage from '@/assets/daily-activities.jpg';
 import adventureImage from '@/assets/adventure.jpg';
 import birthdayImage from '@/assets/birthday.jpg';
 
-const ProgramHighlights = () => {
+const ProgramsOverview = () => {
   const programs = [
     {
       id: 'homeschooling',
@@ -73,12 +73,12 @@ const ProgramHighlights = () => {
   ];
 
   return (
-    <section className="py-24 px-4" id="programs">
-      <div className="container mx-auto">
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-12">
         <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-6xl font-bold text-primary mb-6">
+          <h1 className="text-4xl md:text-6xl font-bold text-primary mb-6">
             Choose Your Adventure
-          </h2>
+          </h1>
           <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
             Discover our range of outdoor education programs designed to inspire, educate, and create lasting memories through nature-based learning experiences.
           </p>
@@ -162,8 +162,8 @@ const ProgramHighlights = () => {
           </Card>
         </div>
       </div>
-    </section>
+    </div>
   );
 };
 
-export default ProgramHighlights;
+export default ProgramsOverview;

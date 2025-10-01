@@ -2,15 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { toast } from "@/hooks/use-toast";
 import Navbar from '@/components/Navbar';
-import Hero from '@/components/Hero';
+import InteractiveHero from '@/components/InteractiveHero';
 import Announcements from '@/components/Announcements';
-import AboutSection from '@/components/AboutSection';
-import ProgramHighlights from '@/components/ProgramHighlights';
+import ProgramsOverview from '@/components/forms/ProgramsOverview';
 import YearlyCalendar from '@/components/YearlyCalendar';
-import TeamSection from '@/components/TeamSection';
-import Gallery from '@/components/Gallery';
 import Testimonials from '@/components/Testimonials';
-import ContactForm from '@/components/ContactForm';
 import Footer from '@/components/Footer';
 import { loadFromLocalStorage } from '@/services/dataService';
 import { loadEvents } from '@/services/calendarService';
@@ -128,40 +124,24 @@ const Index = () => {
       
       <main role="main">
         <section aria-label="Hero section">
-          <Hero />
+          <InteractiveHero />
         </section>
         
         <section aria-label="Latest announcements">
           <Announcements />
         </section>
         
-        <section aria-label="About our organization">
-          <AboutSection />
-        </section>
-        
         <div className="bg-forest-50">
-          <section aria-label="Program highlights">
-            <ProgramHighlights />
+          <section id="programs" aria-label="Our programs">
+            <ProgramsOverview />
           </section>
           <section aria-label="Annual calendar">
             <YearlyCalendar />
           </section>
         </div>
         
-        <section aria-label="Our team">
-          <TeamSection />
-        </section>
-        
-        <section aria-label="Photo gallery">
-          <Gallery />
-        </section>
-        
         <section aria-label="Customer testimonials">
           <Testimonials />
-        </section>
-        
-        <section aria-label="Contact information">
-          <ContactForm />
         </section>
       </main>
       
