@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import DatePickerField from './DatePickerField';
+import { ConsentDialog } from './ConsentDialog';
 
 const kenyanExperiencesSchema = z.object({
   parentLeader: z.string().min(1, 'Parent/Leader name is required').max(100),
@@ -219,18 +220,17 @@ const KenyanExperiencesForm = () => {
             </div>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="consent"
-              {...register('consent')}
-            />
-            <Label htmlFor="consent" className="text-sm">
-              I consent to participation in this 5-day experience and understand the activities and risks involved *
-            </Label>
-          </div>
-          {errors.consent && (
-            <p className="text-red-500 text-sm mt-1">{errors.consent.message}</p>
-          )}
+          <Controller
+            name="consent"
+            control={control}
+            render={({ field }) => (
+              <ConsentDialog
+                checked={field.value}
+                onCheckedChange={field.onChange}
+                error={errors.consent?.message}
+              />
+            )}
+          />
 
           <Button 
             type="submit" 

@@ -2,12 +2,15 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from "@/lib/utils";
 import { Menu, X, ChevronDown } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 const Navbar = () => {
+  const location = useLocation();
+  const isHomePage = location.pathname === '/';
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+  const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -28,6 +31,10 @@ const Navbar = () => {
 
   const handleDropdownToggle = (dropdown: string) => {
     setActiveDropdown(activeDropdown === dropdown ? null : dropdown);
+  };
+
+  const toggleMobileSection = (section: string) => {
+    setMobileExpandedSection(mobileExpandedSection === section ? null : section);
   };
 
   const programDropdowns = {
@@ -56,7 +63,7 @@ const Navbar = () => {
     <nav 
       className={cn(
         "fixed top-0 w-full z-50 transition-all duration-300 px-4 md:px-8",
-        isScrolled 
+        isScrolled || !isHomePage
           ? "py-2 glass-card bg-white/90 shadow-sm" 
           : "py-4 bg-transparent"
       )}
@@ -66,7 +73,7 @@ const Navbar = () => {
           <Link to="/" className="flex items-center gap-2">
             <span className={cn(
               "text-xl md:text-2xl font-bold transition-colors duration-300",
-              isScrolled ? "text-forest-800" : "text-white"
+              isScrolled || !isHomePage ? "text-forest-800" : "text-white"
             )}>
               Amuse.Ke
             </span>
@@ -78,7 +85,7 @@ const Navbar = () => {
                 to="/" 
                 className={cn(
                   "font-medium hover-lift",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -91,7 +98,7 @@ const Navbar = () => {
                 to="/announcements" 
                 className={cn(
                   "font-medium hover-lift",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -104,7 +111,7 @@ const Navbar = () => {
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -138,7 +145,7 @@ const Navbar = () => {
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -172,7 +179,7 @@ const Navbar = () => {
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -206,7 +213,7 @@ const Navbar = () => {
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -240,7 +247,7 @@ const Navbar = () => {
                 to="/gallery" 
                 className={cn(
                   "font-medium hover-lift",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -253,7 +260,7 @@ const Navbar = () => {
                 to="/contact" 
                 className={cn(
                   "font-medium hover-lift",
-                  isScrolled 
+                  isScrolled || !isHomePage
                     ? "text-gray-700 hover:text-forest-600" 
                     : "text-white hover:text-forest-100"
                 )}
@@ -270,9 +277,9 @@ const Navbar = () => {
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
               {mobileMenuOpen ? (
-                <X className={isScrolled ? "text-gray-800" : "text-white"} size={24} />
+                <X className={isScrolled || !isHomePage ? "text-gray-800" : "text-white"} size={24} />
               ) : (
-                <Menu className={isScrolled ? "text-gray-800" : "text-white"} size={24} />
+                <Menu className={isScrolled || !isHomePage ? "text-gray-800" : "text-white"} size={24} />
               )}
             </button>
           </div>
@@ -306,13 +313,28 @@ const Navbar = () => {
             </li>
             {/* About Submenu */}
             <li>
-              <div className="py-1">
-                <div className="px-4 py-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">About</div>
+              <button 
+                onClick={() => toggleMobileSection('about')}
+                className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
+              >
+                <span>About</span>
+                <ChevronDown 
+                  size={16} 
+                  className={cn(
+                    "transition-transform duration-200",
+                    mobileExpandedSection === 'about' && "rotate-180"
+                  )}
+                />
+              </button>
+              <div className={cn(
+                "overflow-hidden transition-all duration-200",
+                mobileExpandedSection === 'about' ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              )}>
                 {programDropdowns.about.map((item) => (
                   <Link 
                     key={item.path}
                     to={item.path}
-                    className="block py-2 px-6 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                    className="block py-2 px-8 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.name}
@@ -323,13 +345,28 @@ const Navbar = () => {
             
             {/* Camps Submenu */}
             <li>
-              <div className="py-1">
-                <div className="px-4 py-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Camps</div>
+              <button 
+                onClick={() => toggleMobileSection('camps')}
+                className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
+              >
+                <span>Camps</span>
+                <ChevronDown 
+                  size={16} 
+                  className={cn(
+                    "transition-transform duration-200",
+                    mobileExpandedSection === 'camps' && "rotate-180"
+                  )}
+                />
+              </button>
+              <div className={cn(
+                "overflow-hidden transition-all duration-200",
+                mobileExpandedSection === 'camps' ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              )}>
                 {programDropdowns.camps.map((item) => (
                   <Link 
                     key={item.path}
                     to={item.path}
-                    className="block py-2 px-6 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                    className="block py-2 px-8 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.name}
@@ -340,13 +377,28 @@ const Navbar = () => {
 
             {/* Schools Submenu */}
             <li>
-              <div className="py-1">
-                <div className="px-4 py-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Schools</div>
+              <button 
+                onClick={() => toggleMobileSection('schools')}
+                className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
+              >
+                <span>Schools</span>
+                <ChevronDown 
+                  size={16} 
+                  className={cn(
+                    "transition-transform duration-200",
+                    mobileExpandedSection === 'schools' && "rotate-180"
+                  )}
+                />
+              </button>
+              <div className={cn(
+                "overflow-hidden transition-all duration-200",
+                mobileExpandedSection === 'schools' ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              )}>
                 {programDropdowns.schools.map((item) => (
                   <Link 
                     key={item.path}
                     to={item.path}
-                    className="block py-2 px-6 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                    className="block py-2 px-8 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.name}
@@ -357,13 +409,28 @@ const Navbar = () => {
 
             {/* Group Activities Submenu */}
             <li>
-              <div className="py-1">
-                <div className="px-4 py-1 text-sm font-semibold text-gray-500 uppercase tracking-wider">Group Activities</div>
+              <button 
+                onClick={() => toggleMobileSection('groups')}
+                className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
+              >
+                <span>Group Activities</span>
+                <ChevronDown 
+                  size={16} 
+                  className={cn(
+                    "transition-transform duration-200",
+                    mobileExpandedSection === 'groups' && "rotate-180"
+                  )}
+                />
+              </button>
+              <div className={cn(
+                "overflow-hidden transition-all duration-200",
+                mobileExpandedSection === 'groups' ? "max-h-96 opacity-100" : "max-h-0 opacity-0"
+              )}>
                 {programDropdowns.groups.map((item) => (
                   <Link 
                     key={item.path}
                     to={item.path}
-                    className="block py-2 px-6 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                    className="block py-2 px-8 text-sm text-gray-700 hover:text-forest-600 hover:bg-gray-50 rounded-md"
                     onClick={() => setMobileMenuOpen(false)}
                   >
                     {item.name}

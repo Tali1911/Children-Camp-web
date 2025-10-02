@@ -44,16 +44,16 @@ const slides = [
     buttonText: "Explore Program",
     badge: "Ages 0-3",
     link: "/programs/little-forest"
-  },
-  {
-    id: 5,
-    title: "Daily Activities",
-    subtitle: "Join Amuse Kenya at Karura Forest, Sigiria Ridge (Gate F) Monday to Sunday from 8:00 AM to 5:00 PM for a full range of forest activities for your children to enjoy.",
-    description: "Engaging",
-    image: dailyActivitiesImage,
-    buttonText: "Join Today",
-    badge: "Every Day"
   }
+  // {
+  //   id: 5,
+  //   title: "Daily Activities",
+  //   subtitle: "Join Amuse Kenya at Karura Forest, Sigiria Ridge (Gate F) Monday to Sunday from 8:00 AM to 5:00 PM for a full range of forest activities for your children to enjoy.",
+  //   description: "Engaging",
+  //   image: dailyActivitiesImage,
+  //   buttonText: "Join Today",
+  //   badge: "Every Day"
+  // }
 ];
 
 const InteractiveHero = () => {

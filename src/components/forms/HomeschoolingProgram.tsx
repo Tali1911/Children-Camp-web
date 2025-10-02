@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Clock, Users, Target, CheckCircle, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import schoolsImage from '@/assets/schools.jpg';
+import { ConsentDialog } from './ConsentDialog';
 
 const homeschoolingSchema = z.object({
   parentName: z.string().min(1, 'Parent name is required').max(100),
@@ -47,6 +48,7 @@ const HomeschoolingProgram = () => {
   });
 
   const watchedFocus = watch('focus') || [];
+  const consent = watch('consent');
 
   const onSubmit = async (data: HomeschoolingFormData) => {
     try {
@@ -91,9 +93,9 @@ const HomeschoolingProgram = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link to="/programs" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
+          <Link to="/" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
             <ArrowLeft size={20} />
-            Back to Programs
+            Back to Home
           </Link>
         </div>
 
@@ -266,19 +268,11 @@ const HomeschoolingProgram = () => {
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="consent"
-                  {...register('consent')}
-                  className="mt-1"
-                />
-                <Label htmlFor="consent" className="text-sm leading-relaxed">
-                  I consent to my child(ren) participating in the program and understand the activities involved *
-                </Label>
-              </div>
-              {errors.consent && (
-                <p className="text-destructive text-sm mt-1">{errors.consent.message}</p>
-              )}
+              <ConsentDialog
+                checked={consent}
+                onCheckedChange={(checked) => setValue('consent', checked)}
+                error={errors.consent?.message}
+              />
 
               <Button 
                 type="submit" 

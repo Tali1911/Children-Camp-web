@@ -61,6 +61,15 @@ const ContactForm = () => {
       
       <div className="container mx-auto relative z-10">
         <div className="max-w-3xl mx-auto text-center mb-16">
+          <span className="inline-block text-earth-700 bg-earth-100 px-3 py-1 rounded-full text-sm font-medium mb-4">
+            Get in Touch
+          </span>
+          <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6 text-balance">
+            Contact Us
+          </h2>
+          <p className="text-lg text-gray-700 leading-relaxed">
+            Have questions about our programs? Want to share feedback? We'd love to hear from you!
+          </p>
         </div>
         
         <div className="flex flex-col md:flex-row gap-8 max-w-6xl mx-auto">

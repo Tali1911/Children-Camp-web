@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Baby, Clock, Heart, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import dailyActivitiesImage from '@/assets/daily-activities.jpg';
+import { ConsentDialog } from './ConsentDialog';
 
 const littleForestSchema = z.object({
   parentName: z.string().min(1, 'Parent name is required').max(100),
@@ -43,6 +44,7 @@ const LittleForestProgram = () => {
   });
 
   const watchedDays = watch('daySelection') || [];
+  const consent = watch('consent');
 
   const onSubmit = async (data: LittleForestFormData) => {
     try {
@@ -75,9 +77,9 @@ const LittleForestProgram = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link to="/programs" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
+          <Link to="/" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
             <ArrowLeft size={20} />
-            Back to Programs
+            Back to Home
           </Link>
         </div>
 
@@ -269,19 +271,11 @@ const LittleForestProgram = () => {
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="consent"
-                  {...register('consent')}
-                  className="mt-1"
-                />
-                <Label htmlFor="consent" className="text-sm leading-relaxed">
-                  I consent to my child participating in the Little Forest Explorers program and understand the age-appropriate activities involved *
-                </Label>
-              </div>
-              {errors.consent && (
-                <p className="text-destructive text-sm mt-1">{errors.consent.message}</p>
-              )}
+              <ConsentDialog
+                checked={consent}
+                onCheckedChange={(checked) => setValue('consent', checked)}
+                error={errors.consent?.message}
+              />
 
               <Button 
                 type="submit" 

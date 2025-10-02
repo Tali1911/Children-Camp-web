@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import { Mountain, MapPin, Calendar, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import adventureImage from '@/assets/adventure.jpg';
+import { ConsentDialog } from './ConsentDialog';
 
 const kenyanExperiencesSchema = z.object({
   parentLeader: z.string().min(1, 'Parent/Leader name is required').max(100),
@@ -33,6 +34,7 @@ const KenyanExperiencesProgram = () => {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting }
   } = useForm<KenyanExperiencesFormData>({
     resolver: zodResolver(kenyanExperiencesSchema),
@@ -41,6 +43,8 @@ const KenyanExperiencesProgram = () => {
       consent: false
     }
   });
+
+  const consent = watch('consent');
 
   const onSubmit = async (data: KenyanExperiencesFormData) => {
     try {
@@ -108,9 +112,9 @@ const KenyanExperiencesProgram = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
-          <Link to="/programs" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
+          <Link to="/" className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-medium">
             <ArrowLeft size={20} />
-            Back to Programs
+            Back to Home
           </Link>
         </div>
 
@@ -317,19 +321,11 @@ const KenyanExperiencesProgram = () => {
                 </div>
               </div>
 
-              <div className="flex items-start space-x-3">
-                <Checkbox
-                  id="consent"
-                  {...register('consent')}
-                  className="mt-1"
-                />
-                <Label htmlFor="consent" className="text-sm leading-relaxed">
-                  I consent to the participants joining this 5-day experience and understand the activities and risks involved *
-                </Label>
-              </div>
-              {errors.consent && (
-                <p className="text-destructive text-sm mt-1">{errors.consent.message}</p>
-              )}
+              <ConsentDialog
+                checked={consent}
+                onCheckedChange={(checked) => setValue('consent', checked)}
+                error={errors.consent?.message}
+              />
 
               <Button 
                 type="submit" 
