@@ -25,8 +25,7 @@ export const TeamMemberCard: React.FC<TeamMemberCardProps> = ({ member, index, o
   return (
     <Card 
       key={member.id || index} 
-      className="fade-in-element opacity-0 transform translate-y-10 hover:shadow-lg transition-all duration-700 cursor-pointer"
-      style={{ transitionDelay: `${0.1 * (index + 1)}s` }}
+      className="fade-in-element hover:shadow-lg transition-all duration-700 cursor-pointer opacity-100"
       onClick={onClick}
     >
       <div className="relative overflow-hidden aspect-square">

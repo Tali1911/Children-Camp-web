@@ -5,6 +5,7 @@ import { Link, useLocation } from "react-router-dom";
 import amuseLogo from "@/assets/amuse-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { navigationService, NavigationSetting } from "@/services/navigationService";
 
 const Navbar = () => {
   const location = useLocation();
@@ -14,6 +15,7 @@ const Navbar = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [mobileExpandedSection, setMobileExpandedSection] = useState<string | null>(null);
   const [scheduleUrl, setScheduleUrl] = useState<string | null>(null);
+  const [navSettings, setNavSettings] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     const handleScroll = () => {
@@ -30,7 +32,17 @@ const Navbar = () => {
 
   useEffect(() => {
     loadScheduleUrl();
+    loadNavigationSettings();
   }, []);
+
+  const loadNavigationSettings = async () => {
+    const settings = await navigationService.getNavigationSettings();
+    const visibilityMap = settings.reduce((acc, setting) => {
+      acc[setting.nav_key] = setting.is_visible;
+      return acc;
+    }, {} as Record<string, boolean>);
+    setNavSettings(visibilityMap);
+  };
 
   const loadScheduleUrl = async () => {
     try {
@@ -125,34 +137,39 @@ const Navbar = () => {
           </Link>
 
           <ul className="hidden lg:flex items-center space-x-6">
-            <li>
-              <Link 
-                to="/" 
-                className={cn(
-                  "font-medium hover-lift",
-                  isScrolled || !isHomePage
-                    ? "text-gray-700 hover:text-forest-600" 
-                    : "text-white hover:text-forest-100"
-                )}
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/announcements" 
-                className={cn(
-                  "font-medium hover-lift",
-                  isScrolled || !isHomePage
-                    ? "text-gray-700 hover:text-forest-600" 
-                    : "text-white hover:text-forest-100"
-                )}
-              >
-                Announcements
-              </Link>
-            </li>
+            {navSettings.home !== false && (
+              <li>
+                <Link 
+                  to="/" 
+                  className={cn(
+                    "font-medium hover-lift",
+                    isScrolled || !isHomePage
+                      ? "text-gray-700 hover:text-forest-600" 
+                      : "text-white hover:text-forest-100"
+                  )}
+                >
+                  Home
+                </Link>
+              </li>
+            )}
+            {navSettings.announcements !== false && (
+              <li>
+                <Link 
+                  to="/announcements" 
+                  className={cn(
+                    "font-medium hover-lift",
+                    isScrolled || !isHomePage
+                      ? "text-gray-700 hover:text-forest-600" 
+                      : "text-white hover:text-forest-100"
+                  )}
+                >
+                  Announcements
+                </Link>
+              </li>
+            )}
             {/* About Dropdown */}
-            <li className="relative group">
+            {navSettings.about !== false && (
+              <li className="relative group">
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
@@ -183,10 +200,12 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
             
             {/* Camps Mega Menu */}
-            <li className="relative group">
+            {navSettings.camps !== false && (
+              <li className="relative group">
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
@@ -226,25 +245,29 @@ const Navbar = () => {
                   ))}
                 </div>
               </div>
-            </li>
+              </li>
+            )}
 
             {/* Experiences Link */}
-            <li>
-              <Link 
-                to="/experiences/kenyan-experiences" 
-                className={cn(
-                  "font-medium hover-lift",
-                  isScrolled || !isHomePage
-                    ? "text-gray-700 hover:text-forest-600" 
-                    : "text-white hover:text-forest-100"
-                )}
-              >
-                Experiences
-              </Link>
-            </li>
+            {navSettings.experiences !== false && (
+              <li>
+                <Link 
+                  to="/experiences/kenyan-experiences" 
+                  className={cn(
+                    "font-medium hover-lift",
+                    isScrolled || !isHomePage
+                      ? "text-gray-700 hover:text-forest-600" 
+                      : "text-white hover:text-forest-100"
+                  )}
+                >
+                  Experiences
+                </Link>
+              </li>
+            )}
 
             {/* Schools Dropdown */}
-            <li className="relative group">
+            {navSettings.schools !== false && (
+              <li className="relative group">
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
@@ -275,10 +298,12 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
 
             {/* Group Activities Dropdown */}
-            <li className="relative group">
+            {navSettings.groups !== false && (
+              <li className="relative group">
               <button 
                 className={cn(
                   "font-medium hover-lift flex items-center gap-1",
@@ -309,48 +334,55 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
 
-            <li>
-              <Link 
-                to="/gallery" 
-                className={cn(
-                  "font-medium hover-lift",
-                  isScrolled || !isHomePage
-                    ? "text-gray-700 hover:text-forest-600" 
-                    : "text-white hover:text-forest-100"
-                )}
-              >
-                Gallery
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/contact" 
-                className={cn(
-                  "font-medium hover-lift",
-                  isScrolled || !isHomePage
-                    ? "text-gray-700 hover:text-forest-600" 
-                    : "text-white hover:text-forest-100"
-                )}
-              >
-                Contact
-              </Link>
-            </li>
-            <li>
-              <button
-                onClick={handleScheduleDownload}
-                className={cn(
-                  "font-medium hover-lift flex items-center gap-2 px-4 py-2 rounded-lg transition-colors",
-                  isScrolled || !isHomePage
-                    ? "bg-forest-600 text-white hover:bg-forest-700" 
-                    : "bg-white/20 text-white hover:bg-white/30 border border-white/40"
-                )}
-              >
-                <Download size={16} />
-                Download Schedules
-              </button>
-            </li>
+            {navSettings.gallery !== false && (
+              <li>
+                <Link 
+                  to="/gallery" 
+                  className={cn(
+                    "font-medium hover-lift",
+                    isScrolled || !isHomePage
+                      ? "text-gray-700 hover:text-forest-600" 
+                      : "text-white hover:text-forest-100"
+                  )}
+                >
+                  Gallery
+                </Link>
+              </li>
+            )}
+            {navSettings.contact !== false && (
+              <li>
+                <Link 
+                  to="/contact" 
+                  className={cn(
+                    "font-medium hover-lift",
+                    isScrolled || !isHomePage
+                      ? "text-gray-700 hover:text-forest-600" 
+                      : "text-white hover:text-forest-100"
+                  )}
+                >
+                  Contact
+                </Link>
+              </li>
+            )}
+            {navSettings.schedules !== false && (
+              <li>
+                <button
+                  onClick={handleScheduleDownload}
+                  className={cn(
+                    "font-medium hover-lift flex items-center gap-2 px-4 py-2 rounded-lg transition-colors",
+                    isScrolled || !isHomePage
+                      ? "bg-forest-600 text-white hover:bg-forest-700" 
+                      : "bg-white/20 text-white hover:bg-white/30 border border-white/40"
+                  )}
+                >
+                  <Download size={16} />
+                  Download Schedules
+                </button>
+              </li>
+            )}
           </ul>
 
           <div className="flex items-center">
@@ -376,26 +408,31 @@ const Navbar = () => {
           "glass-card mt-2 rounded-lg"
         )}>
           <ul className="py-2 space-y-1">
-            <li>
-              <Link 
-                to="/" 
-                className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Home
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/announcements" 
-                className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Announcements
-              </Link>
-            </li>
+            {navSettings.home !== false && (
+              <li>
+                <Link 
+                  to="/" 
+                  className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Home
+                </Link>
+              </li>
+            )}
+            {navSettings.announcements !== false && (
+              <li>
+                <Link 
+                  to="/announcements" 
+                  className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Announcements
+                </Link>
+              </li>
+            )}
             {/* About Submenu */}
-            <li>
+            {navSettings.about !== false && (
+              <li>
               <button 
                 onClick={() => toggleMobileSection('about')}
                 className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
@@ -424,10 +461,12 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
             
             {/* Camps Submenu */}
-            <li>
+            {navSettings.camps !== false && (
+              <li>
               <button 
                 onClick={() => toggleMobileSection('camps')}
                 className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
@@ -457,25 +496,29 @@ const Navbar = () => {
                       >
                         {item.name}
                       </Link>
-                    ))}
-                  </div>
-                ))}
+                  ))}
+                </div>
+              ))}
               </div>
-            </li>
+              </li>
+            )}
 
             {/* Experiences */}
-            <li>
-              <Link 
-                to="/experiences/kenyan-experiences" 
-                className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Experiences
-              </Link>
-            </li>
+            {navSettings.experiences !== false && (
+              <li>
+                <Link 
+                  to="/experiences/kenyan-experiences" 
+                  className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Experiences
+                </Link>
+              </li>
+            )}
 
             {/* Schools Submenu */}
-            <li>
+            {navSettings.schools !== false && (
+              <li>
               <button 
                 onClick={() => toggleMobileSection('schools')}
                 className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
@@ -504,10 +547,12 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
 
             {/* Group Activities Submenu */}
-            <li>
+            {navSettings.groups !== false && (
+              <li>
               <button 
                 onClick={() => toggleMobileSection('groups')}
                 className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md"
@@ -536,38 +581,47 @@ const Navbar = () => {
                   </Link>
                 ))}
               </div>
-            </li>
+              </li>
+            )}
 
-            <li>
-              <Link 
-                to="/gallery" 
-                className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Gallery
-              </Link>
-            </li>
-            <li>
-              <Link 
-                to="/contact" 
-                className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                Contact
-              </Link>
-            </li>
-            <li>
-              <button
-                onClick={() => {
-                  handleScheduleDownload();
-                  setMobileMenuOpen(false);
-                }}
-                className="w-full flex items-center gap-2 py-2 px-4 font-medium bg-forest-600 text-white hover:bg-forest-700 rounded-md"
-              >
-                <Download size={16} />
-                Download Schedules
-              </button>
-            </li>
+            {navSettings.gallery !== false && (
+              <li>
+                <Link 
+                  to="/gallery" 
+                  className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Gallery
+                </Link>
+              </li>
+            )}
+
+            {navSettings.contact !== false && (
+              <li>
+                <Link 
+                  to="/contact" 
+                  className="block py-2 px-4 font-medium text-gray-800 hover:text-forest-600 hover:bg-gray-50 rounded-md"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  Contact
+                </Link>
+              </li>
+            )}
+
+            {navSettings.schedules !== false && (
+              <li>
+                <button
+                  onClick={() => {
+                    handleScheduleDownload();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="w-full flex items-center justify-center gap-2 py-2 px-4 font-medium text-white bg-forest-600 hover:bg-forest-700 rounded-md"
+                >
+                  <Download size={16} />
+                  Download Schedules
+                </button>
+              </li>
+            )}
           </ul>
         </div>
       </div>

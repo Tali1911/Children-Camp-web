@@ -3,22 +3,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, CheckCircle, Settings, Calendar, ImageIcon } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, Settings } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { cmsService, ContentItem } from '@/services/cmsService';
 import { HeroSlideEditor } from './editors/HeroSlideEditor';
-import { ProgramEditor } from './editors/ProgramEditor';
-import { AnnouncementEditorDialog } from './editors/AnnouncementEditorDialog';
+import ServiceItemEditor from './editors/ServiceItemEditor';
+import AboutSectionEditor from './editors/AboutSectionEditor';
 import { TestimonialEditor } from './editors/TestimonialEditor';
 import { TeamMemberEditor } from './editors/TeamMemberEditor';
+import { ProgramEditor } from './editors/ProgramEditor';
 import { SiteSettingsEditor } from './editors/SiteSettingsEditor';
-import AboutSectionEditor from './editors/AboutSectionEditor';
-import ServiceItemEditor from './editors/ServiceItemEditor';
-import SeedCMSButton from '@/components/admin/SeedCMSButton';
 import AdminGalleryManager from '@/components/AdminGalleryManager';
+import { AnnouncementEditorDialog } from './editors/AnnouncementEditorDialog';
 import EventManagement from '@/components/calendar/EventManagement';
-import EventCalendar from '@/components/calendar/EventCalendar';
-import { loadEvents, Event } from '@/services/calendarService';
+import NavigationManager from './NavigationManager';
+import SeedCMSButton from '@/components/admin/SeedCMSButton';
 
 type EditorType = 'hero' | 'program' | 'announcement' | 'testimonial' | 'team' | 'settings' | 'about' | 'service' | null;
 
@@ -33,22 +32,10 @@ const ContentManagement = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [activeEditor, setActiveEditor] = useState<EditorType>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
-  const [calendarEvents, setCalendarEvents] = useState<Event[]>([]);
 
   useEffect(() => {
     loadAllContent();
-    loadCalendarEvents();
   }, []);
-
-  const loadCalendarEvents = async () => {
-    const events = await loadEvents();
-    setCalendarEvents(events);
-  };
-
-  const handleAddCalendarEvent = (event: Event) => {
-    setCalendarEvents([...calendarEvents, event]);
-    toast({ title: 'Calendar event added successfully' });
-  };
 
   const loadAllContent = async () => {
     setIsLoading(true);
@@ -159,22 +146,17 @@ const ContentManagement = () => {
       <SeedCMSButton />
 
       <Tabs defaultValue="hero" className="space-y-4">
-        <TabsList className="grid grid-cols-5 lg:grid-cols-10 w-full">
+        <TabsList className="grid grid-cols-6 lg:grid-cols-11">
           <TabsTrigger value="hero">Hero</TabsTrigger>
-          <TabsTrigger value="programs">Programs</TabsTrigger>
-          <TabsTrigger value="announcements">News</TabsTrigger>
+          <TabsTrigger value="services">Services</TabsTrigger>
+          <TabsTrigger value="about">About</TabsTrigger>
           <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
           <TabsTrigger value="team">Team</TabsTrigger>
-          <TabsTrigger value="about">About</TabsTrigger>
-          <TabsTrigger value="services">Services</TabsTrigger>
-          <TabsTrigger value="calendar">
-            <Calendar className="h-4 w-4 mr-1" />
-            Calendar
-          </TabsTrigger>
-          <TabsTrigger value="gallery">
-            <ImageIcon className="h-4 w-4 mr-1" />
-            Gallery
-          </TabsTrigger>
+          <TabsTrigger value="programs">Programs</TabsTrigger>
+          <TabsTrigger value="gallery">Gallery</TabsTrigger>
+          <TabsTrigger value="announcements">Announcements</TabsTrigger>
+          <TabsTrigger value="calendar">Calendar</TabsTrigger>
+          <TabsTrigger value="navigation">Navigation</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -243,34 +225,6 @@ const ContentManagement = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="calendar" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Calendar Management</CardTitle>
-              <CardDescription>Manage program events and schedules</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <EventManagement onAddEvent={handleAddCalendarEvent} />
-              <div className="mt-6">
-                <h3 className="text-lg font-semibold mb-4">Calendar Overview</h3>
-                <EventCalendar events={calendarEvents} />
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="gallery" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Gallery Management</CardTitle>
-              <CardDescription>Upload and manage gallery images</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <AdminGalleryManager currentAdminUsername="marketing" />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="about" className="space-y-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -295,6 +249,26 @@ const ContentManagement = () => {
             </CardHeader>
             <CardContent>{renderContentList(serviceItems, 'service')}</CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="gallery">
+          <Card>
+            <CardHeader>
+              <CardTitle>Gallery Management</CardTitle>
+              <CardDescription>Upload and manage gallery images</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <AdminGalleryManager currentAdminUsername="marketing" />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="calendar">
+          <EventManagement />
+        </TabsContent>
+
+        <TabsContent value="navigation">
+          <NavigationManager />
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
