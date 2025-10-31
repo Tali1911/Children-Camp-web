@@ -2,27 +2,27 @@ import React, { useState, useEffect } from 'react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import SEOHead from '@/components/SEOHead';
-import { Card, CardContent } from '@/components/ui/card';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { Target, Eye, Heart, CheckCircle, FileText, Leaf, Users, Smile, Globe } from 'lucide-react';
 import { cmsService, ContentItem } from '@/services/cmsService';
+import PillarColumn from '@/components/about/PillarColumn';
+import PillarDialog from '@/components/about/PillarDialog';
 
-const iconMap: Record<string, any> = {
-  Target,
-  Eye,
-  Heart,
-  CheckCircle,
-  FileText,
-  Leaf,
-  Users,
-  Smile,
-  Globe,
-};
+// Color mapping for the 7 pillars (in order)
+const pillarColors = [
+  '#2563eb', // Kenyan Based - Blue
+  '#16a34a', // Nature - Green
+  '#dc2626', // Holistic Skills - Red
+  '#06b6d4', // Fun - Cyan
+  '#84cc16', // Inclusivity - Yellow/Olive
+  '#d946ef', // Child Centered Approach - Magenta
+  '#92400e', // Environmental Approach - Brown
+];
 
 const WhoWeAre = () => {
   const [sections, setSections] = useState<ContentItem[]>([]);
   const [introSection, setIntroSection] = useState<ContentItem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedPillar, setSelectedPillar] = useState<ContentItem | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     loadContent();
@@ -32,7 +32,8 @@ const WhoWeAre = () => {
     try {
       const data = await cmsService.getAboutSections();
       const intro = data.find(s => s.metadata?.section_type === 'intro');
-      const pillars = data.filter(s => s.metadata?.section_type !== 'intro')
+      // Only get the 7 pillars with section_type = 'pillar'
+      const pillars = data.filter(s => s.metadata?.section_type === 'pillar')
         .sort((a, b) => {
           const orderA = a.metadata?.order || 0;
           const orderB = b.metadata?.order || 0;
@@ -72,39 +73,70 @@ const WhoWeAre = () => {
                   </p>
                 </div>
 
-                <div className="mb-8">
-                  <h2 className="text-3xl font-bold text-foreground mb-6">Our Pillars</h2>
-                  <Card className="border-primary/20">
-                    <CardContent className="pt-6">
-                      <Accordion type="single" collapsible className="w-full">
-                        {sections.map((section, index) => {
-                          const IconComponent = iconMap[section.metadata?.icon || 'Target'];
-                          return (
-                            <AccordionItem key={section.id || index} value={`item-${index}`}>
-                              <AccordionTrigger className="hover:no-underline">
-                                <div className="flex items-center gap-3 text-left">
-                                  <div className="p-2 bg-primary/10 rounded-lg flex-shrink-0">
-                                    {IconComponent && <IconComponent className="h-5 w-5 text-primary" />}
-                                  </div>
-                                  <span className="text-lg font-semibold text-foreground">{section.title}</span>
-                                </div>
-                              </AccordionTrigger>
-                              <AccordionContent>
-                                <div className="text-muted-foreground leading-relaxed pl-14 pr-4 pb-2 space-y-4">
-                                  {section.content.split('\n\n').map((paragraph, idx) => (
-                                    <p key={idx} className="whitespace-pre-line">
-                                      {paragraph}
-                                    </p>
-                                  ))}
-                                </div>
-                              </AccordionContent>
-                            </AccordionItem>
-                          );
-                        })}
-                      </Accordion>
-                    </CardContent>
-                  </Card>
+                {/* Our Pillars Section */}
+                <div className="mb-16">
+                  <h2 className="text-3xl font-bold text-foreground mb-8 text-center">Our Pillars</h2>
+                  
+                  {/* Temple Roof Decoration */}
+                  <div className="max-w-5xl mx-auto mb-8">
+                    <div className="h-2 bg-foreground/80 w-full rounded-sm mb-1"></div>
+                    <div className="h-2 bg-foreground/60 w-11/12 mx-auto rounded-sm"></div>
+                  </div>
+
+                  {/* Pillars Container */}
+                  <div className="flex justify-center gap-3 md:gap-4 lg:gap-5 max-w-6xl mx-auto">
+                    {sections.map((section, index) => (
+                      <PillarColumn
+                        key={section.id || index}
+                        pillar={section}
+                        color={pillarColors[index % pillarColors.length]}
+                        onClick={() => {
+                          setSelectedPillar(section);
+                          setIsDialogOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Base Platform */}
+                  <div className="max-w-5xl mx-auto mt-8">
+                    <div className="h-4 bg-foreground/20 w-full rounded-sm"></div>
+                  </div>
                 </div>
+
+                {/* Our Purpose, Mission, Vision Sections */}
+                <div className="space-y-12">
+                  <div>
+                    <h2 className="text-3xl font-bold text-foreground mb-4">Our Purpose</h2>
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      To make outdoor learning meaningful, accessible, and unforgettable for children in Kenya by creating programs that connect them with nature, culture, and their own potential.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h2 className="text-3xl font-bold text-foreground mb-4">Our Mission</h2>
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      We design and deliver outdoor programs that inspire children to explore, learn, and grow through hands-on experiences rooted in Kenya's natural and cultural heritage.
+                    </p>
+                  </div>
+
+                  <div>
+                    <h2 className="text-3xl font-bold text-foreground mb-4">Our Vision</h2>
+                    <p className="text-lg text-muted-foreground leading-relaxed">
+                      A future where every child in Kenya has the opportunity to learn through nature, building skills and connections that empower them to thrive and care for their environment.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Pillar Details Dialog */}
+                <PillarDialog
+                  isOpen={isDialogOpen}
+                  onClose={() => {
+                    setIsDialogOpen(false);
+                    setSelectedPillar(null);
+                  }}
+                  pillar={selectedPillar}
+                />
               </>
             )}
           </div>

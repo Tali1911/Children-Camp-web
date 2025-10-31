@@ -25,12 +25,17 @@ class NavigationService {
 
   async getNavigationSettings(): Promise<NavigationSetting[]> {
     try {
+      // Add a small delay to ensure database consistency
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
       const { data, error } = await (supabase as any)
         .from('navigation_settings')
         .select('*')
         .order('display_order');
 
       if (error) throw error;
+      
+      console.log('Navigation settings loaded:', data);
       return data || [];
     } catch (error) {
       console.error('Error fetching navigation settings:', error);
@@ -40,21 +45,44 @@ class NavigationService {
 
   async updateNavigationVisibility(navKey: string, isVisible: boolean): Promise<boolean> {
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
       
-      const { error } = await (supabase as any)
+      if (authError) {
+        console.error('❌ Auth error:', authError);
+        return false;
+      }
+
+      if (!user) {
+        console.error('❌ No authenticated user found');
+        return false;
+      }
+
+      console.log(`🔄 Attempting to update ${navKey} to ${isVisible} as user ${user.id}`);
+      
+      const { data, error } = await (supabase as any)
         .from('navigation_settings')
         .update({ 
           is_visible: isVisible,
-          updated_by: user?.id,
+          updated_by: user.id,
           updated_at: new Date().toISOString()
         })
-        .eq('nav_key', navKey);
+        .eq('nav_key', navKey)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('❌ Database update error:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        });
+        return false;
+      }
+
+      console.log('✅ Navigation visibility updated successfully:', data);
       return true;
     } catch (error) {
-      console.error('Error updating navigation visibility:', error);
+      console.error('❌ Unexpected error updating navigation visibility:', error);
       return false;
     }
   }

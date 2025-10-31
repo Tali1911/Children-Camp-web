@@ -1,9 +1,7 @@
 import React, { useState } from 'react';
-import { cn } from "@/lib/utils";
 import { Mail, Phone, MapPin, Send, MessageCircle } from 'lucide-react';
 import { useToast } from "@/components/ui/use-toast";
 import { Textarea } from "@/components/ui/textarea";
-import { leadsService } from '@/services/leadsService';
 const ContactForm = () => {
   const {
     toast
@@ -14,7 +12,7 @@ const ContactForm = () => {
     subject: '',
     message: ''
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const {
       name,
@@ -25,9 +23,8 @@ const ContactForm = () => {
       [name]: value
     }));
   };
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitting(true);
 
     // Validate email
     if (!formData.email || !formData.email.includes('@')) {
@@ -36,51 +33,30 @@ const ContactForm = () => {
         description: "Please enter a valid email address.",
         variant: "destructive"
       });
-      setIsSubmitting(false);
       return;
     }
 
-    try {
-      // Create lead in Supabase
-      const lead = await leadsService.createLead({
-        full_name: formData.name,
-        email: formData.email,
-        phone: '',
-        program_type: 'contact',
-        program_name: formData.subject,
-        form_data: {
-          subject: formData.subject,
-          message: formData.message,
-          source: 'website_contact_form'
-        }
-      });
-
-      if (lead) {
-        toast({
-          title: "Message Sent!",
-          description: "Thank you for your message. We'll get back to you soon."
-        });
-
-        // Reset form
-        setFormData({
-          name: '',
-          email: '',
-          subject: '',
-          message: ''
-        });
-      } else {
-        throw new Error('Failed to submit message');
-      }
-    } catch (error) {
-      console.error('Error submitting contact form:', error);
+    // Validate required fields
+    if (!formData.name || !formData.subject || !formData.message) {
       toast({
-        title: "Submission Failed",
-        description: "There was an error submitting your message. Please try again.",
+        title: "Incomplete Form",
+        description: "Please fill in all fields.",
         variant: "destructive"
       });
-    } finally {
-      setIsSubmitting(false);
+      return;
     }
+
+    // Construct mailto link
+    const emailBody = `Name: ${formData.name}%0D%0AEmail: ${formData.email}%0D%0A%0D%0AMessage:%0D%0A${encodeURIComponent(formData.message)}`;
+    const mailtoLink = `mailto:info@amusekenya.co.ke?subject=${encodeURIComponent(formData.subject)}&body=${emailBody}`;
+    
+    // Open default mail client
+    window.location.href = mailtoLink;
+
+    toast({
+      title: "Opening Email Client",
+      description: "Your default email application will open with the message pre-filled."
+    });
   };
   return <section id="contact" className="py-24 px-4 bg-earth-50 relative overflow-hidden">
       {/* Background Element */}
@@ -180,17 +156,9 @@ const ContactForm = () => {
                     <Textarea id="message" name="message" value={formData.message} onChange={handleChange} required rows={6} className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-forest-500 focus:border-forest-500 outline-none transition-all resize-none" placeholder="Share your thoughts, questions, or feedback with us..." />
                   </div>
                   
-                  <button type="submit" disabled={isSubmitting} className={cn("w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2", isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-forest-600 hover:bg-forest-700 text-white shadow-md hover:shadow-lg")}>
-                    {isSubmitting ? <>
-                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Sending...
-                      </> : <>
-                        Send Message
-                        <Send size={18} />
-                      </>}
+                  <button type="submit" className="w-full py-3 px-4 rounded-lg font-medium transition-all duration-300 flex items-center justify-center gap-2 bg-forest-600 hover:bg-forest-700 text-white shadow-md hover:shadow-lg">
+                    Send Message
+                    <Send size={18} />
                   </button>
                 </div>
               </form>

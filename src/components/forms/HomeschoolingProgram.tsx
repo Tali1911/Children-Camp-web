@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import schoolsImage from '@/assets/schools.jpg';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 import { leadsService } from '@/services/leadsService';
 
 const homeschoolingSchema = z.object({
@@ -64,9 +65,28 @@ const HomeschoolingProgram = () => {
 
   const onSubmit = async (data: HomeschoolingFormData) => {
     try {
-      console.log('Homeschooling form submission:', data);
-      toast.success('Registration submitted successfully! We will contact you soon.');
+      // Save to database
+      const { homeschoolingService } = await import('@/services/programRegistrationService');
+      const registration = await homeschoolingService.create(data);
+
+      // Send confirmation email
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('send-program-confirmation', {
+        body: {
+          email: data.email,
+          name: data.parentName,
+          programType: 'homeschooling',
+          details: {
+            package: data.package,
+            children: data.children,
+            focus: data.focus
+          }
+        }
+      });
+
+      toast.success('Registration submitted successfully! Check your email for confirmation.');
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Failed to submit registration. Please try again.');
     }
   };
@@ -343,7 +363,9 @@ const HomeschoolingProgram = () => {
                 error={errors.consent?.message}
               />
 
-              <Button 
+              <RefundPolicyDialog />
+
+              <Button
                 type="submit" 
                 className="w-full h-12 text-base"
                 disabled={isSubmitting}

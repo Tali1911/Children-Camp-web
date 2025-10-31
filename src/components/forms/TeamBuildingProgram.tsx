@@ -16,6 +16,7 @@ import adventureImage from "@/assets/adventure.jpg";
 import campingImage from "@/assets/camping.jpg";
 import DatePickerField from "./DatePickerField";
 import { ConsentDialog } from "./ConsentDialog";
+import { RefundPolicyDialog } from "./RefundPolicyDialog";
 
 const teamBuildingSchema = z.object({
   occasion: z.enum(["birthday", "family", "corporate"]),
@@ -55,9 +56,29 @@ const TeamBuildingProgram = () => {
 
   const onSubmit = async (data: TeamBuildingFormData) => {
     try {
-      console.log("Team Building form submission:", data);
-      toast.success("Registration submitted successfully! We will contact you soon.");
+      // Save to database
+      const { teamBuildingService } = await import('@/services/programRegistrationService');
+      const registration = await teamBuildingService.create(data);
+
+      // Send confirmation email
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('send-program-confirmation', {
+        body: {
+          email: data.email,
+          name: data.email, // Using email as name since there's no name field
+          programType: 'team-building',
+          details: {
+            occasion: data.occasion,
+            package: data.package,
+            eventDate: data.eventDate,
+            location: data.location
+          }
+        }
+      });
+
+      toast.success("Registration submitted successfully! Check your email for confirmation.");
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error("Failed to submit registration. Please try again.");
     }
   };
@@ -337,6 +358,8 @@ const TeamBuildingProgram = () => {
                 onCheckedChange={(checked) => setValue("consent", checked)}
                 error={errors.consent?.message}
               />
+
+              <RefundPolicyDialog />
 
               <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Book Experience"}

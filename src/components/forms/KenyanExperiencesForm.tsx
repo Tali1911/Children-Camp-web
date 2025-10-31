@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 
 const kenyanExperiencesSchema = z.object({
   parentLeader: z.string().min(1, 'Parent/Leader name is required').max(100),
@@ -232,7 +233,9 @@ const KenyanExperiencesForm = () => {
             )}
           />
 
-          <Button 
+          <RefundPolicyDialog />
+
+          <Button
             type="submit" 
             className="w-full bg-forest-600 hover:bg-forest-700"
             disabled={isSubmitting}

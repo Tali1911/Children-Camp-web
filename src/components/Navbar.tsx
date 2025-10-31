@@ -126,9 +126,9 @@ const Navbar = () => {
           : "py-4 bg-transparent"
       )}
     >
-      <div className="container mx-auto">
+      <div className="container mx-auto max-w-[1400px]">
         <div className="flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
             <img 
               src={amuseLogo} 
               alt="Amuse Kenya Logo" 
@@ -136,7 +136,7 @@ const Navbar = () => {
             />
           </Link>
 
-          <ul className="hidden lg:flex items-center space-x-6">
+          <ul className="hidden lg:flex items-center flex-1 justify-evenly gap-4 ml-12">
             {navSettings.home !== false && (
               <li>
                 <Link 

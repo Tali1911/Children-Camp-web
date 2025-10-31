@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { Plus, Trash2 } from 'lucide-react';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 import { differenceInYears } from 'date-fns';
 import { useCampFormConfig } from '@/hooks/useCampFormConfig';
 import { campRegistrationService } from '@/services/campRegistrationService';
@@ -165,9 +166,9 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
           price: child.totalPrice,
         })),
         total_amount: totalAmount,
-        payment_status: buttonType === 'pay' ? 'paid' as const : 'unpaid' as const,
-        payment_method: buttonType === 'pay' ? 'card' as const : 'pending' as const,
-        registration_type: buttonType === 'pay' ? 'online_paid' as const : 'online_only' as const,
+        payment_status: 'unpaid' as const,
+        payment_method: 'pending' as const,
+        registration_type: 'online_only' as const,
         qr_code_data: qrCodeData,
         consent_given: data.consent,
         status: 'active' as const,
@@ -182,8 +183,15 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
       // Set state for modal
       setRegistrationResult(registration);
       setQrCodeDataUrl(qrUrl);
-      setRegistrationType(buttonType === 'pay' ? 'online_paid' : 'online_only');
+      setRegistrationType('online_only');
       setShowQRModal(true);
+      
+      // Show payment integration message if user clicked "Pay Now"
+      if (buttonType === 'pay') {
+        setTimeout(() => {
+          toast.info('Payment integration coming soon! You will receive an invoice with payment instructions via email.');
+        }, 500);
+      }
       
       // TODO: Call edge function to send email
       // await supabase.functions.invoke('send-camp-confirmation', {
@@ -458,6 +466,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
         </div>
 
         <ConsentDialog checked={consent} onCheckedChange={checked => setValue('consent', checked)} error={errors.consent?.message} />
+
+        <RefundPolicyDialog />
 
         <div className="bg-primary/10 rounded-lg p-4">
           <div className="flex items-center justify-between">

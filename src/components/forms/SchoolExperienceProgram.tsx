@@ -15,6 +15,7 @@ import { Link } from 'react-router-dom';
 import schoolsImage from '@/assets/schools.jpg';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 
 const schoolExperienceSchema = z.object({
   schoolName: z.string().min(1, 'School name is required').max(200),
@@ -73,9 +74,29 @@ const SchoolExperienceProgram = () => {
 
   const onSubmit = async (data: SchoolExperienceFormData) => {
     try {
-      console.log('School Experience form submission:', data);
-      toast.success('Registration submitted successfully! We will contact you soon.');
+      // Save to database
+      const { schoolExperienceService } = await import('@/services/programRegistrationService');
+      const registration = await schoolExperienceService.create(data);
+
+      // Send confirmation email
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('send-program-confirmation', {
+        body: {
+          email: data.email,
+          name: data.schoolName,
+          programType: 'school-experience',
+          details: {
+            schoolName: data.schoolName,
+            package: data.package,
+            numberOfStudents: data.numberOfStudents,
+            location: data.location
+          }
+        }
+      });
+
+      toast.success('Registration submitted successfully! Check your email for confirmation.');
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Failed to submit registration. Please try again.');
     }
   };
@@ -474,7 +495,9 @@ const SchoolExperienceProgram = () => {
                 error={errors.consent?.message}
               />
 
-              <Button 
+              <RefundPolicyDialog />
+
+              <Button
                 type="submit" 
                 className="w-full h-12 text-base"
                 disabled={isSubmitting}

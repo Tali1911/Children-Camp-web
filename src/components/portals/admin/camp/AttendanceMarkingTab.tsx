@@ -5,12 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Clock, QrCode } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { attendanceService } from '@/services/attendanceService';
+import { qrCodeService } from '@/services/qrCodeService';
 import { CampRegistration } from '@/types/campRegistration';
 import { toast } from 'sonner';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
+import { QRScannerDialog } from '@/components/attendance/QRScannerDialog';
 
 export const AttendanceMarkingTab: React.FC = () => {
   const { user } = useSupabaseAuth();
@@ -19,6 +21,7 @@ export const AttendanceMarkingTab: React.FC = () => {
   const [registrations, setRegistrations] = useState<CampRegistration[]>([]);
   const [loading, setLoading] = useState(false);
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, any>>({});
+  const [scannerOpen, setScannerOpen] = useState(false);
 
   const loadTodaysRegistrations = async () => {
     try {
@@ -95,6 +98,67 @@ export const AttendanceMarkingTab: React.FC = () => {
       toast.error('Search failed');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleQRScan = async (qrCodeData: string) => {
+    if (!user?.id) {
+      toast.error('You must be logged in');
+      return;
+    }
+
+    try {
+      // Parse the QR code data
+      const parsed = qrCodeService.parseQRCodeData(qrCodeData);
+      
+      if (!parsed || parsed.type !== 'camp_registration') {
+        toast.error('Invalid QR code. Please scan a valid registration QR code.');
+        return;
+      }
+
+      // Fetch the registration
+      const registration = await campRegistrationService.getRegistrationByQRCode(qrCodeData);
+      
+      if (!registration) {
+        toast.error('Registration not found');
+        return;
+      }
+
+      // Check in all children who haven't checked in yet
+      let checkedInCount = 0;
+      let alreadyCheckedInCount = 0;
+
+      for (const child of registration.children) {
+        const hasCheckedIn = await attendanceService.hasCheckedInToday(registration.id!, child.childName);
+        
+        if (!hasCheckedIn) {
+          await attendanceService.checkIn(registration.id!, child.childName, user.id);
+          checkedInCount++;
+        } else {
+          alreadyCheckedInCount++;
+        }
+      }
+
+      // Close scanner
+      setScannerOpen(false);
+
+      // Show success message
+      if (checkedInCount > 0) {
+        toast.success(
+          `Successfully checked in ${checkedInCount} child${checkedInCount !== 1 ? 'ren' : ''} from ${registration.registration_number}${
+            alreadyCheckedInCount > 0 ? ` (${alreadyCheckedInCount} already checked in)` : ''
+          }`
+        );
+        
+        // Refresh the attendance list
+        loadTodaysRegistrations();
+      } else if (alreadyCheckedInCount > 0) {
+        toast.info('All children from this registration are already checked in');
+      }
+    } catch (error) {
+      console.error('Error processing QR scan:', error);
+      toast.error('Failed to process QR code. Please try again or check in manually.');
+      setScannerOpen(false);
     }
   };
 
@@ -215,6 +279,14 @@ export const AttendanceMarkingTab: React.FC = () => {
               <Button onClick={handleSearch}>
                 <Search className="h-4 w-4" />
               </Button>
+              <Button 
+                onClick={() => setScannerOpen(true)}
+                variant="secondary"
+                className="flex items-center gap-2"
+              >
+                <QrCode className="h-4 w-4" />
+                Scan QR Code
+              </Button>
             </div>
             <Select value={campTypeFilter} onValueChange={setCampTypeFilter}>
               <SelectTrigger className="w-[180px]">
@@ -225,11 +297,18 @@ export const AttendanceMarkingTab: React.FC = () => {
                 <SelectItem value="easter">Easter</SelectItem>
                 <SelectItem value="summer">Summer</SelectItem>
                 <SelectItem value="end-year">End Year</SelectItem>
+                <SelectItem value="little-forest">Little Forest</SelectItem>
               </SelectContent>
             </Select>
           </div>
         </CardHeader>
       </Card>
+
+      <QRScannerDialog
+        open={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onScanSuccess={handleQRScan}
+      />
 
       {loading ? (
         <div className="text-center py-8">Loading...</div>

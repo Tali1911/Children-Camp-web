@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { LayoutDashboard, Users, Settings, FileText, Shield, Building, Database, MessageSquare, BarChart3 } from "lucide-react";
 import SystemAdministration from './SystemAdministration';
 import { CampRegistrationsManager } from './portals/admin/CampRegistrationsManager';
+import { ProgramRegistrationsManager } from './portals/admin/ProgramRegistrationsManager';
 import MessageCenter from './communication/MessageCenter';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 import CustomerDashboard from './admin/CustomerDashboard';
@@ -37,6 +38,8 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeTab }) => {
         return <CustomerDashboard />;
       case 'camp-registrations':
         return <CampRegistrationsManager />;
+      case 'program-registrations':
+        return <ProgramRegistrationsManager />;
       default:
         return renderDashboard();
     }

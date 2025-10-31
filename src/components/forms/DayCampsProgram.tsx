@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 import { CalendarDays, MapPin, Clock, Users, Trash2, Plus } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { qrCodeService } from '@/services/qrCodeService';
@@ -142,9 +143,9 @@ const DayCampsProgram = () => {
           price: child.price,
         })),
         total_amount: totalAmount,
-        payment_status: buttonType === 'pay' ? 'paid' as const : 'unpaid' as const,
-        payment_method: buttonType === 'pay' ? 'card' as const : 'pending' as const,
-        registration_type: buttonType === 'pay' ? 'online_paid' as const : 'online_only' as const,
+        payment_status: 'unpaid' as const,
+        payment_method: 'pending' as const,
+        registration_type: 'online_only' as const,
         qr_code_data: '',
         consent_given: data.consentGiven,
         status: 'active' as const,
@@ -163,10 +164,14 @@ const DayCampsProgram = () => {
       
       setRegistrationResult({ ...registration, qr_code_data: qrData });
       setQrCodeDataUrl(qrDataUrl);
-      setRegistrationType(buttonType === 'pay' ? 'online_paid' : 'online_only');
+      setRegistrationType('online_only');
       setShowQRModal(true);
       
       toast.success('Registration successful!');
+      
+      if (buttonType === 'pay') {
+        toast.info('Payment integration coming soon! Your registration is saved as unpaid.');
+      }
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
@@ -546,6 +551,8 @@ const DayCampsProgram = () => {
               {errors.consentGiven && (
                 <p className="text-sm text-destructive">{errors.consentGiven.message}</p>
               )}
+
+              <RefundPolicyDialog />
 
               {/* Submit Buttons */}
               <div className="grid md:grid-cols-2 gap-4">

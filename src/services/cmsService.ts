@@ -457,5 +457,77 @@ export const cmsService = {
       console.error('Error updating camp form config:', err);
       return null;
     }
+  },
+
+  // Program Form Management
+  async getProgramFormConfig(formType: string): Promise<ContentItem | null> {
+    try {
+      const slug = `${formType}-form`;
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .select('*')
+        .eq('content_type', 'program_form')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .single();
+
+      if (error && error.code !== 'PGRST116') throw error;
+      return data || null;
+    } catch (err) {
+      console.error('Error fetching program form config:', err);
+      return null;
+    }
+  },
+
+  async getAllProgramForms(): Promise<ContentItem[]> {
+    try {
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .select('*')
+        .eq('content_type', 'program_form')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('Error fetching program forms:', err);
+      return [];
+    }
+  },
+
+  async updateProgramFormConfig(formType: string, config: any): Promise<ContentItem | null> {
+    try {
+      const slug = `${formType}-form`;
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .upsert({
+          slug,
+          content_type: 'program_form',
+          title: `${formType.charAt(0).toUpperCase() + formType.slice(1)} Form Config`,
+          status: 'published',
+          content: JSON.stringify(config),
+          metadata: { formConfig: config },
+          author_id: user?.id,
+          published_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'slug,content_type',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Upsert error:', error);
+        throw error;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Error updating program form config:', err);
+      return null;
+    }
   }
 };

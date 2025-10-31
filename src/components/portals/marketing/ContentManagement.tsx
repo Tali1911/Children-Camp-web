@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, CheckCircle, Settings } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, Settings, FormInput } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { cmsService, ContentItem } from '@/services/cmsService';
@@ -22,8 +22,10 @@ import NavigationManager from './NavigationManager';
 import SeedCMSButton from '@/components/admin/SeedCMSButton';
 import { CampPageEditor } from './editors/CampPageEditor';
 import { CampFormEditor } from './editors/CampFormEditor';
+import { LittleForestEditor } from './editors/LittleForestEditor';
+import { ProgramFormEditor } from './editors/ProgramFormEditor';
 
-type EditorType = 'hero' | 'program' | 'announcement' | 'testimonial' | 'team' | 'settings' | 'about' | 'service' | 'camp-page' | 'camp-form' | null;
+type EditorType = 'hero' | 'program' | 'announcement' | 'testimonial' | 'team' | 'settings' | 'about' | 'service' | 'camp-page' | 'camp-form' | 'little-forest' | 'program-form' | null;
 
 const ContentManagement = () => {
   const isMobile = useIsMobile();
@@ -37,6 +39,7 @@ const ContentManagement = () => {
   const [serviceItems, setServiceItems] = useState<ContentItem[]>([]);
   const [campPages, setCampPages] = useState<ContentItem[]>([]);
   const [campForms, setCampForms] = useState<ContentItem[]>([]);
+  const [programForms, setProgramForms] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeEditor, setActiveEditor] = useState<EditorType>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -47,7 +50,7 @@ const ContentManagement = () => {
 
   const loadAllContent = async () => {
     setIsLoading(true);
-    const [heroData, programData, announcementData, testimonialData, teamData, aboutData, serviceData, campPageData, campFormData] = await Promise.all([
+    const [heroData, programData, announcementData, testimonialData, teamData, aboutData, serviceData, campPageData, campFormData, programFormData] = await Promise.all([
       cmsService.getAllContent('hero_slide'),
       cmsService.getAllContent('program'),
       cmsService.getAllContent('announcement'),
@@ -56,7 +59,8 @@ const ContentManagement = () => {
       cmsService.getAllContent('about_section'),
       cmsService.getAllContent('service_item'),
       cmsService.getAllContent('camp_page'),
-      cmsService.getAllContent('camp_form')
+      cmsService.getAllContent('camp_form'),
+      cmsService.getAllProgramForms()
     ]);
     setHeroSlides(heroData);
     setPrograms(programData);
@@ -67,6 +71,7 @@ const ContentManagement = () => {
     setServiceItems(serviceData);
     setCampPages(campPageData);
     setCampForms(campFormData);
+    setProgramForms(programFormData);
     setIsLoading(false);
   };
 
@@ -170,6 +175,7 @@ const ContentManagement = () => {
               <SelectItem value="testimonials">Testimonials</SelectItem>
               <SelectItem value="team">Team</SelectItem>
               <SelectItem value="programs">Programs</SelectItem>
+              <SelectItem value="program-forms">Program Forms</SelectItem>
               <SelectItem value="gallery">Gallery</SelectItem>
               <SelectItem value="announcements">Announcements</SelectItem>
               <SelectItem value="calendar">Calendar</SelectItem>
@@ -179,13 +185,14 @@ const ContentManagement = () => {
             </SelectContent>
           </Select>
         ) : (
-          <TabsList className="grid grid-cols-6 lg:grid-cols-12">
+          <TabsList className="grid grid-cols-7 lg:grid-cols-13 gap-1 overflow-x-auto">
             <TabsTrigger value="hero">Hero</TabsTrigger>
             <TabsTrigger value="services">Services</TabsTrigger>
             <TabsTrigger value="about">About</TabsTrigger>
             <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="programs">Programs</TabsTrigger>
+            <TabsTrigger value="program-forms">Forms</TabsTrigger>
             <TabsTrigger value="gallery">Gallery</TabsTrigger>
             <TabsTrigger value="announcements">Announcements</TabsTrigger>
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
@@ -307,7 +314,7 @@ const ContentManagement = () => {
         </TabsContent>
 
         <TabsContent value="camps" className="space-y-4">
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <Card>
               <CardHeader>
                 <CardTitle>Camp Pages</CardTitle>
@@ -373,7 +380,78 @@ const ContentManagement = () => {
                 )}
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Little Forest Explorers</CardTitle>
+                <CardDescription>Manage Little Forest registration form</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Customize the Little Forest Explorers registration form including pricing, field labels, and messages.
+                  </p>
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    onClick={() => setActiveEditor('little-forest')}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Little Forest Form
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </div>
+        </TabsContent>
+
+        <TabsContent value="program-forms" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FormInput className="w-5 h-5" />
+                Program Registration Forms
+              </CardTitle>
+              <CardDescription>
+                Manage registration form configurations for all programs. Edit field labels, pricing, messages, and content.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-4">Loading...</div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {programForms.map((form) => (
+                    <Card key={form.id} className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">{form.title}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{form.slug}</p>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setActiveEditor('program-form');
+                            setEditingItem(form.slug);
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Form Config
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
+                  {programForms.length === 0 && (
+                    <div className="col-span-full text-center py-8 text-muted-foreground">
+                      No program forms found. Run the SQL migration to seed program forms.
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="settings" className="space-y-4">
@@ -476,6 +554,23 @@ const ContentManagement = () => {
 
       {activeEditor === 'camp-form' && (
         <CampFormEditor
+          isOpen={true}
+          onClose={closeEditor}
+          formSlug={editingItem}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'little-forest' && (
+        <LittleForestEditor
+          isOpen={true}
+          onClose={closeEditor}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'program-form' && (
+        <ProgramFormEditor
           isOpen={true}
           onClose={closeEditor}
           formSlug={editingItem}

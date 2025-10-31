@@ -14,6 +14,7 @@ import { Link } from "react-router-dom";
 import birthdayImage from "@/assets/birthday.jpg";
 import DatePickerField from "./DatePickerField";
 import { ConsentDialog } from "./ConsentDialog";
+import { RefundPolicyDialog } from "./RefundPolicyDialog";
 
 const childSchema = z.object({
   childName: z.string().min(1, "Child name is required").max(100),
@@ -69,9 +70,29 @@ const PartiesProgram = () => {
 
   const onSubmit = async (data: PartiesFormData) => {
     try {
-      console.log("Parties form submission:", data);
-      toast.success("Party booking submitted successfully! We will contact you soon.");
+      // Save to database
+      const { partiesService } = await import('@/services/programRegistrationService');
+      const registration = await partiesService.create(data);
+
+      // Send confirmation email
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('send-program-confirmation', {
+        body: {
+          email: data.email,
+          name: data.parentName,
+          programType: 'parties',
+          details: {
+            occasion: data.occasion,
+            packageType: data.packageType,
+            guestsNumber: data.guestsNumber,
+            eventDate: data.eventDate
+          }
+        }
+      });
+
+      toast.success("Party booking submitted successfully! Check your email for confirmation.");
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error("Failed to submit booking. Please try again.");
     }
   };
@@ -340,6 +361,8 @@ const PartiesProgram = () => {
                 onCheckedChange={(checked) => setValue("consent", checked)}
                 error={errors.consent?.message}
               />
+
+              <RefundPolicyDialog />
 
               <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Book Party"}

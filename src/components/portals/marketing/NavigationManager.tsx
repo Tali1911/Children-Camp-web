@@ -29,19 +29,22 @@ const NavigationManager: React.FC = () => {
     const success = await navigationService.updateNavigationVisibility(navKey, newValue);
     
     if (success) {
-      setSettings(prev =>
-        prev.map(item =>
-          item.nav_key === navKey ? { ...item, is_visible: newValue } : item
-        )
-      );
+      // Reload settings from database to ensure sync
+      const reloadedData = await navigationService.getNavigationSettings();
+      setSettings(reloadedData);
+      
+      // Use the actual value from the reloaded settings
+      const updatedSetting = reloadedData.find(s => s.nav_key === navKey);
+      const actualValue = updatedSetting?.is_visible ?? newValue;
+      
       toast({
         title: 'Navigation Updated',
-        description: `${settings.find(s => s.nav_key === navKey)?.label} is now ${newValue ? 'visible' : 'hidden'}.`,
+        description: `${updatedSetting?.label} is now ${actualValue ? 'visible' : 'hidden'}.`,
       });
     } else {
       toast({
         title: 'Update Failed',
-        description: 'Could not update navigation visibility.',
+        description: 'Could not update navigation visibility. Please check your permissions.',
         variant: 'destructive',
       });
     }

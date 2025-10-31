@@ -1,5 +1,5 @@
-import React from 'react';
-import { useForm } from 'react-hook-form';
+import React, { useState, useEffect } from 'react';
+import { useForm, useFieldArray, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Card } from '@/components/ui/card';
@@ -9,69 +9,189 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Baby, Clock, Heart, ArrowLeft } from 'lucide-react';
+import { Baby, Clock, Heart, ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import dailyActivitiesImage from '@/assets/daily-activities.jpg';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
+import { PaymentGatewayPlaceholder } from '@/components/camp/PaymentGatewayPlaceholder';
+import { QRCodeDownloadModal } from '@/components/camp/QRCodeDownloadModal';
+import { campRegistrationService } from '@/services/campRegistrationService';
+import { qrCodeService } from '@/services/qrCodeService';
+import type { CampRegistration } from '@/types/campRegistration';
+import { useLittleForestConfig } from '@/hooks/useLittleForestConfig';
+
+// Child schema for multiple children support
+const childSchema = z.object({
+  childName: z.string().min(2, 'Child name must be at least 2 characters'),
+  childAge: z.enum(['1-2', '2-3', '3-below'], {
+    required_error: 'Please select child age',
+  }),
+  selectedDays: z.array(z.string()).min(1, 'Select at least one day'),
+  nannyRequired: z.boolean().default(false),
+  price: z.number().default(0),
+});
 
 const littleForestSchema = z.object({
-  parentName: z.string().min(1, 'Parent name is required').max(100),
-  childName: z.string().min(1, 'Child name is required').max(100),
-  childAge: z.enum(['1-2', '2-3', '3-below']),
-  daySelection: z.array(z.string()).min(1, 'Please select at least one day'),
-  nannyOption: z.boolean().default(false),
+  parentName: z.string().min(2, 'Parent name must be at least 2 characters'),
+  children: z.array(childSchema).min(1, 'At least one child is required'),
+  emergencyContact: z.string().min(10, 'Emergency contact must be at least 10 digits'),
   email: z.string().email('Invalid email address'),
-  phone: z.string().min(1, 'Phone number is required').max(20),
-  consent: z.boolean().refine(val => val === true, 'Consent is required')
+  phone: z.string().min(10, 'Phone number must be at least 10 digits'),
+  consent: z.boolean().refine(val => val === true, 'Consent is required'),
 });
 
 type LittleForestFormData = z.infer<typeof littleForestSchema>;
 
 const LittleForestProgram = () => {
+  const { config, isLoading: configLoading } = useLittleForestConfig();
+  const SESSION_PRICE = config.pricing.sessionRate;
+
+  const [submitType, setSubmitType] = useState<'register' | 'pay'>('register');
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [registrationResult, setRegistrationResult] = useState<CampRegistration | null>(null);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [totalAmount, setTotalAmount] = useState(0);
+
   const {
     register,
     handleSubmit,
     setValue,
     watch,
-    formState: { errors, isSubmitting }
+    control,
+    formState: { errors, isSubmitting },
   } = useForm<LittleForestFormData>({
     resolver: zodResolver(littleForestSchema),
     defaultValues: {
-      daySelection: [],
-      nannyOption: false,
-      consent: false
-    }
+      consent: false,
+      children: [{
+        childName: '',
+        childAge: undefined,
+        selectedDays: [],
+        nannyRequired: false,
+        price: 0,
+      }],
+    },
   });
 
-  const watchedDays = watch('daySelection') || [];
-  const consent = watch('consent');
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: 'children',
+  });
+
+  const watchChildren = watch('children');
+  const watchConsent = watch('consent');
+
+  // Auto-calculate pricing
+  useEffect(() => {
+    let total = 0;
+    watchChildren.forEach((child, index) => {
+      const childPrice = (child.selectedDays?.length || 0) * SESSION_PRICE;
+      setValue(`children.${index}.price`, childPrice);
+      total += childPrice;
+    });
+    setTotalAmount(total);
+  }, [watchChildren, setValue, SESSION_PRICE]);
 
   const onSubmit = async (data: LittleForestFormData) => {
     try {
-      console.log('Little Forest Explorers form submission:', data);
-      toast.success('Registration submitted successfully! We will contact you soon.');
+      // Payment integration not yet available - all registrations are unpaid
+      const registrationData = {
+        camp_type: 'little-forest' as const,
+        parent_name: data.parentName,
+        email: data.email,
+        phone: data.phone,
+        emergency_contact: data.emergencyContact,
+        children: data.children.map(child => ({
+          childName: child.childName,
+          dateOfBirth: '',
+          ageRange: child.childAge,
+          specialNeeds: child.nannyRequired ? 'Accompanied by Nanny' : '',
+          selectedDays: child.selectedDays,
+          selectedSessions: child.selectedDays,
+          price: child.price,
+        })),
+        total_amount: totalAmount,
+        payment_status: 'unpaid' as const,
+        payment_method: 'pending' as const,
+        registration_type: 'online_only' as const,
+        qr_code_data: '',
+        consent_given: data.consent,
+        status: 'active' as const,
+      };
+
+      const tempId = `LF-${Date.now()}`;
+      const qrData = qrCodeService.generateQRCodeData(tempId);
+      registrationData.qr_code_data = qrData;
+
+      const result = await campRegistrationService.createRegistration(registrationData);
+      const qrCodeUrl = await qrCodeService.generateQRCode(result.qr_code_data);
+      
+      setRegistrationResult(result);
+      setQrCodeDataUrl(qrCodeUrl);
+      setShowQRModal(true);
+
+      toast.success(config.messages.registrationSuccess);
+      
+      // Show payment integration message if user clicked "Register and Pay"
+      if (submitType === 'pay') {
+        setTimeout(() => {
+          toast.info('Payment integration coming soon! You will receive an invoice with payment instructions via email.');
+        }, 500);
+      }
     } catch (error) {
-      toast.error('Failed to submit registration. Please try again.');
+      console.error('Registration error:', error);
+      toast.error(config.messages.registrationError);
     }
   };
 
-  const handleDayChange = (day: string, checked: boolean) => {
-    const currentDays = watchedDays;
-    if (checked) {
-      setValue('daySelection', [...currentDays, day]);
-    } else {
-      setValue('daySelection', currentDays.filter(d => d !== day));
-    }
+  const addChild = () => {
+    append({
+      childName: '',
+      childAge: undefined,
+      selectedDays: [],
+      nannyRequired: false,
+      price: 0,
+    });
   };
 
-  const schedule = [
-    { time: '10:00', activity: 'Welcome Song & Nature Walk', skills: 'Language, Motor' },
-    { time: '10:30', activity: 'Mud Kitchen & Sensory Play', skills: 'Sensory Exploration' },
-    { time: '11:00', activity: 'Swahili Story Circle', skills: 'Listening' },
-    { time: '11:30', activity: 'Nature Craft & Drumming', skills: 'Rhythm' },
-    { time: '12:15', activity: 'Snack & Free Play', skills: 'Social Skills' },
-    { time: '12:45', activity: 'Closing Song', skills: 'Routine & Transition' }
-  ];
+  const handleDayChange = (childIndex: number, day: string, checked: boolean) => {
+    const currentDays = watchChildren[childIndex]?.selectedDays || [];
+    const newDays = checked
+      ? [...currentDays, day]
+      : currentDays.filter((d) => d !== day);
+    setValue(`children.${childIndex}.selectedDays`, newDays);
+  };
+
+  const schedule = [{
+    time: '10:00',
+    activity: 'Welcome Song & Nature Walk',
+    skills: 'Language, Motor'
+  }, {
+    time: '10:30',
+    activity: 'Mud Kitchen & Sensory Play',
+    skills: 'Sensory Exploration'
+  }, {
+    time: '11:00',
+    activity: 'Swahili Story Circle',
+    skills: 'Listening'
+  }, {
+    time: '11:30',
+    activity: 'Nature Craft & Drumming',
+    skills: 'Rhythm'
+  }, {
+    time: '12:15',
+    activity: 'Snack & Free Play',
+    skills: 'Social Skills'
+  }, {
+    time: '12:45',
+    activity: 'Closing Song',
+    skills: 'Routine & Transition'
+  }];
+
+  if (configLoading) {
+    return <div className="container mx-auto px-4 py-8 text-center">Loading form configuration...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -104,11 +224,7 @@ const LittleForestProgram = () => {
             </div>
 
             <div className="relative h-80 rounded-2xl overflow-hidden">
-              <img 
-                src={dailyActivitiesImage} 
-                alt="Little children exploring nature"
-                className="w-full h-full object-cover"
-              />
+              <img src={dailyActivitiesImage} alt="Little children exploring nature" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             </div>
 
@@ -154,127 +270,225 @@ const LittleForestProgram = () => {
             
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
               <div>
-                <Label htmlFor="parentName" className="text-base font-medium">Parent Name *</Label>
-                <Input
-                  id="parentName"
-                  {...register('parentName')}
-                  className="mt-2"
-                  placeholder="Enter your full name"
-                />
-                {errors.parentName && (
-                  <p className="text-destructive text-sm mt-1">{errors.parentName.message}</p>
-                )}
+                <Label htmlFor="parentName" className="text-base font-medium">{config.fields.parentName.label}</Label>
+                <Input id="parentName" {...register('parentName')} className="mt-2" placeholder={config.fields.parentName.placeholder} />
+                {errors.parentName && <p className="text-destructive text-sm mt-1">{errors.parentName.message}</p>}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="childName" className="text-base font-medium">Child Name *</Label>
-                  <Input
-                    id="childName"
-                    {...register('childName')}
-                    className="mt-2"
-                    placeholder="Child's name"
-                  />
-                  {errors.childName && (
-                    <p className="text-destructive text-sm mt-1">{errors.childName.message}</p>
-                  )}
+              {/* Children Section */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-base font-medium">Children Information</Label>
+                  <Button
+                    type="button"
+                    onClick={addChild}
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    {config.buttons.addChild}
+                  </Button>
                 </div>
-                <div>
-                  <Label htmlFor="childAge" className="text-base font-medium">Child Age *</Label>
-                  <Select onValueChange={(value) => setValue('childAge', value as any)}>
-                    <SelectTrigger className="mt-2">
-                      <SelectValue placeholder="Select age range" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1-2">1-2 years</SelectItem>
-                      <SelectItem value="2-3">2-3 years</SelectItem>
-                      <SelectItem value="3-below">3 & below</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.childAge && (
-                    <p className="text-destructive text-sm mt-1">{errors.childAge.message}</p>
-                  )}
-                </div>
+
+                {fields.map((field, index) => (
+                  <Card key={field.id} className="p-4 space-y-4 border-2">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-semibold">Child {index + 1}</h4>
+                      {fields.length > 1 && (
+                        <Button
+                          type="button"
+                          onClick={() => remove(index)}
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor={`children.${index}.childName`}>{config.fields.childName.label}</Label>
+                      <Input
+                        {...register(`children.${index}.childName`)}
+                        placeholder={config.fields.childName.placeholder}
+                        className="mt-2"
+                      />
+                      {errors.children?.[index]?.childName && (
+                        <p className="text-destructive text-sm mt-1">
+                          {errors.children[index]?.childName?.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label htmlFor={`children.${index}.childAge`}>{config.fields.childAge.label}</Label>
+                      <Controller
+                        name={`children.${index}.childAge`}
+                        control={control}
+                        render={({ field }) => (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue placeholder={config.fields.childAge.placeholder} />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {config.ageOptions.map(option => (
+                                <SelectItem key={option.value} value={option.value}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                      {errors.children?.[index]?.childAge && (
+                        <p className="text-destructive text-sm mt-1">
+                          {errors.children[index]?.childAge?.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div>
+                      <Label className="text-base font-medium">
+                        Select Days * ({config.pricing.currency} {SESSION_PRICE.toLocaleString()} per day)
+                      </Label>
+                      <div className="mt-3 flex gap-6">
+                        {config.dayOptions.map(day => (
+                          <div key={day.value} className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`${day.value}-${index}`}
+                              checked={watchChildren[index]?.selectedDays?.includes(day.value)}
+                              onCheckedChange={(checked) =>
+                                handleDayChange(index, day.value, checked as boolean)
+                              }
+                            />
+                            <Label htmlFor={`${day.value}-${index}`} className="text-base">
+                              {day.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                      {errors.children?.[index]?.selectedDays && (
+                        <p className="text-destructive text-sm mt-1">
+                          {errors.children[index]?.selectedDays?.message}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="bg-accent/30 p-4 rounded-lg">
+                      <div className="flex items-center space-x-3">
+                        <Controller
+                          name={`children.${index}.nannyRequired`}
+                          control={control}
+                          render={({ field }) => (
+                            <Checkbox
+                              id={`nanny-${index}`}
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                            />
+                          )}
+                        />
+                        <Label htmlFor={`nanny-${index}`} className="text-base">
+                          {config.fields.nannyOption.label}
+                        </Label>
+                      </div>
+                    </div>
+
+                    {watchChildren[index]?.price > 0 && (
+                      <div className="pt-2 border-t">
+                        <p className="text-sm font-semibold">
+                          Subtotal: {config.pricing.currency} {watchChildren[index].price.toLocaleString()}
+                        </p>
+                      </div>
+                    )}
+                  </Card>
+                ))}
               </div>
 
               <div>
-                <Label className="text-base font-medium">Day Selection *</Label>
-                <div className="mt-3 flex gap-6">
-                  {['Monday', 'Friday'].map((day) => (
-                    <div key={day} className="flex items-center space-x-3">
-                      <Checkbox
-                        id={day}
-                        checked={watchedDays.includes(day)}
-                        onCheckedChange={(checked) => handleDayChange(day, checked as boolean)}
-                      />
-                      <Label htmlFor={day} className="text-base">{day}</Label>
-                    </div>
-                  ))}
-                </div>
-                {errors.daySelection && (
-                  <p className="text-destructive text-sm mt-1">{errors.daySelection.message}</p>
+                <Label htmlFor="emergencyContact" className="text-base font-medium">{config.fields.emergencyContact.label}</Label>
+                <Input
+                  id="emergencyContact"
+                  {...register('emergencyContact')}
+                  className="mt-2"
+                  placeholder={config.fields.emergencyContact.placeholder}
+                />
+                {errors.emergencyContact && (
+                  <p className="text-destructive text-sm mt-1">{errors.emergencyContact.message}</p>
                 )}
-              </div>
-
-              <div className="bg-accent/30 p-4 rounded-lg">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id="nannyOption"
-                    {...register('nannyOption')}
-                  />
-                  <Label htmlFor="nannyOption" className="text-base">
-                    Nanny Required (Optional)
-                  </Label>
-                </div>
-                <p className="text-sm text-muted-foreground mt-2 ml-7">
-                  Check if you need nanny services for your child during the program
-                </p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="email" className="text-base font-medium">Email *</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    {...register('email')}
-                    className="mt-2"
-                    placeholder="your@email.com"
-                  />
-                  {errors.email && (
-                    <p className="text-destructive text-sm mt-1">{errors.email.message}</p>
-                  )}
+                  <Label htmlFor="email" className="text-base font-medium">{config.fields.email.label}</Label>
+                  <Input id="email" type="email" {...register('email')} className="mt-2" placeholder={config.fields.email.placeholder} />
+                  {errors.email && <p className="text-destructive text-sm mt-1">{errors.email.message}</p>}
                 </div>
                 <div>
-                  <Label htmlFor="phone" className="text-base font-medium">Phone Number *</Label>
-                  <Input
-                    id="phone"
-                    {...register('phone')}
-                    className="mt-2"
-                    placeholder="+254 700 000 000"
-                  />
-                  {errors.phone && (
-                    <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>
-                  )}
+                  <Label htmlFor="phone" className="text-base font-medium">{config.fields.phone.label}</Label>
+                  <Input id="phone" {...register('phone')} className="mt-2" placeholder={config.fields.phone.placeholder} />
+                  {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>}
                 </div>
               </div>
 
               <ConsentDialog
-                checked={consent}
+                checked={watchConsent}
                 onCheckedChange={(checked) => setValue('consent', checked)}
                 error={errors.consent?.message}
               />
 
-              <Button 
-                type="submit" 
-                className="w-full h-12 text-base"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Submitting...' : 'Register Little Explorer'}
-              </Button>
+              <RefundPolicyDialog />
+
+              {/* Total Amount Display */}
+              <div className="bg-primary/10 rounded-lg p-6 text-center">
+                <p className="text-sm text-muted-foreground mb-2">Total Amount</p>
+                <p className="text-3xl font-bold text-primary">
+                  {config.pricing.currency} {totalAmount.toLocaleString()}
+                </p>
+              </div>
+
+              <PaymentGatewayPlaceholder />
+
+              <div className="space-y-4">
+                <p className="text-center text-muted-foreground text-sm">{config.messages.chooseOption}</p>
+                
+                <div className="grid gap-3">
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    size="lg"
+                    onClick={() => setSubmitType('register')}
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    {config.buttons.registerOnly}
+                  </Button>
+                  
+                  <Button
+                    type="submit"
+                    size="lg"
+                    onClick={() => setSubmitType('pay')}
+                    disabled={isSubmitting}
+                    className="w-full"
+                  >
+                    {config.buttons.registerAndPay}
+                  </Button>
+                </div>
+              </div>
             </form>
           </Card>
         </div>
+
+        {registrationResult && (
+          <QRCodeDownloadModal
+            open={showQRModal}
+            onOpenChange={setShowQRModal}
+            registration={registrationResult}
+            qrCodeDataUrl={qrCodeDataUrl}
+            registrationType={submitType === 'register' ? 'online_only' : 'online_paid'}
+          />
+        )}
       </div>
     </div>
   );

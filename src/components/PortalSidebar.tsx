@@ -136,6 +136,7 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'users', label: 'User Management', icon: Users },
           { id: 'customers', label: 'Customer Management', icon: Users },
           { id: 'camp-registrations', label: 'Camp Registrations', icon: Tent },
+          { id: 'program-registrations', label: 'Program Registrations', icon: Calendar },
           { id: 'system', label: 'System Admin', icon: Database },
           { id: 'settings', label: 'System Settings', icon: Settings },
           { id: 'audit', label: 'Audit Logs', icon: FileText },

@@ -14,6 +14,7 @@ import { Mountain, MapPin, Calendar, ArrowLeft, Plus, Trash2 } from 'lucide-reac
 import { Link } from 'react-router-dom';
 import adventureImage from '@/assets/adventure.jpg';
 import { ConsentDialog } from './ConsentDialog';
+import { RefundPolicyDialog } from './RefundPolicyDialog';
 import DatePickerField from './DatePickerField';
 
 const participantSchema = z.object({
@@ -71,9 +72,28 @@ const KenyanExperiencesProgram = () => {
 
   const onSubmit = async (data: KenyanExperiencesFormData) => {
     try {
-      console.log('Kenyan Experiences form submission:', data);
-      toast.success('Registration submitted successfully! We will contact you soon.');
+      // Save to database
+      const { kenyanExperiencesService } = await import('@/services/programRegistrationService');
+      const registration = await kenyanExperiencesService.create(data);
+
+      // Send confirmation email
+      const { supabase } = await import('@/integrations/supabase/client');
+      await supabase.functions.invoke('send-program-confirmation', {
+        body: {
+          email: data.email,
+          name: data.parentLeader,
+          programType: 'kenyan-experiences',
+          details: {
+            circuit: data.circuit,
+            participants: data.participants,
+            transport: data.transport
+          }
+        }
+      });
+
+      toast.success('Registration submitted successfully! Check your email for confirmation.');
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Failed to submit registration. Please try again.');
     }
   };
@@ -437,7 +457,9 @@ const KenyanExperiencesProgram = () => {
                 error={errors.consent?.message}
               />
 
-              <Button 
+              <RefundPolicyDialog />
+
+              <Button
                 type="submit" 
                 className="w-full h-12 text-base"
                 disabled={isSubmitting}
