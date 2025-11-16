@@ -16,7 +16,7 @@ import EasterCamp from "./pages/camps/EasterCamp";
 import SummerCamp from "./pages/camps/SummerCamp";
 import EndYearCamp from "./pages/camps/EndYearCamp";
 import MidTermCamp from "./pages/camps/MidTermCamp";
-import DayCamps from "./pages/camps/DayCamps";
+// import DayCamps from "./pages/camps/DayCamps";
 import KenyanExperiencesPage from "./pages/experiences/KenyanExperiences";
 import TeamBuilding from "./pages/group-activities/TeamBuilding";
 import Parties from "./pages/group-activities/Parties";
@@ -57,7 +57,7 @@ function App() {
               <Route path="/camps/summer" element={<SummerCamp />} />
               <Route path="/camps/end-year" element={<EndYearCamp />} />
               <Route path="/camps/mid-term/:period" element={<MidTermCamp />} />
-              <Route path="/camps/day-camps" element={<DayCamps />} />
+              {/* <Route path="/camps/day-camps" element={<DayCamps />} /> */}
               
               {/* Experiences Routes */}
               <Route path="/experiences/kenyan-experiences" element={<KenyanExperiencesPage />} />

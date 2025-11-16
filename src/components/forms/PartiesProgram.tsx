@@ -29,7 +29,10 @@ const partiesSchema = z.object({
   children: z.array(childSchema).min(1, "At least one child is required"),
   guestsNumber: z.string().min(1, "Number of guests is required"),
   packageType: z.enum(["half-day", "full-day"]),
+  eventTiming: z.enum(["day", "night", "both"], { required_error: "Event timing is required" }),
   eventDate: z.date({ required_error: "Event date is required" }),
+  startTime: z.string().min(1, "Start time is required").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format"),
+  endTime: z.string().min(1, "End time is required").regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, "Invalid time format"),
   location: z.enum(["karura-f", "tigoni"]),
   decor: z.boolean().default(false),
   catering: z.boolean().default(false),
@@ -96,8 +99,11 @@ const PartiesProgram = () => {
           details: {
             occasion: data.occasion,
             packageType: data.packageType,
+            eventTiming: data.eventTiming,
             guestsNumber: data.guestsNumber,
-            eventDate: data.eventDate
+            eventDate: data.eventDate,
+            startTime: data.startTime,
+            endTime: data.endTime
           },
           totalAmount: 0, // TBD - will be confirmed by team
           registrationId: registration && 'id' in registration ? registration.id : undefined
@@ -303,6 +309,21 @@ const PartiesProgram = () => {
                 {errors.packageType && <p className="text-destructive text-sm mt-1">{errors.packageType.message}</p>}
               </div>
 
+              <div>
+                <Label className="text-base font-medium">Event Timing *</Label>
+                <Select onValueChange={(value) => setValue("eventTiming", value as any)}>
+                  <SelectTrigger className="mt-2">
+                    <SelectValue placeholder="Select event timing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="day">During the Day</SelectItem>
+                    <SelectItem value="night">During the Night</SelectItem>
+                    <SelectItem value="both">Both Day and Night</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.eventTiming && <p className="text-destructive text-sm mt-1">{errors.eventTiming.message}</p>}
+              </div>
+
               <Controller
                 name="eventDate"
                 control={control}
@@ -317,6 +338,38 @@ const PartiesProgram = () => {
                   />
                 )}
               />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="startTime" className="text-base font-medium">
+                    Start Time *
+                  </Label>
+                  <Input
+                    id="startTime"
+                    type="time"
+                    {...register("startTime")}
+                    className="mt-2"
+                  />
+                  {errors.startTime && (
+                    <p className="text-destructive text-sm mt-1">{errors.startTime.message}</p>
+                  )}
+                </div>
+
+                <div>
+                  <Label htmlFor="endTime" className="text-base font-medium">
+                    End Time *
+                  </Label>
+                  <Input
+                    id="endTime"
+                    type="time"
+                    {...register("endTime")}
+                    className="mt-2"
+                  />
+                  {errors.endTime && (
+                    <p className="text-destructive text-sm mt-1">{errors.endTime.message}</p>
+                  )}
+                </div>
+              </div>
 
               <div>
                 <Label className="text-base font-medium">Location *</Label>

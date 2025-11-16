@@ -96,10 +96,10 @@ const Navbar = () => {
         { name: 'Feb/March Camp', path: '/camps/mid-term/feb-march' },
         { name: 'May/June Camp', path: '/camps/mid-term/may-june' },
         { name: 'October Camp', path: '/camps/mid-term/october' }
-      ],
-      'Day Camps': [
-        { name: 'Nairobi Day Camps', path: '/camps/day-camps' }
       ]
+      // 'Day Camps': [
+      //   { name: 'Nairobi Day Camps', path: '/camps/day-camps' }
+      // ]
     },
     schools: [
       { name: 'Homeschooling Program', path: '/programs/homeschooling' },
@@ -226,7 +226,7 @@ const Navbar = () => {
                 onMouseEnter={() => setActiveDropdown('camps')}
                 onMouseLeave={() => setActiveDropdown(null)}
               >
-                <div className="grid grid-cols-3 gap-4 p-4">
+                <div className="grid grid-cols-2 gap-4 p-4">
                   {Object.entries(programDropdowns.camps).map(([category, items]) => (
                     <div key={category}>
                       <h3 className="font-semibold text-gray-900 mb-2 px-2">{category}</h3>
