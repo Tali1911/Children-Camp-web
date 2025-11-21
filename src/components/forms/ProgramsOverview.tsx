@@ -73,6 +73,42 @@ const defaultPrograms = [
   },
 ];
 
+const getProgramUrl = (programId: string, title: string): string => {
+  // Normalize title for matching
+  const normalizedTitle = title.toLowerCase();
+
+  // Map based on title keywords for robust matching
+  if (normalizedTitle.includes("kenyan") || normalizedTitle.includes("5-day")) {
+    return "/experiences/kenyan-experiences";
+  }
+  if (normalizedTitle.includes("day camp") || normalizedTitle.includes("nairobi circuit")) {
+    return "/camps/day-camps";
+  }
+  if (normalizedTitle.includes("team building")) {
+    return "/group-activities/team-building";
+  }
+  if (normalizedTitle.includes("little forest") || normalizedTitle.includes("little explorer")) {
+    return "/programs/little-forest";
+  }
+  if (normalizedTitle.includes("school experience")) {
+    return "/programs/school-experience";
+  }
+  if (normalizedTitle.includes("homeschool")) {
+    return "/programs/homeschooling";
+  }
+
+  // Fallback to ID-based mapping
+  const urlMap: Record<string, string> = {
+    "kenyan-experiences": "/experiences/kenyan-experiences",
+    "day-camps": "/camps/day-camps",
+    "team-building": "/group-activities/team-building",
+    homeschooling: "/programs/homeschooling",
+    "little-forest": "/programs/little-forest",
+    "school-experience": "/programs/school-experience",
+  };
+  return urlMap[programId] || `/programs/${programId}`;
+};
+
 const ProgramsOverview = () => {
   const [programs, setPrograms] = useState(defaultPrograms);
 
@@ -157,7 +193,7 @@ const ProgramsOverview = () => {
                     </div>
                   </div>
 
-                  <Link to={`/programs/${program.id}`}>
+                  <Link to={getProgramUrl(program.id, program.title)}>
                     <Button className="w-full group">
                       Learn More & Register
                       <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />

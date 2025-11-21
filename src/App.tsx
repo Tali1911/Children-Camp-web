@@ -52,6 +52,7 @@ function App() {
               <Route path="/admin" element={<Admin />} />
               <Route path="/contact" element={<Contact />} />
           <Route path="/gallery" element={<Gallery />} />
+          <Route path="/programs" element={<Programs />} />
           <Route path="/programs/homeschooling" element={<Homeschooling />} />
           <Route path="/programs/homeschooling-outdoor-experiences" element={<Homeschooling />} />
           <Route path="/programs/:programId" element={<ProgramDetail />} />
