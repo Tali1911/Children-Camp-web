@@ -1,11 +1,12 @@
 import React from 'react';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Calendar } from 'lucide-react';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface DateOption {
   date: string; // YYYY-MM-DD
@@ -42,8 +43,10 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
     
     dates.forEach(dateStr => {
       try {
-        const date = parseISO(dateStr);
-        const weekNumber = Math.floor((date.getTime() - parseISO(dates[0]).getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
+        // Parse as local date to avoid timezone shifts
+        const date = parseLocalDate(dateStr);
+        const firstDate = parseLocalDate(dates[0]);
+        const weekNumber = Math.floor((date.getTime() - firstDate.getTime()) / (7 * 24 * 60 * 60 * 1000)) + 1;
         
         const option: DateOption = {
           date: dateStr,

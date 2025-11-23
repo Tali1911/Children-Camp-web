@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Plus, Edit, Trash2, CheckCircle, Settings, FormInput } from 'lucide-react';
+import { Plus, Edit, Trash2, CheckCircle, Settings, FormInput, Eye, EyeOff } from 'lucide-react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { toast } from '@/hooks/use-toast';
 import { cmsService, ContentItem } from '@/services/cmsService';
@@ -132,10 +132,22 @@ const ContentManagement = () => {
               <div className="flex-1">
                 <h4 className="font-medium">{item.title}</h4>
                 <p className="text-sm text-muted-foreground mb-2">{item.slug}</p>
-                <div className="flex gap-2 items-center">
+                <div className="flex gap-2 items-center flex-wrap">
                   {getStatusBadge(item.status)}
                   {item.metadata?.order && (
                     <span className="text-xs text-muted-foreground">Order: {item.metadata.order}</span>
+                  )}
+                  {item.content_type === 'program' && item.metadata?.visible === false && (
+                    <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                      <EyeOff className="h-3 w-3 mr-1" />
+                      Hidden
+                    </Badge>
+                  )}
+                  {item.content_type === 'program' && item.metadata?.visible !== false && (
+                    <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                      <Eye className="h-3 w-3 mr-1" />
+                      Visible
+                    </Badge>
                   )}
                 </div>
               </div>

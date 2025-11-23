@@ -117,7 +117,7 @@ export const saveEvent = async (event: Event): Promise<Event | null> => {
         registration_url: event.registrationUrl,
         program_pdf: event.programPdf,
         event_type: event.eventType,
-        event_dates: event.eventDates ? JSON.stringify(event.eventDates) : null,
+        event_dates: event.eventDates || null,
         created_by: user.id
       })
       .select()
@@ -137,7 +137,7 @@ export const saveEvent = async (event: Event): Promise<Event | null> => {
       registrationUrl: (data as any).registration_url,
       programPdf: (data as any).program_pdf,
       eventType: (data as any).event_type as 'camp' | 'program' | 'workshop' | 'other',
-      eventDates: (data as any).event_dates ? JSON.parse((data as any).event_dates) : undefined
+      eventDates: (data as any).event_dates || undefined
     } : null;
   } catch (error) {
     console.error('Failed to save event:', error);
@@ -155,21 +155,41 @@ export const loadEvents = async (): Promise<Event[]> => {
 
     if (error) throw error;
 
-    return data ? data.map((event: any) => ({
-      id: event.id,
-      title: event.title,
-      start: new Date(event.start_date),
-      end: new Date(event.end_date),
-      description: event.description || '',
-      color: event.color || 'bg-forest-500',
-      location: event.location,
-      maxAttendees: event.max_attendees,
-      programType: event.program_type,
-      registrationUrl: event.registration_url,
-      programPdf: event.program_pdf,
-      eventType: event.event_type as 'camp' | 'program' | 'workshop' | 'other',
-      eventDates: event.event_dates ? JSON.parse(event.event_dates) : undefined
-    })) : [];
+    return data ? data.map((event: any) => {
+      // Handle legacy JSON-stringified eventDates
+      let eventDates = event.event_dates;
+      if (eventDates) {
+        // If it's a string (legacy format), parse it
+        if (typeof eventDates === 'string') {
+          try {
+            eventDates = JSON.parse(eventDates);
+          } catch (e) {
+            console.error('Failed to parse legacy event_dates:', e);
+            eventDates = undefined;
+          }
+        }
+        // Ensure it's an array
+        if (!Array.isArray(eventDates)) {
+          eventDates = undefined;
+        }
+      }
+      
+      return {
+        id: event.id,
+        title: event.title,
+        start: new Date(event.start_date),
+        end: new Date(event.end_date),
+        description: event.description || '',
+        color: event.color || 'bg-forest-500',
+        location: event.location,
+        maxAttendees: event.max_attendees,
+        programType: event.program_type,
+        registrationUrl: event.registration_url,
+        programPdf: event.program_pdf,
+        eventType: event.event_type as 'camp' | 'program' | 'workshop' | 'other',
+        eventDates: eventDates || undefined
+      };
+    }) : [];
   } catch (error) {
     console.error('Failed to load events:', error);
     return [];
@@ -193,7 +213,7 @@ export const updateEvent = async (event: Event): Promise<Event | null> => {
         registration_url: event.registrationUrl,
         program_pdf: event.programPdf,
         event_type: event.eventType,
-        event_dates: event.eventDates ? JSON.stringify(event.eventDates) : null
+        event_dates: event.eventDates || null
       })
       .eq('id', event.id)
       .select()
@@ -213,7 +233,7 @@ export const updateEvent = async (event: Event): Promise<Event | null> => {
       registrationUrl: (data as any).registration_url,
       programPdf: (data as any).program_pdf,
       eventType: (data as any).event_type as 'camp' | 'program' | 'workshop' | 'other',
-      eventDates: (data as any).event_dates ? JSON.parse((data as any).event_dates) : undefined
+      eventDates: (data as any).event_dates || undefined
     } : null;
   } catch (error) {
     console.error('Failed to update event:', error);

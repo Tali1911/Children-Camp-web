@@ -145,12 +145,31 @@ const AdminCalendar: React.FC = () => {
                         return dateA.getTime() - dateB.getTime();
                       })
                       .map((event) => {
-                        const isMultiDate = event.eventDates && event.eventDates.length > 0;
-                        const dateDisplay = isMultiDate 
-                          ? event.eventDates!.length === 1
-                            ? format(new Date(event.eventDates![0]), 'MMM d, yyyy')
-                            : `${format(new Date(event.eventDates![0]), 'MMM d')} - ${format(new Date(event.eventDates![event.eventDates!.length - 1]), 'MMM d, yyyy')} (${event.eventDates!.length} days)`
-                          : format(event.start instanceof Date ? event.start : new Date(event.start), 'MMM d, yyyy');
+                        const isMultiDate = event.eventDates && Array.isArray(event.eventDates) && event.eventDates.length > 0;
+                        
+                        let dateDisplay: string;
+                        if (isMultiDate) {
+                          try {
+                            const firstDate = new Date(event.eventDates![0]);
+                            const lastDate = new Date(event.eventDates![event.eventDates!.length - 1]);
+                            
+                            if (isNaN(firstDate.getTime()) || isNaN(lastDate.getTime())) {
+                              throw new Error('Invalid date');
+                            }
+                            
+                            dateDisplay = event.eventDates!.length === 1
+                              ? format(firstDate, 'MMM d, yyyy')
+                              : `${format(firstDate, 'MMM d')} - ${format(lastDate, 'MMM d, yyyy')} (${event.eventDates!.length} days)`;
+                          } catch (error) {
+                            console.error('Invalid date in eventDates:', event.eventDates, error);
+                            dateDisplay = 'Invalid dates';
+                          }
+                        } else {
+                          const startDate = event.start instanceof Date ? event.start : new Date(event.start);
+                          dateDisplay = isNaN(startDate.getTime()) 
+                            ? 'Invalid date' 
+                            : format(startDate, 'MMM d, yyyy');
+                        }
                         
                         return (
                           <Card key={event.id} className="overflow-hidden">

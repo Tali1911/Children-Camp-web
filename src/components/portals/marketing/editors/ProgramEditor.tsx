@@ -4,10 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import { toast } from '@/hooks/use-toast';
 import { cmsService } from '@/services/cmsService';
 import { supabase } from '@/integrations/supabase/client';
-import { Upload } from 'lucide-react';
+import { Upload, Eye, EyeOff } from 'lucide-react';
 
 interface Program {
   id?: string;
@@ -19,6 +20,7 @@ interface Program {
   duration: string;
   highlights: string[];
   order: number;
+  visible: boolean;
 }
 
 interface ProgramEditorProps {
@@ -37,7 +39,8 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
     ageRange: program?.metadata?.ageRange || '',
     duration: program?.metadata?.duration || '',
     highlights: Array.isArray(program?.metadata?.highlights) ? program.metadata.highlights : [],
-    order: program?.metadata?.order || 1
+    order: program?.metadata?.order || 1,
+    visible: program?.metadata?.visible ?? true // Default to visible
   });
   const [highlightInput, setHighlightInput] = useState('');
   const [isSaving, setIsSaving] = useState(false);
@@ -146,7 +149,8 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
             ageRange: formData.ageRange,
             duration: formData.duration,
             highlights: formData.highlights,
-            order: formData.order
+            order: formData.order,
+            visible: formData.visible
           }
         });
         toast({ title: 'Program updated successfully' });
@@ -163,7 +167,8 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
             ageRange: formData.ageRange,
             duration: formData.duration,
             highlights: formData.highlights,
-            order: formData.order
+            order: formData.order,
+            visible: formData.visible
           }
         });
         toast({ title: 'Program created successfully' });
@@ -292,6 +297,30 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
               value={formData.order}
               onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) })}
               min="1"
+            />
+          </div>
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-muted/30">
+            <div className="flex items-center gap-3">
+              {formData.visible ? (
+                <Eye className="h-5 w-5 text-green-600" />
+              ) : (
+                <EyeOff className="h-5 w-5 text-muted-foreground" />
+              )}
+              <div>
+                <Label htmlFor="visible" className="text-base font-medium cursor-pointer">
+                  Show on Website
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  {formData.visible 
+                    ? 'This program is visible in the "Choose Your Adventure" section' 
+                    : 'This program is hidden from public view'}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="visible"
+              checked={formData.visible}
+              onCheckedChange={(checked) => setFormData({ ...formData, visible: checked })}
             />
           </div>
           <div className="flex justify-end gap-2">

@@ -116,8 +116,11 @@ const ProgramsOverview = () => {
     const loadPrograms = async () => {
       const cmsPrograms = await cmsService.getPrograms();
       if (cmsPrograms.length > 0) {
+        // Filter visible programs before mapping
+        const visiblePrograms = cmsPrograms.filter((item) => item.metadata?.visible !== false);
+        
         setPrograms(
-          cmsPrograms.map((item) => ({
+          visiblePrograms.map((item) => ({
             id: item.slug,
             title: item.title,
             description: item.content || "",

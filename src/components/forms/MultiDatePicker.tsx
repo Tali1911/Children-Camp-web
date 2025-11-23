@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/card';
 import { X, Calendar as CalendarIcon, Plus, Trash2 } from 'lucide-react';
 import { format, addDays, startOfWeek, endOfWeek, eachDayOfInterval, isWeekend } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 
 interface MultiDatePickerProps {
   selectedDates: string[];
@@ -20,7 +21,7 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
 }) => {
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date());
 
-  const selectedDateObjects = selectedDates.map(d => new Date(d));
+  const selectedDateObjects = selectedDates.map(d => parseLocalDate(d));
   
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return;
@@ -59,7 +60,7 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
   const handleAddDateRange = () => {
     if (selectedDates.length === 0) return;
     
-    const lastDate = new Date(selectedDates[selectedDates.length - 1]);
+    const lastDate = parseLocalDate(selectedDates[selectedDates.length - 1]);
     const nextDays = eachDayOfInterval({ 
       start: addDays(lastDate, 1), 
       end: addDays(lastDate, 7) 
@@ -86,7 +87,7 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
     let currentGroup: string[] = [];
     
     selectedDates.forEach(dateString => {
-      const date = new Date(dateString);
+      const date = parseLocalDate(dateString);
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
       
       if (!currentWeekStart || weekStart.getTime() !== currentWeekStart.getTime()) {
@@ -221,7 +222,7 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
                           className="flex items-center justify-between p-2 rounded bg-muted/50 hover:bg-muted transition-colors"
                         >
                           <span className="text-sm">
-                            {format(new Date(dateString), 'EEE, MMM dd, yyyy')}
+                            {formatLocalDate(dateString, 'EEE, MMM dd, yyyy')}
                           </span>
                           <Button
                             type="button"
@@ -251,7 +252,7 @@ export const MultiDatePicker: React.FC<MultiDatePickerProps> = ({
             <div className="space-y-1">
               {selectedDates.slice(0, 5).map((dateString, idx) => (
                 <p key={dateString} className="text-sm text-muted-foreground">
-                  Day {idx + 1} ({format(new Date(dateString), 'MMM dd, yyyy')})
+                  Day {idx + 1} ({formatLocalDate(dateString, 'MMM dd, yyyy')})
                 </p>
               ))}
               {selectedDates.length > 5 && (
