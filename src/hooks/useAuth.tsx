@@ -1,6 +1,9 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import type { User, Session } from '@supabase/supabase-js';
+import { Session } from '@supabase/supabase-js';
+import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
+import { auditLogService } from '@/services/auditLogService';
 
 interface AuthContextType {
   user: any | null;
@@ -174,6 +177,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setSession(data.session);
         setIsSuperAdmin(userObject.isSuperAdmin);
         
+        // Log the login event
+        await auditLogService.logLogin(userObject.username || email);
+        
         console.log('Login successful:', userObject);
         return true;
       }
@@ -215,7 +221,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const logout = async () => {
+    const username = user?.username || user?.email || 'unknown';
+    
     await supabase.auth.signOut();
+    
+    // Log the logout event before clearing user state
+    await auditLogService.logLogout(username);
+    
     setUser(null);
     setSession(null);
     setIsSuperAdmin(false);

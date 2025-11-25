@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { useAuditLog } from '@/hooks/useAuditLog';
 import { ROLES } from '@/services/roleService';
 import CEODashboard from './portals/CEODashboard';
 import MarketingPortal from './portals/MarketingPortal';
@@ -14,6 +15,9 @@ import PortalSidebar from './PortalSidebar';
 const RoleBasedPortal = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
+  
+  // Enable automatic page view tracking
+  useAuditLog();
 
   if (!user) {
     return <div>Loading...</div>;

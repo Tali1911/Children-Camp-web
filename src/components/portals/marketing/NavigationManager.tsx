@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
 import { navigationService, NavigationSetting } from '@/services/navigationService';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { auditLogService } from '@/services/auditLogService';
 
 const NavigationManager: React.FC = () => {
   const [settings, setSettings] = useState<NavigationSetting[]>([]);
@@ -36,6 +37,20 @@ const NavigationManager: React.FC = () => {
       // Use the actual value from the reloaded settings
       const updatedSetting = reloadedData.find(s => s.nav_key === navKey);
       const actualValue = updatedSetting?.is_visible ?? newValue;
+      
+      await auditLogService.logEvent({
+        action: 'navigation_visibility_changed',
+        entityType: 'navigation',
+        entityId: navKey,
+        details: `Changed ${updatedSetting?.label} visibility to ${actualValue ? 'visible' : 'hidden'}`,
+        metadata: {
+          nav_key: navKey,
+          label: updatedSetting?.label,
+          previous_value: currentValue,
+          new_value: actualValue
+        },
+        severity: 'info'
+      });
       
       toast({
         title: 'Navigation Updated',

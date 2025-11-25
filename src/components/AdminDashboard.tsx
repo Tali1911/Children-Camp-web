@@ -10,6 +10,7 @@ import MessageCenter from './communication/MessageCenter';
 import AnalyticsDashboard from './analytics/AnalyticsDashboard';
 import CustomerDashboard from './admin/CustomerDashboard';
 import UserManagement from './admin/UserManagement';
+import AuditLogsViewer from './admin/AuditLogsViewer';
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -34,12 +35,14 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeTab }) => {
         return <MessageCenter />;
       case 'analytics':
         return <AnalyticsDashboard />;
-      case 'customers':
+      case 'customer-management':
         return <CustomerDashboard />;
       case 'camp-registrations':
         return <CampRegistrationsManager />;
       case 'program-registrations':
         return <ProgramRegistrationsManager />;
+      case 'audit-logs':
+        return <AuditLogsViewer />;
       default:
         return renderDashboard();
     }

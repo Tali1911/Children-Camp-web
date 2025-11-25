@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { cmsService } from '@/services/cmsService';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload, Eye, EyeOff } from 'lucide-react';
+import { auditLogService } from '@/services/auditLogService';
 
 interface Program {
   id?: string;
@@ -153,9 +154,11 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
             visible: formData.visible
           }
         });
+        
+        await auditLogService.logContentUpdated('program', program.id, formData.title);
         toast({ title: 'Program updated successfully' });
       } else {
-        await cmsService.createContent({
+        const result = await cmsService.createContent({
           title: formData.title,
           slug,
           content: formData.description,
@@ -171,6 +174,8 @@ export const ProgramEditor: React.FC<ProgramEditorProps> = ({ isOpen, onClose, p
             visible: formData.visible
           }
         });
+        
+        await auditLogService.logContentCreated('program', result?.id || 'new', formData.title);
         toast({ title: 'Program created successfully' });
       }
       onSave();

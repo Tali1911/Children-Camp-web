@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { CheckCircle, XCircle, Clock, Users, UserCheck, UserX, Edit } from "lucide-react";
 import { ROLES } from '@/services/roleService';
+import { auditLogService } from '@/services/auditLogService';
 
 interface PendingUser {
   id: string;
@@ -124,6 +125,21 @@ const UserManagement: React.FC = () => {
 
       if (error) throw error;
 
+      // Log audit event
+      await auditLogService.logEvent({
+        action: 'user_approved',
+        entityType: 'user',
+        entityId: selectedUser.id,
+        details: `Approved user ${selectedUser.email} with role ${selectedRole}`,
+        metadata: {
+          user_email: selectedUser.email,
+          assigned_role: selectedRole,
+          full_name: selectedUser.full_name,
+          department: selectedUser.department
+        },
+        severity: 'info'
+      });
+
       toast({
         title: "User Approved",
         description: `${selectedUser.email} has been approved with ${selectedRole} role`
@@ -157,6 +173,21 @@ const UserManagement: React.FC = () => {
       });
 
       if (error) throw error;
+
+      // Log audit event
+      await auditLogService.logEvent({
+        action: 'user_rejected',
+        entityType: 'user',
+        entityId: selectedUser.id,
+        details: `Rejected user ${selectedUser.email}. Reason: ${rejectionReason}`,
+        metadata: {
+          user_email: selectedUser.email,
+          rejection_reason: rejectionReason,
+          full_name: selectedUser.full_name,
+          department: selectedUser.department
+        },
+        severity: 'warning'
+      });
 
       toast({
         title: "User Rejected",
@@ -204,6 +235,22 @@ const UserManagement: React.FC = () => {
       });
 
       if (error) throw error;
+
+      // Log audit event
+      await auditLogService.logEvent({
+        action: 'role_changed',
+        entityType: 'user',
+        entityId: selectedApprovedUser.id,
+        details: `Changed role for ${selectedApprovedUser.email} from ${selectedApprovedUser.role} to ${selectedRole}`,
+        metadata: {
+          user_email: selectedApprovedUser.email,
+          old_role: selectedApprovedUser.role,
+          new_role: selectedRole,
+          full_name: selectedApprovedUser.full_name,
+          department: selectedApprovedUser.department
+        },
+        severity: 'info'
+      });
 
       toast({
         title: "Role Changed",

@@ -8,6 +8,7 @@ import { toast } from '@/hooks/use-toast';
 import { cmsService } from '@/services/cmsService';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload } from 'lucide-react';
+import { auditLogService } from '@/services/auditLogService';
 
 interface HeroSlide {
   id?: string;
@@ -137,9 +138,11 @@ export const HeroSlideEditor: React.FC<HeroSlideEditorProps> = ({ isOpen, onClos
             detailPageSlug: formData.detailPageSlug
           }
         });
+        
+        await auditLogService.logContentUpdated('hero_slide', slide.id, formData.title);
         toast({ title: 'Hero slide updated successfully' });
       } else {
-        await cmsService.createContent({
+        const result = await cmsService.createContent({
           title: formData.title,
           slug: formData.title.toLowerCase().replace(/\s+/g, '-'),
           content: formData.description,
@@ -155,6 +158,8 @@ export const HeroSlideEditor: React.FC<HeroSlideEditorProps> = ({ isOpen, onClos
             detailPageSlug: formData.detailPageSlug
           }
         });
+        
+        await auditLogService.logContentCreated('hero_slide', result?.id || 'new', formData.title);
         toast({ title: 'Hero slide created successfully' });
       }
       onSave();

@@ -16,6 +16,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { faqService, type FAQItem } from '@/services/faqService';
+import { auditLogService } from '@/services/auditLogService';
 
 export const FAQManager: React.FC = () => {
   const [faqs, setFaqs] = useState<FAQItem[]>([]);
@@ -68,9 +69,11 @@ export const FAQManager: React.FC = () => {
     try {
       if (editingFaq) {
         await faqService.updateFAQ(editingFaq.id, payload);
+        await auditLogService.logContentUpdated('faq', editingFaq.id, formData.question);
         toast({ title: 'FAQ updated successfully' });
       } else {
-        await faqService.createFAQ(payload);
+        const result = await faqService.createFAQ(payload);
+        await auditLogService.logContentCreated('faq', result?.id || 'new', formData.question);
         toast({ title: 'FAQ created successfully' });
       }
 
@@ -89,8 +92,11 @@ export const FAQManager: React.FC = () => {
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this FAQ?')) return;
 
+    const faqToDelete = faqs.find(f => f.id === id);
+    
     try {
       await faqService.deleteFAQ(id);
+      await auditLogService.logContentDeleted('faq', id, faqToDelete?.question || 'FAQ');
       toast({ title: 'FAQ deleted successfully' });
       loadFAQs();
     } catch (error: any) {

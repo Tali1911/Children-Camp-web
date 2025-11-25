@@ -9,6 +9,7 @@ import { toast } from '@/hooks/use-toast';
 import { cmsService } from '@/services/cmsService';
 import { supabase } from '@/integrations/supabase/client';
 import { Upload } from 'lucide-react';
+import { auditLogService } from '@/services/auditLogService';
 
 interface Announcement {
   id?: string;
@@ -126,9 +127,11 @@ export const AnnouncementEditorDialog: React.FC<AnnouncementEditorProps> = ({ is
             posterUrl: formData.posterUrl
           }
         });
+        
+        await auditLogService.logContentUpdated('announcement', announcement.id, formData.title);
         toast({ title: 'Announcement updated successfully' });
       } else {
-        await cmsService.createContent({
+        const result = await cmsService.createContent({
           title: formData.title,
           slug,
           content: formData.content,
@@ -139,6 +142,8 @@ export const AnnouncementEditorDialog: React.FC<AnnouncementEditorProps> = ({ is
             posterUrl: formData.posterUrl
           }
         });
+        
+        await auditLogService.logContentCreated('announcement', result?.id || 'new', formData.title);
         toast({ title: 'Announcement created successfully' });
       }
       onSave();
