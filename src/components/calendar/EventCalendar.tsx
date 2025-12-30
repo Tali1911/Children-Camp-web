@@ -238,11 +238,11 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
 
   return (
     <Card className={cn("w-full", className)}>
-      <CardHeader className="space-y-1 border-b pb-2">
-        <div className="flex items-center justify-between">
+      <CardHeader className="space-y-3 border-b pb-3">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
           <div className="flex items-center space-x-2">
             <CalendarIcon className="h-5 w-5 text-forest-600" />
-            <CardTitle>Program Calendar</CardTitle>
+            <CardTitle className="text-base sm:text-lg">Program Calendar</CardTitle>
           </div>
           
           {showControls && (
@@ -251,12 +251,14 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                 variant="ghost" 
                 size="sm" 
                 onClick={navigateToday}
+                className="text-xs sm:text-sm"
               >
                 Today
               </Button>
               <Button 
                 variant="outline" 
                 size="icon" 
+                className="h-8 w-8"
                 onClick={navigatePrevious}
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -264,6 +266,7 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
               <Button 
                 variant="outline" 
                 size="icon" 
+                className="h-8 w-8"
                 onClick={navigateNext}
               >
                 <ChevronRight className="h-4 w-4" />
@@ -272,8 +275,8 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
           )}
         </div>
         
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <h3 className="text-sm sm:text-lg font-medium">
             {view === 'month' ? (
               format(currentDate, 'MMMM yyyy')
             ) : view === 'week' ? (
@@ -289,24 +292,28 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
             defaultValue={view}
             value={view} 
             onValueChange={(val) => setView(val as 'month' | 'week' | 'day' | 'year')}
-            className="w-[400px]"
+            className="w-full sm:w-auto"
           >
-            <TabsList className="grid w-full grid-cols-4">
-              <TabsTrigger value="year">
-                <CalendarIcon className="h-4 w-4 mr-2" />
-                Year
+            <TabsList className="grid w-full grid-cols-4 sm:w-[320px] md:w-[400px]">
+              <TabsTrigger value="year" className="text-xs sm:text-sm px-1 sm:px-3">
+                <CalendarIcon className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Year</span>
+                <span className="sm:hidden">Y</span>
               </TabsTrigger>
-              <TabsTrigger value="month">
-                <CalendarDays className="h-4 w-4 mr-2" />
-                Month
+              <TabsTrigger value="month" className="text-xs sm:text-sm px-1 sm:px-3">
+                <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Month</span>
+                <span className="sm:hidden">M</span>
               </TabsTrigger>
-              <TabsTrigger value="week">
-                <LayoutGrid className="h-4 w-4 mr-2" />
-                Week
+              <TabsTrigger value="week" className="text-xs sm:text-sm px-1 sm:px-3">
+                <LayoutGrid className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Week</span>
+                <span className="sm:hidden">W</span>
               </TabsTrigger>
-              <TabsTrigger value="day">
-                <Grid3X3 className="h-4 w-4 mr-2" />
-                Day
+              <TabsTrigger value="day" className="text-xs sm:text-sm px-1 sm:px-3">
+                <Grid3X3 className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Day</span>
+                <span className="sm:hidden">D</span>
               </TabsTrigger>
             </TabsList>
           </Tabs>
