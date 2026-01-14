@@ -32,13 +32,13 @@ const ProgramHighlights = () => {
     },
     {
       id: "school-experience",
-      title: "School Experience Packages",
-      description: "Complement curriculum with immersive experiential learning for schools.",
+      title: "School Adventure",
+      description: "Curriculum-aligned outdoor education, field trips, forest school experiences, and sleep-away camps.",
       image: homeschoolingImage,
       icon: GraduationCap,
       ageRange: "6-17 years",
       duration: "1-5 days",
-      highlights: ["Curriculum Tie-in", "Group Learning", "Adventure Sleep-Aways", "Life Skills"],
+      highlights: ["Forest Days", "Field Trips", "Industrial Visits", "Sleep-Away Camps"],
     },
     {
       id: "team-building",

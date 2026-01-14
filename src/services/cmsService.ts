@@ -8,7 +8,7 @@ export interface ContentItem {
   title: string;
   slug: string;
   content?: string;
-  content_type: 'page' | 'post' | 'announcement' | 'campaign' | 'hero_slide' | 'program' | 'site_settings' | 'testimonial' | 'team_member' | 'about_section' | 'service_item' | 'camp_page' | 'camp_form' | 'activity_detail';
+  content_type: 'page' | 'post' | 'announcement' | 'campaign' | 'hero_slide' | 'program' | 'site_settings' | 'testimonial' | 'team_member' | 'about_section' | 'service_item' | 'camp_page' | 'camp_form' | 'activity_detail' | 'experience_page';
   status: 'draft' | 'published' | 'archived';
   author_id?: string;
   published_at?: string;
@@ -586,6 +586,82 @@ export const cmsService = {
     } catch (err) {
       console.error('Error fetching activity details:', err);
       return [];
+    }
+  },
+
+  // Experience Page Management
+  async getExperiencePageConfig(experienceType: string): Promise<ContentItem | null> {
+    try {
+      const slug = `${experienceType}-page`;
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .select('*')
+        .eq('content_type', 'experience_page')
+        .eq('slug', slug)
+        .eq('status', 'published')
+        .maybeSingle();
+
+      if (error) {
+        console.error(`[CMS] Error fetching ${slug}:`, error);
+        throw error;
+      }
+      
+      return data || null;
+    } catch (err) {
+      console.error('Error fetching experience page config:', err);
+      return null;
+    }
+  },
+
+  async getAllExperiencePages(): Promise<ContentItem[]> {
+    try {
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .select('*')
+        .eq('content_type', 'experience_page')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return data || [];
+    } catch (err) {
+      console.error('Error fetching experience pages:', err);
+      return [];
+    }
+  },
+
+  async updateExperiencePageConfig(experienceType: string, config: any): Promise<ContentItem | null> {
+    try {
+      const slug = `${experienceType}-page`;
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      const { data, error } = await supabaseAny
+        .from('content_items')
+        .upsert({
+          slug,
+          content_type: 'experience_page',
+          title: `${experienceType.charAt(0).toUpperCase() + experienceType.slice(1).replace(/-/g, ' ')} Page`,
+          status: 'published',
+          content: JSON.stringify(config),
+          metadata: { pageConfig: config },
+          author_id: user?.id,
+          published_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'slug,content_type',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Upsert error:', error);
+        throw error;
+      }
+      
+      return data;
+    } catch (err) {
+      console.error('Error updating experience page config:', err);
+      return null;
     }
   }
 };

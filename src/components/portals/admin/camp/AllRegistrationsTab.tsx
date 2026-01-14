@@ -179,6 +179,45 @@ export const AllRegistrationsTab: React.FC = () => {
     }
   };
 
+  // Delete handlers
+  const handleDeleteSingle = async (id: string) => {
+    if (!confirm('Are you sure you want to permanently delete this registration? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      await campRegistrationService.deleteRegistration(id);
+      toast.success('Registration deleted successfully');
+      loadRegistrations();
+    } catch (error) {
+      console.error('Error deleting registration:', error);
+      toast.error('Failed to delete registration');
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    const selected = getSelectedRegistrations();
+    if (selected.length === 0) {
+      toast.error('No registrations selected');
+      return;
+    }
+
+    if (!confirm(`Are you sure you want to permanently delete ${selected.length} registration(s)? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await campRegistrationService.deleteRegistrations(selected.map(r => r.id!));
+      toast.success(`Deleted ${selected.length} registration(s)`);
+      setSelectedIds(new Set());
+      setSelectAll(false);
+      loadRegistrations();
+    } catch (error) {
+      console.error('Error deleting registrations:', error);
+      toast.error('Failed to delete registrations');
+    }
+  };
+
   // Export handlers
   const handleExportCSV = () => {
     const dataToExport = selectedIds.size > 0 ? getSelectedRegistrations() : registrations;
@@ -411,8 +450,12 @@ export const AllRegistrationsTab: React.FC = () => {
                   <span className="hidden sm:inline">Mark </span>Unpaid
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => handleBulkStatusUpdate('cancelled')} className="text-xs px-2 py-1 h-7 sm:h-8">
-                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  <XCircle className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
                   Cancel
+                </Button>
+                <Button size="sm" variant="destructive" onClick={handleBulkDelete} className="text-xs px-2 py-1 h-7 sm:h-8">
+                  <Trash2 className="h-3 w-3 sm:h-4 sm:w-4 mr-1" />
+                  Delete
                 </Button>
                 <Button size="sm" variant="outline" onClick={() => { setSelectedIds(new Set()); setSelectAll(false); }} className="text-xs px-2 py-1 h-7 sm:h-8">
                   Clear
@@ -467,14 +510,24 @@ export const AllRegistrationsTab: React.FC = () => {
                         {new Date(reg.created_at!).toLocaleDateString()}
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleViewDetails(reg)}
-                          className="h-7 w-7 p-0"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleViewDetails(reg)}
+                            className="h-7 w-7 p-0"
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSingle(reg.id!)}
+                            className="h-7 w-7 p-0 text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}

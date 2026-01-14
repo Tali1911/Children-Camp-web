@@ -6,6 +6,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, ArrowLeft, Clock } from 'lucide-react';
 import DayCampsProgram from '@/components/forms/DayCampsProgram';
 import { useCampPageConfig } from '@/hooks/useCampPageConfig';
+import DynamicMedia from '@/components/content/DynamicMedia';
 
 const DayCamps = () => {
   const { config, isLoading, refresh } = useCampPageConfig('day-camps');
@@ -100,9 +101,12 @@ const DayCamps = () => {
             </div>
 
             <div className="relative h-80 rounded-2xl overflow-hidden">
-              <img 
-                src={config.heroImage} 
-                alt={`Children enjoying ${config.title} activities`}
+              <DynamicMedia
+                mediaType={config.mediaType || 'photo'}
+                mediaUrl={config.mediaUrl || config.heroImage}
+                fallbackImage={config.heroImage}
+                thumbnailUrl={config.videoThumbnail}
+                altText={config.mediaAltText || `Children enjoying ${config.title} activities`}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />

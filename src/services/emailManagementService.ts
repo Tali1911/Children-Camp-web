@@ -13,8 +13,21 @@ export interface EmailDelivery {
   sent_at: string;
   delivered_at: string | null;
   opened_at: string | null;
+  clicked_at: string | null;
   bounced_at: string | null;
   created_at: string;
+}
+
+export interface UserEngagementStats {
+  email: string;
+  totalSent: number;
+  totalDelivered: number;
+  totalOpened: number;
+  totalClicked: number;
+  openRate: number;
+  clickRate: number;
+  clickToOpenRate: number;
+  lastActivity: string | null;
 }
 
 export interface EmailSuppression {
@@ -276,6 +289,78 @@ class EmailManagementService {
     } catch (error) {
       console.error('Error deleting email segment:', error);
       return false;
+    }
+  }
+
+  async getUserEngagementStats(): Promise<UserEngagementStats[]> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data, error } = await supabaseClient
+        .from('email_deliveries')
+        .select('email, status, sent_at, delivered_at, opened_at, clicked_at');
+
+      if (error) throw error;
+
+      const deliveries = (data || []) as any[];
+      
+      // Group by email
+      const userMap = new Map<string, {
+        sent: number;
+        delivered: number;
+        opened: number;
+        clicked: number;
+        lastActivity: string | null;
+      }>();
+
+      const deliveredStatuses = ['delivered', 'opened', 'clicked'];
+      const openedStatuses = ['opened', 'clicked'];
+
+      for (const d of deliveries) {
+        const email = d.email;
+        if (!email) continue;
+
+        const existing = userMap.get(email) || {
+          sent: 0,
+          delivered: 0,
+          opened: 0,
+          clicked: 0,
+          lastActivity: null
+        };
+
+        existing.sent++;
+        if (deliveredStatuses.includes(d.status)) existing.delivered++;
+        if (openedStatuses.includes(d.status)) existing.opened++;
+        if (d.status === 'clicked') existing.clicked++;
+
+        // Track most recent activity
+        const activityDate = d.clicked_at || d.opened_at || d.delivered_at || d.sent_at;
+        if (activityDate && (!existing.lastActivity || activityDate > existing.lastActivity)) {
+          existing.lastActivity = activityDate;
+        }
+
+        userMap.set(email, existing);
+      }
+
+      // Convert to array with calculated rates
+      const result: UserEngagementStats[] = [];
+      for (const [email, stats] of userMap) {
+        result.push({
+          email,
+          totalSent: stats.sent,
+          totalDelivered: stats.delivered,
+          totalOpened: stats.opened,
+          totalClicked: stats.clicked,
+          openRate: stats.delivered > 0 ? (stats.opened / stats.delivered) * 100 : 0,
+          clickRate: stats.delivered > 0 ? (stats.clicked / stats.delivered) * 100 : 0,
+          clickToOpenRate: stats.opened > 0 ? (stats.clicked / stats.opened) * 100 : 0,
+          lastActivity: stats.lastActivity
+        });
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error fetching user engagement stats:', error);
+      return [];
     }
   }
 }

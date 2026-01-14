@@ -24,7 +24,10 @@ import {
   X,
   Tent,
   Mail,
-  Ban
+  Ban,
+  MousePointerClick,
+  LineChart,
+  Activity
 } from "lucide-react";
 import { ROLES } from '@/services/roleService';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -86,6 +89,9 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'email-deliveries', label: 'Email Deliveries', icon: Mail },
           { id: 'email-segments', label: 'Email Segments', icon: Users },
           { id: 'email-suppressions', label: 'Suppressions', icon: Ban },
+          { id: 'user-engagement', label: 'User Engagement', icon: MousePointerClick },
+          { id: 'site-analytics', label: 'Site Analytics', icon: LineChart },
+          { id: 'realtime', label: 'Real-Time', icon: Activity },
           { id: 'faq', label: 'FAQ Manager', icon: MessageSquare },
           { id: 'analytics', label: 'Analytics', icon: BarChart3 },
           { id: 'communication', label: 'Messages', icon: MessageSquare }

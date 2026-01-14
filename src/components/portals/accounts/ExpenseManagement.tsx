@@ -287,12 +287,12 @@ const ExpenseManagement = () => {
               </div>
               <div>
                 <Label htmlFor="budget_id">Link to Budget</Label>
-                <Select value={formData.budget_id} onValueChange={(value) => setFormData({...formData, budget_id: value})}>
+                <Select value={formData.budget_id || "none"} onValueChange={(value) => setFormData({...formData, budget_id: value === "none" ? "" : value})}>
                   <SelectTrigger>
                     <SelectValue placeholder="Budget (optional)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">None</SelectItem>
+                    <SelectItem value="none">None</SelectItem>
                     {budgets.map(budget => (
                       <SelectItem key={budget.id} value={budget.id}>
                         {budget.name}

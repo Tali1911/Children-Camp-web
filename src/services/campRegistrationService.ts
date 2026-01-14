@@ -172,4 +172,38 @@ export const campRegistrationService = {
     if (error) throw error;
     return data.map(fromDb);
   },
+
+  async deleteRegistration(id: string) {
+    // First delete related attendance records
+    await supabase
+      .from('camp_attendance')
+      .delete()
+      .eq('registration_id', id);
+
+    // Then delete the registration
+    const { error } = await supabase
+      .from('camp_registrations')
+      .delete()
+      .eq('id', id);
+
+    if (error) throw error;
+    return true;
+  },
+
+  async deleteRegistrations(ids: string[]) {
+    // First delete related attendance records for all registrations
+    await supabase
+      .from('camp_attendance')
+      .delete()
+      .in('registration_id', ids);
+
+    // Then delete all registrations
+    const { error } = await supabase
+      .from('camp_registrations')
+      .delete()
+      .in('id', ids);
+
+    if (error) throw error;
+    return true;
+  },
 };

@@ -419,9 +419,10 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
         
         {view === 'month' && (
           <div className="grid grid-cols-7 text-center">
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
-              <div key={day} className="py-2 border-b font-medium text-sm">
-                {day}
+            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, idx) => (
+              <div key={day} className="py-1 sm:py-2 border-b font-medium text-[10px] sm:text-sm">
+                <span className="hidden sm:inline">{day}</span>
+                <span className="sm:hidden">{day.charAt(0)}</span>
               </div>
             ))}
             
@@ -434,20 +435,46 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                 <div 
                   key={index}
                   className={cn(
-                    "min-h-[100px] border-t border-r p-1 relative",
+                    "min-h-[60px] sm:min-h-[100px] border-t border-r p-0.5 sm:p-1 relative",
                     index % 7 === 0 && "border-l",
                     !inMonth && "bg-gray-50",
                     isCurrentDay && "bg-blue-50"
                   )}
                 >
                   <div className={cn(
-                    "text-sm font-medium leading-none rounded-full w-7 h-7 flex items-center justify-center",
+                    "text-[10px] sm:text-sm font-medium leading-none rounded-full w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center mx-auto sm:mx-0",
                     isCurrentDay && "bg-blue-600 text-white"
                   )}>
                     {format(day, 'd')}
                   </div>
                   
-                  <div className="mt-1 space-y-1 max-h-[80px] overflow-y-auto">
+                  {/* Mobile: Show dot indicator only */}
+                  <div className="sm:hidden flex justify-center mt-0.5">
+                    {dayEvents.length > 0 && (
+                      <div 
+                        className="flex gap-0.5 cursor-pointer"
+                        onClick={() => {
+                          if (dayEvents.length > 0) {
+                            setSelectedEvent(dayEvents[0]);
+                            setIsEventDialogOpen(true);
+                          }
+                        }}
+                      >
+                        {dayEvents.slice(0, 3).map((event, i) => (
+                          <div 
+                            key={i} 
+                            className={cn("w-1.5 h-1.5 rounded-full", event.color)}
+                          />
+                        ))}
+                        {dayEvents.length > 3 && (
+                          <span className="text-[8px] text-muted-foreground">+</span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  {/* Desktop: Show full event cards */}
+                  <div className="hidden sm:block mt-1 space-y-1 max-h-[80px] overflow-y-auto">
                     {dayEvents.map((event) => (
                       <div
                         key={event.id}
@@ -471,45 +498,104 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
         )}
         
         {view === 'week' && (
-          <div className="grid grid-cols-7 divide-x">
-            {days.map((day, i) => (
-              <div key={i} className={cn(
-                "min-h-[500px] p-2",
-                isToday(day) && "bg-blue-50"
-              )}>
-                <div className="text-center mb-2 font-medium">
-                  <div>{format(day, 'EEE')}</div>
-                  <div className={cn(
-                    "text-lg inline-flex items-center justify-center h-8 w-8 rounded-full",
-                    isToday(day) && "bg-blue-600 text-white"
+          <>
+            {/* Mobile: Stacked vertical layout */}
+            <div className="sm:hidden divide-y">
+              {days.map((day, i) => {
+                const dayEvents = getEventsByDay(day);
+                return (
+                  <div key={i} className={cn(
+                    "p-3",
+                    isToday(day) && "bg-blue-50"
                   )}>
-                    {format(day, 'd')}
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className={cn(
+                        "text-lg font-bold w-10 h-10 flex items-center justify-center rounded-full",
+                        isToday(day) && "bg-blue-600 text-white"
+                      )}>
+                        {format(day, 'd')}
+                      </div>
+                      <div>
+                        <div className="font-medium text-sm">{format(day, 'EEEE')}</div>
+                        <div className="text-xs text-muted-foreground">{format(day, 'MMM yyyy')}</div>
+                      </div>
+                      {dayEvents.length > 0 && (
+                        <Badge variant="secondary" className="ml-auto text-xs">
+                          {dayEvents.length} event{dayEvents.length > 1 ? 's' : ''}
+                        </Badge>
+                      )}
+                    </div>
+                    {dayEvents.length > 0 ? (
+                      <div className="space-y-2 ml-13">
+                        {dayEvents.map((event) => (
+                          <div
+                            key={event.id}
+                            className={cn(
+                              "p-2 rounded text-white cursor-pointer text-sm",
+                              event.color
+                            )}
+                            onClick={() => {
+                              setSelectedEvent(event);
+                              setIsEventDialogOpen(true);
+                            }}
+                          >
+                            <div className="font-medium">{event.title}</div>
+                            <div className="text-xs flex items-center mt-1 opacity-90">
+                              <Clock className="h-3 w-3 mr-1" />
+                              {getEventTimeDisplay(event)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-xs text-muted-foreground ml-13">No events</div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Desktop: Grid layout */}
+            <div className="hidden sm:grid grid-cols-7 divide-x">
+              {days.map((day, i) => (
+                <div key={i} className={cn(
+                  "min-h-[500px] p-2",
+                  isToday(day) && "bg-blue-50"
+                )}>
+                  <div className="text-center mb-2 font-medium">
+                    <div>{format(day, 'EEE')}</div>
+                    <div className={cn(
+                      "text-lg inline-flex items-center justify-center h-8 w-8 rounded-full",
+                      isToday(day) && "bg-blue-600 text-white"
+                    )}>
+                      {format(day, 'd')}
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    {getEventsByDay(day).map((event) => (
+                      <div
+                        key={event.id}
+                        className={cn(
+                          "p-2 rounded text-white cursor-pointer",
+                          event.color
+                        )}
+                        onClick={() => {
+                          setSelectedEvent(event);
+                          setIsEventDialogOpen(true);
+                        }}
+                      >
+                        <div className="font-medium">{event.title}</div>
+                        <div className="text-xs flex items-center mt-1">
+                          <Clock className="h-3 w-3 mr-1" />
+                          {getEventTimeDisplay(event)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
-                <div className="space-y-2">
-                  {getEventsByDay(day).map((event) => (
-                    <div
-                      key={event.id}
-                      className={cn(
-                        "p-2 rounded text-white cursor-pointer",
-                        event.color
-                      )}
-                      onClick={() => {
-                        setSelectedEvent(event);
-                        setIsEventDialogOpen(true);
-                      }}
-                    >
-                      <div className="font-medium">{event.title}</div>
-                      <div className="text-xs flex items-center mt-1">
-                        <Clock className="h-3 w-3 mr-1" />
-                        {getEventTimeDisplay(event)}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          </>
         )}
         
         {view === 'day' && (

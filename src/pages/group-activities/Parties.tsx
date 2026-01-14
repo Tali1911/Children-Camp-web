@@ -1,125 +1,248 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { Button } from "@/components/ui/button";
-import { Link } from "react-router-dom";
-import { Calendar, MapPin, Users, Gift } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ArrowLeft, Calendar, MapPin, Users, Gift, PartyPopper, Cake, Camera, Star, Music, Sparkles } from "lucide-react";
+import { cmsService } from "@/services/cmsService";
 import birthdayImage from "@/assets/birthday.jpg";
 
+interface PartiesConfig {
+  title: string;
+  subtitle: string;
+  description: string;
+  featuredImage: string;
+  details: {
+    partyTypes: string;
+    groupSize: string;
+    duration: string;
+    location: string;
+  };
+  whatsIncluded: string[];
+  addOns: Array<{ icon: string; text: string }>;
+  ctaText: string;
+  ctaLink: string;
+  metaTitle: string;
+  metaDescription: string;
+}
+
+const defaultConfig: PartiesConfig = {
+  title: 'Parties & Celebrations',
+  subtitle: 'Celebrate in the forest, at your home, or under the stars',
+  description: 'Unforgettable celebrations that combine adventure, nature, and fun. Choose your party style: come to Karura Forest, we come to you, or plan an overnight camping experience.',
+  featuredImage: '',
+  details: {
+    partyTypes: 'Birthdays, family reunions, group celebrations',
+    groupSize: '10-50 guests',
+    duration: 'Half-day / Full-day / Overnight',
+    location: 'Karura Forest, your venue, or camping site'
+  },
+  whatsIncluded: [
+    'Come to Karura: Obstacle courses, rope course, scavenger hunts, bushcraft',
+    'We Come to You: Adventure brought to your home, school, or community space',
+    'Overnight Camping: Spacious tents, archery, orienteering, campfire stories',
+    'Custom themes with trained facilitators',
+    'Full facilitation and equipment provided',
+    'Age-appropriate activities',
+    'Safety equipment and supervision',
+    'Note: No single-use plastics at Karura (forest guidelines)'
+  ],
+  addOns: [
+    { icon: 'Cake', text: 'Custom catering services' },
+    { icon: 'Camera', text: 'Professional photography' },
+    { icon: 'Star', text: 'Special activities (archery, bushcraft)' },
+    { icon: 'Gift', text: 'Party favors and gift bags' }
+  ],
+  ctaText: 'Book Your Party',
+  ctaLink: '/group-activities/parties/booking',
+  metaTitle: 'Parties & Celebrations | Amuse Kenya Outdoor Events',
+  metaDescription: 'Host unforgettable outdoor birthday parties and celebrations at Karura Forest or your venue.'
+};
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Cake,
+  Camera,
+  Star,
+  Gift,
+  Music,
+  Sparkles
+};
+
 const Parties = () => {
+  const [config, setConfig] = useState<PartiesConfig>(defaultConfig);
+
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const content = await cmsService.getContentBySlug('parties-page', 'camp_page');
+        if (content?.metadata?.pageConfig) {
+          setConfig({ ...defaultConfig, ...content.metadata.pageConfig });
+        }
+      } catch (error) {
+        console.error('Error loading parties config:', error);
+      }
+    };
+    
+    loadConfig();
+
+    const handleCmsUpdate = () => loadConfig();
+    window.addEventListener('cms-content-updated', handleCmsUpdate);
+    return () => window.removeEventListener('cms-content-updated', handleCmsUpdate);
+  }, []);
+
   return (
     <>
       <SEOHead
-        title="Parties & Celebrations | Amuse Kenya Outdoor Events"
-        description="Host unforgettable outdoor birthday parties and celebrations at Karura Forest. Customized party packages with nature activities, games, catering, and decorations for groups of 10-50 guests."
+        title={config.metaTitle}
+        description={config.metaDescription}
         keywords="birthday parties Kenya, outdoor celebrations, children's party venue, forest parties, group events, party packages Karura, outdoor party venue Nairobi"
         canonical="https://amusekenya.co.ke/group-activities/parties"
       />
       <div className="min-h-screen bg-background">
         <Navbar />
 
-        <div className="pt-20">
-          {/* Hero Section */}
-          <section className="relative h-[400px] overflow-hidden">
-            <img src={birthdayImage} alt="Parties & Celebrations" className="w-full h-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-r from-forest-900/80 to-forest-600/60 flex items-center">
-              <div className="container mx-auto px-4">
-                <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">Parties & Celebrations</h1>
-                <p className="text-xl text-white/90 max-w-2xl">
-                  Customised parties and team-building events with a focus on fun and tangible outcomes.
-                </p>
+        <div className="pt-24 pb-16">
+          <div className="container mx-auto px-4">
+            {/* Back Navigation */}
+            <Link 
+              to="/programs" 
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors"
+            >
+              <ArrowLeft size={20} />
+              <span>Back to Programs</span>
+            </Link>
+
+            {/* Header */}
+            <div className="flex items-center gap-4 mb-8">
+              <div className="bg-primary/10 rounded-full p-3">
+                <PartyPopper className="h-8 w-8 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-primary">{config.title}</h1>
+                <p className="text-muted-foreground mt-1">{config.subtitle}</p>
               </div>
             </div>
-          </section>
 
-          {/* Content Section */}
-          <section className="py-16 container mx-auto px-4">
-            <div className="grid md:grid-cols-2 gap-12 items-start">
-              <div className="space-y-6">
-                <h2 className="text-3xl font-bold text-forest-900">Celebrate Outdoors</h2>
-                <p className="text-gray-700 leading-relaxed">
-                  Make your special occasion extraordinary! Our outdoor party packages combine nature, adventure, and
-                  celebration for birthday parties, family gatherings, and group events.
-                </p>
+            {/* Main Content Grid */}
+            <div className="grid lg:grid-cols-2 gap-12">
+              {/* Left Column */}
+              <div className="space-y-8">
+                {/* Image */}
+                <div className="relative rounded-2xl overflow-hidden">
+                  <img 
+                    src={config.featuredImage || birthdayImage} 
+                    alt={config.title} 
+                    className="w-full h-[300px] object-cover"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-primary/20 to-transparent" />
+                </div>
 
-                <div className="space-y-4">
+                {/* Description */}
+                <div>
+                  <h2 className="text-2xl font-bold text-primary mb-4">Celebrate Outdoors</h2>
+                  <p className="text-muted-foreground leading-relaxed">{config.description}</p>
+                </div>
+
+                {/* Details */}
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-start gap-3">
-                    <Gift className="text-forest-600 mt-1" size={20} />
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <Gift className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Party Types</h3>
-                      <p className="text-gray-600">Birthdays, anniversaries, family reunions, and more</p>
+                      <h3 className="font-semibold text-foreground">Party Types</h3>
+                      <p className="text-sm text-muted-foreground">{config.details.partyTypes}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Users className="text-forest-600 mt-1" size={20} />
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <Users className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Group Size</h3>
-                      <p className="text-gray-600">10-50 guests</p>
+                      <h3 className="font-semibold text-foreground">Group Size</h3>
+                      <p className="text-sm text-muted-foreground">{config.details.groupSize}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <Calendar className="text-forest-600 mt-1" size={20} />
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <Calendar className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Duration</h3>
-                      <p className="text-gray-600">Half-day/ Full-day/ Overnight packages available</p>
+                      <h3 className="font-semibold text-foreground">Duration</h3>
+                      <p className="text-sm text-muted-foreground">{config.details.duration}</p>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-3">
-                    <MapPin className="text-forest-600 mt-1" size={20} />
+                    <div className="bg-primary/10 rounded-full p-2">
+                      <MapPin className="h-5 w-5 text-primary" />
+                    </div>
                     <div>
-                      <h3 className="font-semibold text-gray-900">Location</h3>
-                      <p className="text-gray-600">Amuse Kenya Outdoor Center/ Location of your choice</p>
+                      <h3 className="font-semibold text-foreground">Location</h3>
+                      <p className="text-sm text-muted-foreground">{config.details.location}</p>
                     </div>
                   </div>
                 </div>
 
-                <div className="pt-6">
-                  <Link to="/group-activities/parties/booking">
-                    <Button size="lg" className="bg-forest-600 hover:bg-forest-700">
-                      Book Your Party
-                    </Button>
-                  </Link>
-                </div>
+                {/* CTA Button */}
+                <Link to={config.ctaLink}>
+                  <Button size="lg" className="w-full md:w-auto">
+                    {config.ctaText}
+                  </Button>
+                </Link>
               </div>
 
+              {/* Right Column */}
               <div className="space-y-6">
-                <h3 className="text-2xl font-bold text-forest-900">What's Included</h3>
-                <ul className="space-y-3">
-                  {[
-                    "Customized party themes",
-                    "Outdoor adventure activities",
-                    "Party games and entertainment",
-                    "Dedicated party area",
-                    "Basic decorations and setup",
-                    "Professional event coordination",
-                    "Photography opportunities",
-                    "Age-appropriate activities",
-                    "Safety equipment and supervision",
-                    "Flexible catering options",
-                  ].map((highlight, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="text-forest-600 font-bold">•</span>
-                      <span className="text-gray-700">{highlight}</span>
-                    </li>
-                  ))}
-                </ul>
+                {/* What's Included */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Star className="h-5 w-5 text-primary" />
+                      What's Included
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-3">
+                      {config.whatsIncluded.map((item, index) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <span className="text-primary font-bold">•</span>
+                          <span className="text-muted-foreground">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
 
-                <div className="bg-forest-50 p-6 rounded-lg mt-6">
-                  <h4 className="font-semibold text-forest-900 mb-2">Popular Add-Ons</h4>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li>• Custom cake and catering services</li>
-                    <li>• Professional photography package</li>
-                    <li>• Special activity sessions (rock climbing, kayaking)</li>
-                    <li>• Party favors and gift bags</li>
-                  </ul>
-                </div>
+                {/* Popular Add-Ons */}
+                <Card className="bg-accent/50 border-accent">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Cake className="h-5 w-5 text-primary" />
+                      Popular Add-Ons
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {config.addOns.map((addon, index) => {
+                        const IconComponent = iconMap[addon.icon] || Star;
+                        return (
+                          <li key={index} className="flex items-start gap-2">
+                            <IconComponent className="h-4 w-4 text-primary mt-0.5" />
+                            <span className="text-sm text-muted-foreground">{addon.text}</span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </CardContent>
+                </Card>
               </div>
             </div>
-          </section>
+          </div>
         </div>
 
         <Footer />

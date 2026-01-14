@@ -1,8 +1,59 @@
 import { supabase } from '@/integrations/supabase/client';
 import { CampAttendance, AttendanceRecord } from '@/types/campRegistration';
 
+interface RegistrationDetails {
+  parent_name: string;
+  email: string;
+  camp_type: string;
+}
+
+// Helper to send attendance notification email
+async function sendAttendanceNotification(
+  registrationId: string,
+  childName: string,
+  eventType: 'check-in' | 'check-out',
+  notes?: string
+) {
+  try {
+    // Fetch registration details for email
+    const { data: registration, error: regError } = await supabase
+      .from('camp_registrations')
+      .select('parent_name, email, camp_type')
+      .eq('id', registrationId)
+      .single();
+
+    if (regError || !registration) {
+      console.error('Could not fetch registration for notification:', regError);
+      return;
+    }
+
+    const regDetails = registration as RegistrationDetails;
+
+    const { error } = await supabase.functions.invoke('send-attendance-notification', {
+      body: {
+        registrationId,
+        childName,
+        parentEmail: regDetails.email,
+        parentName: regDetails.parent_name,
+        campType: regDetails.camp_type,
+        eventType,
+        timestamp: new Date().toISOString(),
+        notes
+      }
+    });
+
+    if (error) {
+      console.error('Failed to send attendance notification:', error);
+    } else {
+      console.log(`Attendance ${eventType} notification sent for ${childName}`);
+    }
+  } catch (err) {
+    console.error('Error sending attendance notification:', err);
+  }
+}
+
 export const attendanceService = {
-  async checkIn(registrationId: string, childName: string, markedBy: string, notes?: string) {
+  async checkIn(registrationId: string, childName: string, markedBy: string, notes?: string, sendNotification = false) {
     const { data, error } = await supabase
       .from('camp_attendance')
       .insert({
@@ -17,10 +68,16 @@ export const attendanceService = {
       .single();
 
     if (error) throw error;
+
+    // Optionally send notification
+    if (sendNotification) {
+      sendAttendanceNotification(registrationId, childName, 'check-in', notes);
+    }
+
     return data as CampAttendance;
   },
 
-  async checkInForDate(registrationId: string, childName: string, markedBy: string, date: string, notes?: string) {
+  async checkInForDate(registrationId: string, childName: string, markedBy: string, date: string, notes?: string, sendNotification = false) {
     const { data, error } = await supabase
       .from('camp_attendance')
       .insert({
@@ -35,10 +92,15 @@ export const attendanceService = {
       .single();
 
     if (error) throw error;
+
+    if (sendNotification) {
+      sendAttendanceNotification(registrationId, childName, 'check-in', notes);
+    }
+
     return data as CampAttendance;
   },
 
-  async checkOut(attendanceId: string, notes?: string) {
+  async checkOut(attendanceId: string, notes?: string, sendNotification = false, registrationId?: string, childName?: string) {
     const { data, error } = await supabase
       .from('camp_attendance')
       .update({
@@ -50,6 +112,11 @@ export const attendanceService = {
       .single();
 
     if (error) throw error;
+
+    if (sendNotification && registrationId && childName) {
+      sendAttendanceNotification(registrationId, childName, 'check-out', notes);
+    }
+
     return data as CampAttendance;
   },
 

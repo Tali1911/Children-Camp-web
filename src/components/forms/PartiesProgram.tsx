@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -8,10 +8,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { PartyPopper, Gift, ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { PartyPopper, Gift, ArrowLeft, Plus, Trash2, TreePine, Home, Moon, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
 import birthdayImage from "@/assets/birthday.jpg";
+import campingImage from "@/assets/camping.jpg";
+import adventureImage from "@/assets/adventure.jpg";
 import DatePickerField from "./DatePickerField";
 import { ConsentDialog } from "./ConsentDialog";
 import { RefundPolicyDialog } from "./RefundPolicyDialog";
@@ -45,7 +48,69 @@ const partiesSchema = z.object({
 
 type PartiesFormData = z.infer<typeof partiesSchema>;
 
+interface PartyOption {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  image: string;
+  shortDescription: string;
+  fullDescription: string;
+  features: string[];
+  idealFor: string;
+  note?: string;
+}
+
+const partyOptions: PartyOption[] = [
+  {
+    id: 'karura-forest',
+    title: 'Come to Karura Forest',
+    icon: <TreePine className="w-6 h-6" />,
+    image: adventureImage,
+    shortDescription: 'Bring your child to Karura, where most of our outdoor adventures happens!',
+    fullDescription: 'Bring your child to Karura, where most of our outdoor adventures happens! Here, your child and their friends will enjoy adventure activities, bushcraft, creative outdoor play, and more—all in a safe, supervised environment with trained facilitators.',
+    features: [
+      'Adventure activities like obstacle courses, rope course, nature scavenger hunts',
+      'Bushcraft and creative outdoor play',
+      'Safe, supervised fun with trained facilitators',
+      'Custom themes and setups to make the day extra special'
+    ],
+    idealFor: 'Perfect for children of all ages who love nature, movement, and exploration.',
+    note: 'In line with forest guidelines, no single-use plastics are allowed, and our team will help handle all forest logistics on your behalf—so you can relax and enjoy the celebration.'
+  },
+  {
+    id: 'we-come-to-you',
+    title: 'We Come to You',
+    icon: <Home className="w-6 h-6" />,
+    image: birthdayImage,
+    shortDescription: 'No need to travel—we can bring the adventure to your chosen location!',
+    fullDescription: 'No need to travel—we can bring the adventure to your chosen location! Our team sets up fun, engaging, and safe outdoor activities wherever you are, with full facilitation and equipment provided for stress-free planning.',
+    features: [
+      'Our team sets up fun, engaging, and safe outdoor activities wherever you are',
+      'Ideal for home gardens, schools, or community spaces',
+      'Activities can be customized for your child\'s age, interests, and group size',
+      'Full facilitation and equipment provided, so you can enjoy stress-free planning'
+    ],
+    idealFor: 'Perfect for families looking for outdoor birthday parties without leaving home.'
+  },
+  {
+    id: 'overnight-camping',
+    title: 'Overnight Camping (Preteens & Teens)',
+    icon: <Moon className="w-6 h-6" />,
+    image: campingImage,
+    shortDescription: 'Take your child\'s birthday to the next level with an immersive overnight adventure.',
+    fullDescription: 'Take your child\'s birthday to the next level with an immersive overnight adventure. We offer flexible locations: you can host a backyard camping party at your home, use a shared clubhouse or school compound, or venture into nature for a full wilderness experience.',
+    features: [
+      'Sleep in spacious tents and enjoy hands-on adventure activities like archery, orienteering, and bushcraft',
+      'Bond with friends through night activities, campfire stories, and outdoor movie nights under the stars',
+      'Build life skills including independence, teamwork, resilience, and problem-solving while having the time of their lives'
+    ],
+    idealFor: 'Perfect for preteens and teenagers seeking a memorable, adventurous birthday celebration beyond the ordinary.'
+  }
+];
+
 const PartiesProgram = () => {
+  const [selectedPartyOption, setSelectedPartyOption] = useState<PartyOption | null>(null);
+
   const {
     register,
     handleSubmit,
@@ -129,24 +194,58 @@ const PartiesProgram = () => {
           </Link>
         </div>
 
+        {/* Hero Section */}
+        <div className="mb-12">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="bg-primary/10 rounded-full p-3">
+              <PartyPopper className="w-8 h-8 text-primary" />
+            </div>
+            <div>
+              <h1 className="text-4xl md:text-5xl font-bold text-primary">Parties</h1>
+              <p className="text-lg text-muted-foreground">Celebrate Outdoors, Make Memories Forever</p>
+            </div>
+          </div>
+          <p className="text-xl text-muted-foreground leading-relaxed max-w-4xl">
+            We turn birthdays into memorable adventures! Whether your child loves exploring forests, challenging themselves with fun activities, or enjoying magical nights under the stars, we've got the perfect birthday experience.
+          </p>
+        </div>
+
+        {/* Party Options - Clickable Cards */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-primary mb-4">Choose the birthday party that fits your child and your family's style:</h2>
+          <p className="text-muted-foreground mb-6">Click on any option to learn more about what's included.</p>
+          
+          <div className="grid md:grid-cols-3 gap-6">
+            {partyOptions.map((option) => (
+              <Card 
+                key={option.id} 
+                className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50 overflow-hidden"
+                onClick={() => setSelectedPartyOption(option)}
+              >
+                <div className="relative h-48">
+                  <img src={option.image} alt={option.title} className="w-full h-full object-cover" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center gap-2">
+                    <div className="bg-white/20 backdrop-blur-sm rounded-full p-2 text-white">
+                      {option.icon}
+                    </div>
+                    <h3 className="text-lg font-bold text-white">{option.title}</h3>
+                  </div>
+                </div>
+                <div className="p-4">
+                  <p className="text-muted-foreground mb-3">{option.shortDescription}</p>
+                  <Button variant="link" className="p-0 h-auto text-primary">
+                    Learn More →
+                  </Button>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+
         <div className="grid lg:grid-cols-2 gap-12 items-start">
           {/* Party Information */}
           <div className="space-y-8">
-            <div>
-              <div className="flex items-center gap-3 mb-4">
-                <div className="bg-primary/10 rounded-full p-3">
-                  <PartyPopper className="w-8 h-8 text-primary" />
-                </div>
-                <div>
-                  <h1 className="text-4xl md:text-5xl font-bold text-primary">Party Booking</h1>
-                  <p className="text-lg text-muted-foreground">Celebrations & Events</p>
-                </div>
-              </div>
-              <p className="text-xl text-muted-foreground leading-relaxed">
-                Book your unforgettable outdoor party experience. Perfect for birthdays, family gatherings, and special celebrations.
-              </p>
-            </div>
-
             <div className="relative h-80 rounded-2xl overflow-hidden">
               <img src={birthdayImage} alt="Party celebrations" className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
@@ -159,12 +258,30 @@ const PartiesProgram = () => {
                 Standard Package Includes
               </h4>
               <ul className="space-y-2 text-muted-foreground">
-                <li>• Dedicated party area</li>
-                <li>• Outdoor adventure activities</li>
-                <li>• Party games and entertainment</li>
-                <li>• Professional event coordination</li>
-                <li>• Safety equipment and supervision</li>
-                <li>• Basic decorations setup</li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Dedicated party area
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Outdoor adventure activities
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Party games and entertainment
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Professional event coordination
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Safety equipment and supervision
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Basic decorations setup
+                </li>
               </ul>
             </Card>
           </div>
@@ -418,28 +535,85 @@ const PartiesProgram = () => {
                 </div>
                 <div>
                   <Label htmlFor="phone" className="text-base font-medium">
-                    Phone Number *
+                    Phone *
                   </Label>
                   <Input id="phone" {...register("phone")} className="mt-2" placeholder="+254 700 000 000" />
                   {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>}
                 </div>
               </div>
 
-              <ConsentDialog
-                checked={consent}
-                onCheckedChange={(checked) => setValue("consent", checked)}
-                error={errors.consent?.message}
-              />
+              <div className="flex items-start space-x-3 pt-4">
+                <Controller
+                  name="consent"
+                  control={control}
+                  render={({ field }) => (
+                    <Checkbox
+                      id="consent"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  )}
+                />
+                <Label htmlFor="consent" className="text-sm leading-relaxed">
+                  I agree to the terms and conditions and consent to my child's participation in the party activities. *
+                </Label>
+              </div>
+              {errors.consent && <p className="text-destructive text-sm">{errors.consent.message}</p>}
 
-              <RefundPolicyDialog />
+              <div className="flex flex-wrap gap-4 pt-4">
+                <RefundPolicyDialog />
+              </div>
 
-              <Button type="submit" className="w-full h-12 text-base" disabled={isSubmitting}>
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Book Party"}
               </Button>
             </form>
           </Card>
         </div>
       </div>
+
+      {/* Party Option Detail Dialog */}
+      <Dialog open={!!selectedPartyOption} onOpenChange={() => setSelectedPartyOption(null)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-primary/10 rounded-full p-3 text-primary">
+                {selectedPartyOption?.icon}
+              </div>
+              <DialogTitle className="text-2xl">{selectedPartyOption?.title}</DialogTitle>
+            </div>
+            <DialogDescription className="text-base text-foreground">
+              {selectedPartyOption?.fullDescription}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="mt-4 space-y-4">
+            <div>
+              <h4 className="font-semibold mb-3">What's Included:</h4>
+              <ul className="space-y-2">
+                {selectedPartyOption?.features.map((feature, index) => (
+                  <li key={index} className="flex items-start gap-2 text-muted-foreground">
+                    <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            
+            {selectedPartyOption?.note && (
+              <div className="bg-accent/50 rounded-lg p-4">
+                <p className="text-sm text-muted-foreground italic">
+                  <strong>Note:</strong> {selectedPartyOption.note}
+                </p>
+              </div>
+            )}
+            
+            <div className="bg-primary/5 rounded-lg p-4">
+              <p className="text-sm font-medium text-primary">{selectedPartyOption?.idealFor}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

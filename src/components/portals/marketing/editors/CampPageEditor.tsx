@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { cmsService } from '@/services/cmsService';
-import { supabase } from '@/integrations/supabase/client';
-import { Trash2, Plus, Upload } from 'lucide-react';
+import { Trash2, Plus } from 'lucide-react';
+import MediaUploader from './MediaUploader';
 
 interface CampPageEditorProps {
   isOpen: boolean;
@@ -21,6 +21,10 @@ export const CampPageEditor: React.FC<CampPageEditorProps> = ({ isOpen, onClose,
     title: '',
     description: '',
     heroImage: '',
+    mediaType: 'photo' as 'photo' | 'video',
+    mediaUrl: '',
+    videoThumbnail: '',
+    mediaAltText: '',
     duration: '',
     ageGroup: '',
     location: '',
@@ -28,14 +32,10 @@ export const CampPageEditor: React.FC<CampPageEditorProps> = ({ isOpen, onClose,
     highlights: ['']
   });
   const [isLoading, setIsLoading] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [imagePreview, setImagePreview] = useState<string>('');
 
   useEffect(() => {
     if (campSlug && isOpen) {
       loadCampData();
-    } else if (!isOpen) {
-      setImagePreview('');
     }
   }, [campSlug, isOpen]);
 
@@ -49,59 +49,16 @@ export const CampPageEditor: React.FC<CampPageEditorProps> = ({ isOpen, onClose,
         title: config.title || '',
         description: config.description || '',
         heroImage: config.heroImage || '',
+        mediaType: config.mediaType || 'photo',
+        mediaUrl: config.mediaUrl || '',
+        videoThumbnail: config.videoThumbnail || '',
+        mediaAltText: config.mediaAltText || '',
         duration: config.duration || '',
         ageGroup: config.ageGroup || '',
         location: config.location || '',
         time: config.time || '',
         highlights: config.highlights || ['']
       });
-      setImagePreview(config.heroImage || '');
-    }
-  };
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Check for HEIC/HEIF files (not web-compatible)
-    const fileName = file.name.toLowerCase();
-    const isHeic = fileName.endsWith('.heic') || fileName.endsWith('.heif');
-    
-    if (isHeic) {
-      toast.error('HEIC format not supported. Please convert to JPG or PNG first.');
-      return;
-    }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      toast.error('Please select an image file');
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      const fileExt = file.name.split('.').pop();
-      const fileName = `${Math.random().toString(36).substring(2)}-${Date.now()}.${fileExt}`;
-      const filePath = `camp-heroes/${fileName}`;
-
-      const { error: uploadError } = await supabase.storage
-        .from('marketing-assets')
-        .upload(filePath, file);
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage
-        .from('marketing-assets')
-        .getPublicUrl(filePath);
-
-      setFormData({ ...formData, heroImage: publicUrl });
-      setImagePreview(publicUrl);
-      toast.success('Image uploaded successfully');
-    } catch (error) {
-      console.error('Upload error:', error);
-      toast.error('Failed to upload image');
-    } finally {
-      setIsUploading(false);
     }
   };
 
@@ -175,50 +132,26 @@ export const CampPageEditor: React.FC<CampPageEditorProps> = ({ isOpen, onClose,
             />
           </div>
 
-          <div>
-            <Label htmlFor="heroImage">Hero Image *</Label>
-            <div className="space-y-3">
-              <div className="flex gap-2">
-                <Input
-                  id="heroImage"
-                  value={formData.heroImage}
-                  onChange={(e) => {
-                    setFormData({ ...formData, heroImage: e.target.value });
-                    setImagePreview(e.target.value);
-                  }}
-                  placeholder="https://... or /src/assets/camping.jpg"
-                  required
-                  className="flex-1"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => document.getElementById('heroImageUpload')?.click()}
-                  disabled={isUploading}
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  {isUploading ? 'Uploading...' : 'Upload'}
-                </Button>
-                <input
-                  id="heroImageUpload"
-                  type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                  className="hidden"
-                  onChange={handleImageUpload}
-                />
-              </div>
-              {imagePreview && (
-                <div className="relative w-full h-40 rounded-md overflow-hidden border">
-                  <img
-                    src={imagePreview}
-                    alt="Hero preview"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              )}
-              <p className="text-xs text-muted-foreground">
-                Upload from device or paste image URL
-              </p>
+          <div className="border rounded-lg p-4 bg-muted/30">
+            <Label className="text-base font-medium mb-4 block">Featured Media</Label>
+            <MediaUploader
+              mediaType={formData.mediaType}
+              mediaUrl={formData.mediaUrl || formData.heroImage}
+              thumbnailUrl={formData.videoThumbnail}
+              onMediaTypeChange={(type) => setFormData({ ...formData, mediaType: type })}
+              onMediaUrlChange={(url) => setFormData({ ...formData, mediaUrl: url, heroImage: url })}
+              onThumbnailUrlChange={(url) => setFormData({ ...formData, videoThumbnail: url })}
+              storagePath="camps"
+            />
+            <div className="mt-4">
+              <Label htmlFor="mediaAltText">Alt Text (for accessibility)</Label>
+              <Input
+                id="mediaAltText"
+                value={formData.mediaAltText}
+                onChange={(e) => setFormData({ ...formData, mediaAltText: e.target.value })}
+                placeholder="Describe the media for screen readers"
+                className="mt-1"
+              />
             </div>
           </div>
 

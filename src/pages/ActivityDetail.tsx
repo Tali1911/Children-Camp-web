@@ -7,6 +7,7 @@ import SEOHead from '@/components/SEOHead';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Skeleton } from '@/components/ui/skeleton';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 const ActivityDetail = () => {
   const { slug } = useParams<{ slug: string }>();
@@ -134,7 +135,7 @@ const ActivityDetail = () => {
 
           <div 
             className="prose prose-lg max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-a:text-primary"
-            dangerouslySetInnerHTML={{ __html: activity.content || '' }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(activity.content) }}
           />
 
           {/* CTA Section */}

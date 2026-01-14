@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useForm, useFieldArray, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -18,6 +18,8 @@ import { RefundPolicyDialog } from "./RefundPolicyDialog";
 import DatePickerField from "./DatePickerField";
 import { leadsService } from "@/services/leadsService";
 import { invoiceService } from "@/services/invoiceService";
+import { useExperiencePageConfig } from "@/hooks/useExperiencePageConfig";
+import DynamicMedia from "@/components/content/DynamicMedia";
 
 const participantSchema = z.object({
   name: z.string().min(1, "Participant name is required").max(100),
@@ -43,6 +45,17 @@ const kenyanExperiencesSchema = z.object({
 type KenyanExperiencesFormData = z.infer<typeof kenyanExperiencesSchema>;
 
 const KenyanExperiencesProgram = () => {
+  const { config: mediaConfig, refresh: refreshMedia } = useExperiencePageConfig('kenyan-experiences');
+
+  // Listen for CMS updates and refresh config
+  useEffect(() => {
+    const handleCMSUpdate = () => {
+      refreshMedia?.();
+    };
+    
+    window.addEventListener('cms-content-updated', handleCMSUpdate);
+    return () => window.removeEventListener('cms-content-updated', handleCMSUpdate);
+  }, [refreshMedia]);
   const {
     register,
     handleSubmit,
@@ -226,19 +239,26 @@ const KenyanExperiencesProgram = () => {
                 </div>
                 <div>
                   <h1 className="text-4xl md:text-5xl font-bold text-primary">Kenyan Experiences</h1>
-                  <p className="text-lg text-muted-foreground">(5-Day Programs)</p>
+                  <p className="text-lg text-muted-foreground">(5-Night, 6-Day Programs)</p>
                 </div>
               </div>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Multi day experiences designed to immerse teens in the rich cultural, artistic, and natural diversity
-                that Kenya has to offer. These dynamic, adventure-packed programs combine outdoor activities with
-                opportunities to engage meaningfully with local communities and traditions, providing real-world
-                learning experiences that are both thrilling and transformative.
+                Exploring Kenya, one region at a time. Sleep-away adventures for teens and preteens that shape 
+                confidence, character, and curiosity through real-world learning. From roaring rivers and mountain 
+                trails to cultural heartlands, campers tackle challenges, work as teams, and engage in community 
+                projects—raising a generation that thinks boldly and leads responsibly.
               </p>
             </div>
 
             <div className="relative h-80 rounded-2xl overflow-hidden">
-              <img src={adventureImage} alt="Kenyan landscape adventures" className="w-full h-full object-cover" />
+              <DynamicMedia
+                mediaType={mediaConfig?.mediaType || 'photo'}
+                mediaUrl={mediaConfig?.mediaUrl || adventureImage}
+                fallbackImage={adventureImage}
+                thumbnailUrl={mediaConfig?.videoThumbnail}
+                altText={mediaConfig?.mediaAltText || "Kenyan landscape adventures"}
+                className="w-full h-full object-cover"
+              />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             </div>
 
@@ -281,20 +301,20 @@ const KenyanExperiencesProgram = () => {
             <Card className="p-6 bg-primary/5">
               <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <Calendar className="w-5 h-5 text-primary" />
-                5-Day Progressive Learning
+                Program Experience
               </h4>
               <ul className="space-y-2 text-muted-foreground">
                 <li>
-                  • <strong>Day 1-2:</strong> Orientation and skill building
+                  • <strong>Living Classrooms:</strong> Kenya's regions become immersive learning environments
                 </li>
                 <li>
-                  • <strong>Day 3:</strong> Challenge application and teamwork
+                  • <strong>Team Challenges:</strong> Tackle real obstacles together
                 </li>
                 <li>
-                  • <strong>Day 4-5:</strong> Leadership development and reflection
+                  • <strong>Community Projects:</strong> Meaningful engagement with local communities
                 </li>
                 <li>
-                  • <strong>Cultural Integration:</strong> Local community engagement throughout
+                  • <strong>Leadership Development:</strong> Building confident, responsible young leaders
                 </li>
               </ul>
             </Card>

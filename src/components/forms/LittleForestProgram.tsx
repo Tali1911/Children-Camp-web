@@ -245,7 +245,7 @@ const LittleForestProgram = () => {
                 </div>
               </div>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Nurture sensory exploration, early language acquisition (Swahili focus), and motor development through nature-based activities designed specifically for our youngest explorers.
+                Safe, playful discovery for our youngest adventurers. Nature play, sensory exploration, and simple challenges that build curiosity, movement skills, and social interaction.
               </p>
             </div>
 
@@ -282,10 +282,10 @@ const LittleForestProgram = () => {
                 Special Focus Areas
               </h4>
               <ul className="space-y-2 text-muted-foreground">
-                <li>• <strong>Swahili Language:</strong> Early introduction through songs and stories</li>
-                <li>• <strong>Sensory Development:</strong> Natural materials and textures</li>
-                <li>• <strong>Motor Skills:</strong> Age-appropriate movement activities</li>
-                <li>• <strong>Social Skills:</strong> Gentle group interaction and sharing</li>
+                <li>• <strong>Nature Play:</strong> Sensory-rich outdoor experiences</li>
+                <li>• <strong>Movement:</strong> Activities for physical growth and coordination</li>
+                <li>• <strong>Swahili Immersion:</strong> Early language through songs and stories</li>
+                <li>• <strong>Nurturing Environment:</strong> Safe space for early childhood development</li>
               </ul>
             </Card>
           </div>

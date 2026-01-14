@@ -37,13 +37,66 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // Validate authentication
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.error('❌ No valid authorization header');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
 
-    if (!resendApiKey) throw new Error('RESEND_API_KEY not configured');
-    if (!supabaseUrl || !supabaseServiceKey) throw new Error('Supabase credentials not configured');
+    if (!resendApiKey || !supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      console.error('❌ Missing required environment variables');
+      return new Response(
+        JSON.stringify({ error: 'Server configuration error' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Verify the JWT token
+    const authSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authSupabase.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('❌ Invalid token:', claimsError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log('✅ User authenticated:', userId);
+
+    // Check user role - only accounts or admin can send invoices
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const allowedRoles = ['admin', 'accounts', 'ceo'];
+    if (!roles?.some(r => allowedRoles.includes(r.role))) {
+      console.error('❌ User lacks required role');
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - insufficient permissions' }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log('✅ User authorized with role:', roles.map(r => r.role).join(', '));
 
     const requestBody: InvoiceEmailRequest = await req.json();
     const { 
@@ -202,8 +255,9 @@ const handler = async (req: Request): Promise<Response> => {
 
   } catch (error: any) {
     console.error('❌ Error sending invoice email:', error);
+    // Return generic error - don't expose internal details
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: 'Failed to send invoice email. Please try again.' }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

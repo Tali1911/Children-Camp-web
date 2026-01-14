@@ -9,8 +9,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import { ArrowLeft, Clock, Users, Target, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Clock, Users, Target, CheckCircle, BookOpen, Bike, Tent, Award, Flame, Focus, Compass } from 'lucide-react';
 import campingImage from '@/assets/camping.jpg';
 import adventureImage from '@/assets/adventure.jpg';
 import dailyActivitiesImage from '@/assets/daily-activities.jpg';
@@ -36,8 +37,77 @@ const homeschoolingSchema = z.object({
 
 type HomeschoolingFormData = z.infer<typeof homeschoolingSchema>;
 
+interface Activity {
+  id: string;
+  title: string;
+  icon: React.ReactNode;
+  shortDescription: string;
+  fullDescription: string;
+  benefits: string[];
+}
+
+const activities: Activity[] = [
+  {
+    id: 'horse-riding',
+    title: 'Horse Riding',
+    icon: <Award className="w-6 h-6" />,
+    shortDescription: 'Build balance, coordination, and connection with animals.',
+    fullDescription: 'Horse riding builds balance, coordination, confidence, and responsibility while nurturing empathy and connection with animals. Our trained instructors ensure a safe and enriching experience for all skill levels.',
+    benefits: ['Balance & Coordination', 'Confidence Building', 'Responsibility', 'Empathy & Animal Connection']
+  },
+  {
+    id: 'mountain-biking',
+    title: 'Mountain Biking',
+    icon: <Bike className="w-6 h-6" />,
+    shortDescription: 'Develop endurance and bike-handling skills on guided trails.',
+    fullDescription: 'Mountain biking develops endurance, bike-handling skills, risk assessment, and resilience through guided trail riding. Students learn to navigate varying terrain while building physical fitness and mental toughness.',
+    benefits: ['Endurance', 'Bike-Handling Skills', 'Risk Assessment', 'Resilience']
+  },
+  {
+    id: 'camping',
+    title: 'Camping Experiences',
+    icon: <Tent className="w-6 h-6" />,
+    shortDescription: 'Learn independence, teamwork, and self-reliance outdoors.',
+    fullDescription: 'Camping experiences teach independence, teamwork, planning, and self-reliance through immersive outdoor living. Students learn to set up camp, cook outdoors, and work together in nature.',
+    benefits: ['Independence', 'Teamwork', 'Planning Skills', 'Self-Reliance']
+  },
+  {
+    id: 'leadership',
+    title: 'Outdoor Leadership Programs',
+    icon: <Users className="w-6 h-6" />,
+    shortDescription: 'Focus on communication, decision-making, and leadership.',
+    fullDescription: 'Our outdoor leadership programs focus on communication, decision-making, teamwork, and leadership through challenge-based activities. Students develop essential life skills in a supportive outdoor environment.',
+    benefits: ['Communication', 'Decision-Making', 'Teamwork', 'Leadership Skills']
+  },
+  {
+    id: 'bushcraft',
+    title: 'Bushcraft & Survival Skills',
+    icon: <Flame className="w-6 h-6" />,
+    shortDescription: 'Acquire practical skills like shelter building and fire safety.',
+    fullDescription: 'Learners acquire practical skills such as shelter building, fire safety, knot-tying, and nature awareness. These hands-on experiences build confidence and self-sufficiency in outdoor environments.',
+    benefits: ['Shelter Building', 'Fire Safety', 'Knot-Tying', 'Nature Awareness']
+  },
+  {
+    id: 'archery',
+    title: 'Archery',
+    icon: <Focus className="w-6 h-6" />,
+    shortDescription: 'Enhance focus, patience, and hand-eye coordination.',
+    fullDescription: 'Archery enhances focus, patience, discipline, and hand-eye coordination in a safe and structured setting. Students learn proper technique while developing mental concentration and physical control.',
+    benefits: ['Focus', 'Patience', 'Discipline', 'Hand-Eye Coordination']
+  },
+  {
+    id: 'orienteering',
+    title: 'Orienteering & Navigation',
+    icon: <Compass className="w-6 h-6" />,
+    shortDescription: 'Learn map reading, compass use, and problem-solving.',
+    fullDescription: 'Orienteering teaches map reading, compass use, spatial awareness, and problem-solving while navigating natural environments. Students develop critical thinking skills and outdoor confidence.',
+    benefits: ['Map Reading', 'Compass Use', 'Spatial Awareness', 'Problem-Solving']
+  }
+];
+
 const HomeschoolingForm = () => {
   const [selectedFocus, setSelectedFocus] = useState<string[]>([]);
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   
   const {
     register,
@@ -143,15 +213,95 @@ const HomeschoolingForm = () => {
             Back
           </Button>
           
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Homeschooling Programs</h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Homeschooler Programs</h1>
           <p className="text-xl text-forest-100 max-w-3xl">
-            Learn without limits! Join our nature-based homeschool program where curiosity leads the way.
+            Flexible, Experiential Learning for Homeschooling Families
           </p>
         </div>
       </div>
 
-      {/* Package Showcase Section */}
-      <div className="container mx-auto max-w-6xl px-4 py-16">
+      {/* Introduction Section */}
+      <div className="container mx-auto max-w-6xl px-4 py-12">
+        <div className="bg-accent/30 rounded-2xl p-8 mb-12">
+          <p className="text-lg text-foreground leading-relaxed mb-6">
+            Our Homeschooler Programs are designed to support families seeking meaningful, hands-on learning experiences beyond textbooks. These programs provide structured outdoor education that complements homeschooling curricula while fostering social interaction and real-world skill development.
+          </p>
+          <div className="grid md:grid-cols-2 gap-6">
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-primary">What We Offer:</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Curriculum-linked outdoor learning sessions across science, geography, physical education, and life skills
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Project-based learning through nature exploration, problem-solving, and creative challenges
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Social engagement with peers in a supportive outdoor environment
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Flexible scheduling to suit homeschool routines
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 className="font-semibold text-lg mb-3 text-primary">Key Benefits:</h3>
+              <ul className="space-y-2 text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Increased independence and confidence
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Enhanced collaboration skills
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Strong connection to the natural world
+                </li>
+                <li className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                  Memorable and impactful learning experiences
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        {/* Activities We Support - Clickable Cards */}
+        <div className="mb-12">
+          <h2 className="text-2xl font-bold text-primary mb-6">Activities We Readily Support</h2>
+          <p className="text-muted-foreground mb-6">Click on any activity to learn more about what's included and the benefits for your child.</p>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {activities.map((activity) => (
+              <Card 
+                key={activity.id} 
+                className="cursor-pointer hover:shadow-lg transition-all hover:border-primary/50"
+                onClick={() => setSelectedActivity(activity)}
+              >
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="bg-primary/10 rounded-full p-2 text-primary">
+                      {activity.icon}
+                    </div>
+                    <h4 className="font-semibold">{activity.title}</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-3">{activity.shortDescription}</p>
+                  <Button variant="link" className="p-0 h-auto text-primary">
+                    Learn More →
+                  </Button>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+
+        {/* Package Showcase Section */}
         <div className="grid md:grid-cols-3 gap-6 mb-12">
           <Card className="hover:shadow-lg transition-shadow">
             <CardHeader>
@@ -197,6 +347,13 @@ const HomeschoolingForm = () => {
               </p>
             </CardContent>
           </Card>
+        </div>
+
+        {/* Ideal For Section */}
+        <div className="bg-primary/5 rounded-xl p-6 mb-12">
+          <p className="text-center text-muted-foreground italic">
+            Ideal for families searching for <strong>homeschool outdoor programs in Nairobi</strong>, <strong>things homeschool children can do in Nairobi</strong>, and <strong>experiential learning for homeschoolers in Kenya</strong>.
+          </p>
         </div>
 
         {/* Registration Form */}
@@ -410,6 +567,36 @@ const HomeschoolingForm = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activity Detail Dialog */}
+      <Dialog open={!!selectedActivity} onOpenChange={() => setSelectedActivity(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="bg-primary/10 rounded-full p-3 text-primary">
+                {selectedActivity?.icon}
+              </div>
+              <DialogTitle className="text-2xl">{selectedActivity?.title}</DialogTitle>
+            </div>
+            <DialogDescription className="text-base text-foreground">
+              {selectedActivity?.fullDescription}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            <h4 className="font-semibold mb-3">Key Benefits:</h4>
+            <div className="flex flex-wrap gap-2">
+              {selectedActivity?.benefits.map((benefit, index) => (
+                <span 
+                  key={index} 
+                  className="bg-primary/10 text-primary text-sm px-3 py-1 rounded-full"
+                >
+                  {benefit}
+                </span>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

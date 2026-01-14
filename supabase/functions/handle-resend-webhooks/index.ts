@@ -47,37 +47,42 @@ const handler = async (req: Request): Promise<Response> => {
     // Get raw body for signature verification
     const payload = await req.text();
     
-    // Verify webhook signature if secret is configured
-    if (webhookSecret) {
-      const svixId = req.headers.get('svix-id');
-      const svixTimestamp = req.headers.get('svix-timestamp');
-      const svixSignature = req.headers.get('svix-signature');
+    // SECURITY: Webhook signature verification is MANDATORY in production
+    if (!webhookSecret) {
+      console.error('❌ RESEND_WEBHOOK_SECRET not configured - rejecting request');
+      return new Response(
+        JSON.stringify({ error: 'Webhook configuration error' }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
-      if (!svixId || !svixTimestamp || !svixSignature) {
-        console.error('❌ Missing Svix headers');
-        return new Response(
-          JSON.stringify({ error: 'Missing webhook signature headers' }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+    // Verify webhook signature
+    const svixId = req.headers.get('svix-id');
+    const svixTimestamp = req.headers.get('svix-timestamp');
+    const svixSignature = req.headers.get('svix-signature');
 
-      try {
-        const wh = new Webhook(webhookSecret);
-        wh.verify(payload, {
-          'svix-id': svixId,
-          'svix-timestamp': svixTimestamp,
-          'svix-signature': svixSignature,
-        });
-        console.log('✅ Webhook signature verified');
-      } catch (verifyError) {
-        console.error('❌ Webhook signature verification failed:', verifyError);
-        return new Response(
-          JSON.stringify({ error: 'Invalid webhook signature' }),
-          { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-    } else {
-      console.warn('⚠️ RESEND_WEBHOOK_SECRET not configured - skipping signature verification');
+    if (!svixId || !svixTimestamp || !svixSignature) {
+      console.error('❌ Missing Svix headers');
+      return new Response(
+        JSON.stringify({ error: 'Missing webhook signature headers' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    try {
+      const wh = new Webhook(webhookSecret);
+      wh.verify(payload, {
+        'svix-id': svixId,
+        'svix-timestamp': svixTimestamp,
+        'svix-signature': svixSignature,
+      });
+      console.log('✅ Webhook signature verified');
+    } catch (verifyError) {
+      console.error('❌ Webhook signature verification failed:', verifyError);
+      return new Response(
+        JSON.stringify({ error: 'Invalid webhook signature' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     // Initialize Supabase client with service role key

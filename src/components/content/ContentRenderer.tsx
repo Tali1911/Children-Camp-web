@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 interface ContentRendererProps {
   content: string;
@@ -16,7 +17,7 @@ const ContentRenderer: React.FC<ContentRendererProps> = ({
     return (
       <div 
         className={`prose prose-gray max-w-none ${className}`}
-        dangerouslySetInnerHTML={{ __html: content }}
+        dangerouslySetInnerHTML={{ __html: sanitizeHtml(content) }}
       />
     );
   }

@@ -15,16 +15,71 @@ const handler = async (req: Request): Promise<Response> => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Validate authentication - only authenticated users can test email
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.error('❌ No valid authorization header');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
-    // Check for API key
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const resendApiKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!supabaseUrl || !supabaseAnonKey || !supabaseServiceKey) {
+      console.error("❌ Supabase credentials not configured");
+      return new Response(
+        JSON.stringify({ error: "Server configuration error" }),
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Verify the JWT token
+    const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.39.3');
+    const authSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } }
+    });
+
+    const token = authHeader.replace('Bearer ', '');
+    const { data: claimsData, error: claimsError } = await authSupabase.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error('❌ Invalid token:', claimsError?.message);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const userId = claimsData.claims.sub;
+    console.log('✅ User authenticated:', userId);
+
+    // Check user role - only admin can test email
+    const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const { data: roles } = await supabase
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId);
+
+    const allowedRoles = ['admin', 'ceo', 'marketing'];
+    if (!roles?.some(r => allowedRoles.includes(r.role))) {
+      console.error('❌ User lacks required role');
+      return new Response(
+        JSON.stringify({ error: 'Forbidden - insufficient permissions' }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     if (!resendApiKey) {
       console.error("❌ RESEND_API_KEY not found");
       return new Response(
         JSON.stringify({
-          error: "RESEND_API_KEY environment variable is not configured",
-          configured: false,
+          error: "Email service not configured",
         }),
         {
           status: 500,
@@ -110,11 +165,10 @@ const handler = async (req: Request): Promise<Response> => {
   } catch (error: any) {
     console.error("❌ Error in test-resend:", error);
 
+    // Return generic error - don't expose internal details
     return new Response(
       JSON.stringify({
-        error: error.message,
-        details: error.toString(),
-        configured: !!Deno.env.get("RESEND_API_KEY"),
+        error: "Failed to send test email. Please check configuration.",
       }),
       {
         status: 500,

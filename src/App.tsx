@@ -31,10 +31,14 @@ import EmailTestMonitor from "./pages/EmailTestMonitor";
 import SendGridTest from "./pages/SendGridTest";
 import FunctionStatus from "./pages/FunctionStatus";
 import ActivityDetail from "./pages/ActivityDetail";
+import TermsAndConditions from "./pages/TermsAndConditions";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
 
 import { AuthProvider } from "./hooks/useAuth";
 import ProgramRegistration from "./components/ProgramRegistration";
 import FloatingFAQ from "./components/FloatingFAQ";
+import CookieConsentBanner from "./components/CookieConsentBanner";
+import { PageTracker } from "./hooks/usePageTracking";
 import { useState } from "react";
 
 function App() {
@@ -89,9 +93,15 @@ function App() {
               {/* Activity Detail Pages */}
               <Route path="/activity/:slug" element={<ActivityDetail />} />
               
+              {/* Legal Pages */}
+              <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
+              <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+              
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <PageTracker />
             <FloatingFAQ />
+            <CookieConsentBanner />
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>

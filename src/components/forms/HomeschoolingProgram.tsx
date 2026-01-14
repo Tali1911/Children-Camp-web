@@ -166,9 +166,8 @@ const HomeschoolingProgram = () => {
                 </div>
               </div>
               <p className="text-xl text-muted-foreground leading-relaxed">
-                Structured, experiential, hands-on learning and outdoor adventures tailored to your child’s unique way
-                of learning. Through engaging activities, students explore, create, and grow beyond the traditional
-                classroom. Let us help you bring the outdoors into your homeschool experience.
+                Flexible, experiential learning beyond textbooks. Structured outdoor education that complements
+                homeschooling curricula while fostering social interaction and real-world skill development.
               </p>
             </div>
 
@@ -195,16 +194,21 @@ const HomeschoolingProgram = () => {
               ))}
             </div>
 
-            {/* Rainy Day Activities */}
+            {/* Available Activities */}
             <Card className="p-6 bg-accent/50">
               <h4 className="text-lg font-semibold mb-3 flex items-center gap-2">
                 <CheckCircle className="w-5 h-5 text-primary" />
-                Rainy Day Activities
+                Available Activities
               </h4>
-              <p className="text-muted-foreground">
-                Nature crafts, mapping indoors, nature storytime - ensuring learning continues regardless of weather
-                with adaptability and sensory play focus.
-              </p>
+              <ul className="space-y-2 text-muted-foreground text-sm">
+                <li>• <strong>Horse Riding:</strong> Balance, coordination, empathy with animals</li>
+                <li>• <strong>Mountain Biking:</strong> Endurance, risk assessment, resilience</li>
+                <li>• <strong>Camping Experiences:</strong> Independence, teamwork, self-reliance</li>
+                <li>• <strong>Outdoor Leadership:</strong> Communication, decision-making</li>
+                <li>• <strong>Bushcraft & Survival:</strong> Shelter building, fire safety, nature awareness</li>
+                <li>• <strong>Archery:</strong> Focus, patience, discipline</li>
+                <li>• <strong>Orienteering:</strong> Map reading, compass use, navigation</li>
+              </ul>
             </Card>
           </div>
 

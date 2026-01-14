@@ -126,9 +126,9 @@ const defaultProgramConfigs: { [key: string]: ProgramFormConfig } = {
   },
   'school-experience': {
     programInfo: {
-      title: 'School Experience Packages',
+      title: 'School Adventure',
       subtitle: '(Ages 6-17 years)',
-      description: 'Designed to complement curriculum with immersive experiential learning. International schools receive curriculum tie-in and reflection journals. Kenyan schools gain accessible packages focusing on practical life skills.'
+      description: 'We partner with schools across Nairobi and Kenya to deliver curriculum-aligned outdoor education programs, school field trips, forest school experiences, and sleep-away camps that enhance academic learning while nurturing holistic child development and environmental stewardship.'
     },
     fields: {
       schoolName: { label: 'School Name', placeholder: 'Enter school name', required: true },

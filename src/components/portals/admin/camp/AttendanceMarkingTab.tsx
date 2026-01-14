@@ -5,7 +5,9 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { Search, CheckCircle, XCircle, Clock, QrCode, Calendar, Users, CalendarDays } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { Search, CheckCircle, XCircle, Clock, QrCode, Calendar, Users, CalendarDays, Mail } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { attendanceService } from '@/services/attendanceService';
 import { qrCodeService } from '@/services/qrCodeService';
@@ -31,6 +33,7 @@ export const AttendanceMarkingTab: React.FC = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [viewMode, setViewMode] = useState<'expected' | 'all'>('expected');
+  const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
 
   const loadRegistrations = async () => {
     try {
@@ -115,9 +118,12 @@ export const AttendanceMarkingTab: React.FC = () => {
         }
       }));
 
-      // Perform check-in for selected date
-      await attendanceService.checkInForDate(registrationId, childName, user.id, selectedDate);
-      toast.success(`${childName} checked in successfully for ${format(parseISO(selectedDate), 'MMM d, yyyy')}`);
+      // Perform check-in for selected date with optional notification
+      await attendanceService.checkInForDate(registrationId, childName, user.id, selectedDate, undefined, sendEmailNotifications);
+      
+      let message = `${childName} checked in successfully for ${format(parseISO(selectedDate), 'MMM d, yyyy')}`;
+      if (sendEmailNotifications) message += ' (notification sent)';
+      toast.success(message);
       
       // Fetch updated attendance record
       const attendance = await attendanceService.hasCheckedInOnDate(registrationId, childName, selectedDate);
@@ -145,9 +151,12 @@ export const AttendanceMarkingTab: React.FC = () => {
         }
       }));
 
-      // Perform check-out
-      await attendanceService.checkOut(attendanceId);
-      toast.success(`${childName} checked out successfully`);
+      // Perform check-out with optional notification
+      await attendanceService.checkOut(attendanceId, undefined, sendEmailNotifications, registrationId, childName);
+      
+      let message = `${childName} checked out successfully`;
+      if (sendEmailNotifications) message += ' (notification sent)';
+      toast.success(message);
       
       // Fetch updated attendance record
       const attendance = await attendanceService.hasCheckedInOnDate(registrationId, childName, selectedDate);
@@ -484,6 +493,19 @@ export const AttendanceMarkingTab: React.FC = () => {
                 <SelectItem value="little-forest">Little Forest</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+          <div className="flex items-center gap-3 mt-4 p-3 bg-muted/50 rounded-lg">
+            <Mail className="h-4 w-4 text-muted-foreground" />
+            <div className="flex items-center gap-2">
+              <Switch
+                id="email-notifications"
+                checked={sendEmailNotifications}
+                onCheckedChange={setSendEmailNotifications}
+              />
+              <Label htmlFor="email-notifications" className="text-sm cursor-pointer">
+                Send email notifications to parents on check-in/check-out
+              </Label>
+            </div>
           </div>
         </CardHeader>
       </Card>

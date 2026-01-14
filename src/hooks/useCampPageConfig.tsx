@@ -6,6 +6,11 @@ export interface CampPageConfig {
   title: string;
   description: string;
   heroImage: string;
+  // New media fields for photo/video support
+  mediaType?: 'photo' | 'video';
+  mediaUrl?: string;
+  videoThumbnail?: string;
+  mediaAltText?: string;
   duration: string;
   ageGroup: string;
   location: string;

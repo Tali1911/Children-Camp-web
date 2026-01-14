@@ -25,8 +25,13 @@ import { CampFormEditor } from './editors/CampFormEditor';
 import { LittleForestEditor } from './editors/LittleForestEditor';
 import { ProgramFormEditor } from './editors/ProgramFormEditor';
 import { ActivityDetailEditor } from './editors/ActivityDetailEditor';
+import { LegalPageEditor } from './editors/LegalPageEditor';
+import { PartiesPageEditor } from './editors/PartiesPageEditor';
+import { TeamBuildingEditor } from './editors/TeamBuildingEditor';
+import { ExperiencePageEditor } from './editors/ExperiencePageEditor';
+import MediaLibrary from './MediaLibrary';
 
-type EditorType = 'hero' | 'program' | 'announcement' | 'testimonial' | 'team' | 'settings' | 'about' | 'service' | 'camp-page' | 'camp-form' | 'little-forest' | 'program-form' | 'activity-detail' | null;
+type EditorType = 'hero' | 'program' | 'announcement' | 'testimonial' | 'team' | 'settings' | 'about' | 'service' | 'camp-page' | 'camp-form' | 'little-forest' | 'program-form' | 'activity-detail' | 'legal-terms' | 'legal-privacy' | 'parties-page' | 'team-building-page' | 'experience-page' | null;
 
 const ContentManagement = () => {
   const isMobile = useIsMobile();
@@ -42,6 +47,7 @@ const ContentManagement = () => {
   const [campForms, setCampForms] = useState<ContentItem[]>([]);
   const [programForms, setProgramForms] = useState<ContentItem[]>([]);
   const [activityDetails, setActivityDetails] = useState<ContentItem[]>([]);
+  const [experiencePages, setExperiencePages] = useState<ContentItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeEditor, setActiveEditor] = useState<EditorType>(null);
   const [editingItem, setEditingItem] = useState<any>(null);
@@ -52,7 +58,7 @@ const ContentManagement = () => {
 
   const loadAllContent = async () => {
     setIsLoading(true);
-    const [heroData, programData, announcementData, testimonialData, teamData, aboutData, serviceData, campPageData, campFormData, programFormData, activityDetailData] = await Promise.all([
+    const [heroData, programData, announcementData, testimonialData, teamData, aboutData, serviceData, campPageData, campFormData, programFormData, activityDetailData, experiencePageData] = await Promise.all([
       cmsService.getAllContent('hero_slide'),
       cmsService.getAllContent('program'),
       cmsService.getAllContent('announcement'),
@@ -63,7 +69,8 @@ const ContentManagement = () => {
       cmsService.getAllContent('camp_page'),
       cmsService.getAllContent('camp_form'),
       cmsService.getAllProgramForms(),
-      cmsService.getAllActivityDetails()
+      cmsService.getAllActivityDetails(),
+      cmsService.getAllExperiencePages()
     ]);
     setHeroSlides(heroData);
     setPrograms(programData);
@@ -76,6 +83,7 @@ const ContentManagement = () => {
     setCampForms(campFormData);
     setProgramForms(programFormData);
     setActivityDetails(activityDetailData);
+    setExperiencePages(experiencePageData);
     setIsLoading(false);
   };
 
@@ -201,6 +209,9 @@ const ContentManagement = () => {
               <SelectItem value="calendar">Calendar</SelectItem>
               <SelectItem value="navigation">Navigation</SelectItem>
               <SelectItem value="camps">Camp Management</SelectItem>
+              <SelectItem value="experiences">Experiences</SelectItem>
+              <SelectItem value="media">Media Library</SelectItem>
+              <SelectItem value="legal">Legal Pages</SelectItem>
               <SelectItem value="settings">Settings</SelectItem>
             </SelectContent>
           </Select>
@@ -219,6 +230,9 @@ const ContentManagement = () => {
             <TabsTrigger value="calendar">Calendar</TabsTrigger>
             <TabsTrigger value="navigation">Navigation</TabsTrigger>
             <TabsTrigger value="camps">Camps</TabsTrigger>
+            <TabsTrigger value="experiences">Experiences</TabsTrigger>
+            <TabsTrigger value="media">Media</TabsTrigger>
+            <TabsTrigger value="legal">Legal</TabsTrigger>
             <TabsTrigger value="settings">Settings</TabsTrigger>
           </TabsList>
         )}
@@ -437,6 +451,47 @@ const ContentManagement = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Group Activities Section */}
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-4">Group Activities</h3>
+            <div className="grid md:grid-cols-2 gap-4">
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Parties & Celebrations</CardTitle>
+                  <p className="text-xs text-muted-foreground">/group-activities/parties</p>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setActiveEditor('parties-page')}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Parties Page
+                  </Button>
+                </CardContent>
+              </Card>
+              <Card className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Team Building</CardTitle>
+                  <p className="text-xs text-muted-foreground">/group-activities/team-building</p>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => setActiveEditor('team-building-page')}
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Edit Team Building Page
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="program-forms" className="space-y-4">
@@ -484,6 +539,132 @@ const ContentManagement = () => {
                   )}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="experiences" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Experience Pages</CardTitle>
+              <CardDescription>Manage experience page media (photos or videos)</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="text-center py-4">Loading...</div>
+              ) : (
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {experiencePages.length > 0 ? (
+                    experiencePages.map((page) => (
+                      <Card key={page.id} className="hover:shadow-md transition-shadow">
+                        <CardHeader className="pb-3">
+                          <CardTitle className="text-base">{page.title}</CardTitle>
+                          <p className="text-xs text-muted-foreground">{page.slug}</p>
+                          {page.metadata?.mediaType && (
+                            <Badge variant="outline" className="w-fit mt-1">
+                              {page.metadata.mediaType === 'video' ? '🎬 Video' : '📷 Photo'}
+                            </Badge>
+                          )}
+                        </CardHeader>
+                        <CardContent>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="w-full"
+                            onClick={() => {
+                              setActiveEditor('experience-page');
+                              setEditingItem(page.slug);
+                            }}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit Media
+                          </Button>
+                        </CardContent>
+                      </Card>
+                    ))
+                  ) : (
+                    <Card className="hover:shadow-md transition-shadow">
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base">Kenyan Experiences</CardTitle>
+                        <p className="text-xs text-muted-foreground">kenyan-experiences</p>
+                      </CardHeader>
+                      <CardContent>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full"
+                          onClick={() => {
+                            setActiveEditor('experience-page');
+                            setEditingItem('kenyan-experiences');
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Media
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="media" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Media Library</CardTitle>
+              <CardDescription>Browse and manage all uploaded photos and videos</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MediaLibrary embedded />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="legal" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Legal Pages</CardTitle>
+              <CardDescription>Manage Terms and Conditions and Privacy Policy content</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid md:grid-cols-2 gap-4">
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Terms and Conditions</CardTitle>
+                    <p className="text-xs text-muted-foreground">/terms-and-conditions</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => openEditor('legal-terms')}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Terms
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Privacy Policy</CardTitle>
+                    <p className="text-xs text-muted-foreground">/privacy-policy</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={() => openEditor('legal-privacy')}
+                    >
+                      <Edit className="h-4 w-4 mr-2" />
+                      Edit Privacy Policy
+                    </Button>
+                  </CardContent>
+                </Card>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -619,6 +800,49 @@ const ContentManagement = () => {
           activityDetail={editingItem}
           onSave={handleSave}
           heroSlides={heroSlides}
+        />
+      )}
+
+      {activeEditor === 'legal-terms' && (
+        <LegalPageEditor
+          pageType="terms"
+          isOpen={true}
+          onClose={closeEditor}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'legal-privacy' && (
+        <LegalPageEditor
+          pageType="privacy"
+          isOpen={true}
+          onClose={closeEditor}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'parties-page' && (
+        <PartiesPageEditor
+          isOpen={true}
+          onClose={closeEditor}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'team-building-page' && (
+        <TeamBuildingEditor
+          isOpen={true}
+          onClose={closeEditor}
+          onSave={handleSave}
+        />
+      )}
+
+      {activeEditor === 'experience-page' && (
+        <ExperiencePageEditor
+          isOpen={true}
+          onClose={closeEditor}
+          experienceSlug={editingItem}
+          onSave={handleSave}
         />
       )}
     </div>

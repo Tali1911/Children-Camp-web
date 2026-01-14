@@ -55,6 +55,45 @@ const handler = async (req: Request): Promise<Response> => {
     });
   }
 
+  // Validate authentication
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    console.error('❌ No valid authorization header');
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Supabase credentials not configured');
+    return new Response(
+      JSON.stringify({ error: 'Server configuration error' }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  // Verify the JWT token
+  const authSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } }
+  });
+
+  const token = authHeader.replace('Bearer ', '');
+  const { data: claimsData, error: claimsError } = await authSupabase.auth.getClaims(token);
+  
+  if (claimsError || !claimsData?.claims) {
+    console.error('❌ Invalid token:', claimsError?.message);
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
+  console.log('✅ User authenticated:', claimsData.claims.sub);
+
   try {
     // Get environment variables
     const resendApiKey = Deno.env.get('RESEND_API_KEY');
@@ -399,11 +438,9 @@ const handler = async (req: Request): Promise<Response> => {
     console.error('❌ Error in send-confirmation-email:', error);
     console.error('❌ Error stack:', error.stack);
     
+    // Return generic error to client - don't expose internal details
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: error.stack || 'No stack trace available'
-      }),
+      JSON.stringify({ error: 'Failed to send confirmation email. Please try again.' }),
       {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" }

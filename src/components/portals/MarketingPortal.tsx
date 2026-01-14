@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Badge } from "@/components/ui/badge";
 import MessageCenter from '../communication/MessageCenter';
@@ -13,6 +12,9 @@ import EmailHealthDashboard from './marketing/EmailHealthDashboard';
 import EmailDeliveriesTab from './marketing/EmailDeliveriesTab';
 import EmailSegmentsTab from './marketing/EmailSegmentsTab';
 import EmailSuppressionsTab from './marketing/EmailSuppressionsTab';
+import UserEngagementTab from './marketing/UserEngagementTab';
+import SiteAnalyticsTab from './marketing/SiteAnalyticsTab';
+import RealTimeAnalytics from './marketing/RealTimeAnalytics';
 
 interface MarketingPortalProps {
   activeTab: string;
@@ -45,6 +47,12 @@ const MarketingPortal: React.FC<MarketingPortalProps> = ({ activeTab }) => {
         return <EmailSegmentsTab />;
       case 'email-suppressions':
         return <EmailSuppressionsTab />;
+      case 'user-engagement':
+        return <UserEngagementTab />;
+      case 'site-analytics':
+        return <SiteAnalyticsTab />;
+      case 'realtime':
+        return <RealTimeAnalytics />;
       default:
         return <MarketingDashboard />;
     }

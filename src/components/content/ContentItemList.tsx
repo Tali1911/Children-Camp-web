@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Edit, FileText, Globe, Clock } from 'lucide-react';
 import { ContentItem } from '@/services/cmsService';
+import { sanitizeHtml } from '@/utils/sanitize';
 
 interface ContentItemListProps {
   content: ContentItem[];
@@ -87,9 +88,11 @@ const ContentItemList: React.FC<ContentItemListProps> = ({
                     <div 
                       className="mt-2 text-sm prose prose-sm max-w-none line-clamp-2"
                       dangerouslySetInnerHTML={{ 
-                        __html: item.content.length > 150 
-                          ? item.content.substring(0, 150) + '...' 
-                          : item.content 
+                        __html: sanitizeHtml(
+                          item.content.length > 150 
+                            ? item.content.substring(0, 150) + '...' 
+                            : item.content
+                        )
                       }}
                     />
                   )}
