@@ -1,115 +1,337 @@
+# Amuse Ke - Children's Nature Camp Platform
 
-# Forest Camp Backend
+## About Amuse Ke
 
-This is the backend server for the Forest Camp website. It provides APIs for user authentication, program management, registration, payments, and email communications.
+Amuse Ke is a comprehensive full-stack platform for a children's nature camp located in Kenya's beautiful Karura Forest. The platform serves as both a public-facing website for families to learn about and register for camp programs, and a robust internal management system with role-based portals for staff across multiple departments.
 
-## Setup Instructions
+## Key Features
 
-1. **Install dependencies**
+### Public-Facing Features
+- **Interactive Landing Page**
+  - Dynamic hero slider with content management
+  - Real-time announcements system
+  - Program highlights and seasonal camp offerings
+  - Interactive yearly calendar
+  - Parent testimonials and reviews
+  - Team member profiles
+  - Contact form with email integration
 
+- **Program Registration System**
+  - Multiple program types: Day Camps, Holiday Camps (Easter, Summer, Mid-Term, End Year)
+  - Kenyan Experiences, Homeschooling, School Experience programs
+  - Team Building and Birthday Party bookings
+  - Online payment processing with QR code generation
+  - Automated confirmation emails
+  - Registration tracking and management
+
+- **Content Management**
+  - Dynamic "Who We Are" section with pillars
+  - FAQ system with categorization
+  - Gallery management with image optimization
+  - Navigation settings control
+
+### Administrative & Staff Portals
+- **Marketing Portal**
+  - Content management for all public pages
+  - Lead and customer management
+  - Email campaign management with Postmark integration
+  - Email health dashboard and deliverability tracking
+  - Campaign analytics and reporting
+  - Navigation and SEO settings
+
+- **CEO Dashboard**
+  - Executive analytics and KPI tracking
+  - Approval workflows
+  - Strategic planning tools
+  - Company-wide reports
+  - System settings and configurations
+
+- **HR Portal**
+  - Employee management
+  - Team recruitment section
+  - Staff profiles and roles
+
+- **Accounts Portal**
+  - Invoice management
+  - Financial tracking
+  - Payment reconciliation
+
+- **Governance Portal**
+  - Policy management
+  - Compliance framework
+  - Risk management
+  - Audit trails and logs
+  - Document management
+  - Data governance
+
+- **Coach Portal**
+  - Camp attendance tracking with QR scanner
+  - Registration management
+  - Activity planning and reporting
+
+- **Admin Portal**
+  - User management and approval system
+  - Role-based access control
+  - Camp and program registration management
+  - Ground registration for walk-ins
+  - Attendance marking system
+  - System health monitoring
+  - Data migration tools
+
+## Technology Stack
+
+### Frontend
+- **Framework**: React 18 with TypeScript
+- **Build Tool**: Vite
+- **Styling**: 
+  - Tailwind CSS with custom design system
+  - Semantic color tokens (HSL-based)
+  - Shadcn UI component library
+  - Radix UI primitives
+- **State Management**: 
+  - TanStack React Query for server state
+  - React Context for authentication
+  - Local state with React hooks
+- **Routing**: React Router DOM v6
+- **Form Handling**: React Hook Form with Zod validation
+- **UI Components**:
+  - Custom components built on Radix UI
+  - Responsive design patterns
+  - Accessible ARIA-compliant components
+- **Utilities**:
+  - date-fns for date handling
+  - Recharts for data visualization
+  - Sonner for toast notifications
+  - Lucide React for icons
+  - QR code generation (qrcode, html5-qrcode)
+  - PDF generation (jspdf, html2canvas)
+  - Rich text editing (Quill, React Quill)
+
+### Backend (Supabase)
+- **Database**: PostgreSQL with Row Level Security (RLS)
+- **Authentication**: 
+  - Supabase Auth with JWT
+  - Email/password authentication
+  - Role-based access control with custom app_role enum
+  - User approval system
+- **Storage**: Supabase Storage for images and assets
+- **Edge Functions**: 
+  - Email webhook handling (Postmark integration)
+  - Program confirmation emails
+  - Marketing system automation
+- **Real-time**: Supabase real-time subscriptions for live updates
+- **Security**: 
+  - Row Level Security policies on all tables
+  - Custom security functions (has_role)
+  - Audit logging system
+
+### Key Integrations
+- **Email**: Postmark for transactional emails and campaigns
+- **Analytics**: Custom analytics dashboard with usage tracking
+- **Payment Processing**: Integrated payment gateway (Stripe-ready)
+- **SEO**: React Helmet Async for meta tags and SEO optimization
+
+## Architecture
+- **Frontend**: Single Page Application (SPA)
+- **Backend**: Supabase (PostgreSQL + Edge Functions + Storage + Auth)
+- **State Management**: Server-client synchronization with React Query
+- **Security Model**: Role-based access control (RBAC) with RLS policies
+- **Content Delivery**: Optimized asset delivery with lazy loading
+
+## Development Approach
+- Component-based architecture with TypeScript
+- Mobile-first responsive design
+- Accessibility-first UI components (WCAG compliant)
+- Progressive enhancement patterns
+- Comprehensive CMS for non-technical content management
+- Real-time data synchronization
+- Optimistic UI updates for better UX
+
+---
+
+## Local Development Setup
+
+### Prerequisites
+
+Before running this project locally, ensure you have the following installed:
+
+| Tool | Version | Download Link |
+|------|---------|---------------|
+| **Node.js** | v18.0.0 or higher | [nodejs.org](https://nodejs.org/) |
+| **npm** | v9.0.0 or higher (comes with Node.js) | Included with Node.js |
+| **Git** | Latest | [git-scm.com](https://git-scm.com/) |
+
+Optional but recommended:
+- **VS Code** - [code.visualstudio.com](https://code.visualstudio.com/)
+- **Bun** (alternative package manager) - [bun.sh](https://bun.sh/)
+
+### Installation Steps
+
+1. **Clone the repository**
+   ```bash
+   git clone <YOUR_GIT_URL>
+   cd <YOUR_PROJECT_NAME>
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+   
+   Or if using Bun:
+   ```bash
+   bun install
+   ```
+
+3. **Environment Configuration**
+   
+   Create a `.env.local` file in the root directory with the following variables:
+   ```env
+   VITE_SUPABASE_URL=your_supabase_project_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+   
+   > **Note**: Contact the project administrator to obtain the Supabase credentials.
+
+4. **Start the development server**
+   ```bash
+   npm run dev
+   ```
+   
+   Or with Bun:
+   ```bash
+   bun run dev
+   ```
+
+5. **Access the application**
+   
+   Open your browser and navigate to:
+   ```
+   http://localhost:8080
+   ```
+
+### Available Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server with hot reload |
+| `npm run build` | Build production-ready bundle |
+| `npm run preview` | Preview production build locally |
+| `npm run lint` | Run ESLint for code quality checks |
+
+### IDE Setup (VS Code Recommended)
+
+For the best development experience, install these VS Code extensions:
+
+1. **Essential Extensions**
+   - ESLint (`dbaeumer.vscode-eslint`)
+   - Prettier (`esbenp.prettier-vscode`)
+   - Tailwind CSS IntelliSense (`bradlc.vscode-tailwindcss`)
+   - TypeScript Vue Plugin (Volar) - for `.tsx` files
+
+2. **Recommended Extensions**
+   - Auto Rename Tag (`formulahendry.auto-rename-tag`)
+   - Path Intellisense (`christian-kohler.path-intellisense`)
+   - Error Lens (`usernamehw.errorlens`)
+
+3. **VS Code Settings** (`.vscode/settings.json`)
+   ```json
+   {
+     "editor.formatOnSave": true,
+     "editor.defaultFormatter": "esbenp.prettier-vscode",
+     "editor.codeActionsOnSave": {
+       "source.fixAll.eslint": true
+     },
+     "tailwindCSS.includeLanguages": {
+       "typescript": "javascript",
+       "typescriptreact": "javascript"
+     }
+   }
+   ```
+
+### Troubleshooting
+
+**Port already in use?**
 ```bash
-cd server
-npm install
-```
-
-2. **Configure environment variables**
-
-Copy the `.env.example` file to `.env` and update the values:
-
-```bash
-cp .env.example .env
-```
-
-Update the following variables in the `.env` file:
-- `MONGODB_URI`: Your MongoDB connection string
-- `JWT_SECRET`: A secret key for JWT token generation
-- `EMAIL_*`: Configuration for your email provider
-- `STRIPE_SECRET_KEY`: Your Stripe secret key
-- `STRIPE_WEBHOOK_SECRET`: Your Stripe webhook secret
-
-3. **Seed the database**
-
-```bash
-node seeder.js -i
-```
-
-This will create a default admin user and sample programs and announcements.
-
-4. **Start the server**
-
-Development mode (with auto-reload):
-```bash
+# Kill process on port 8080
+npx kill-port 8080
+# Then restart
 npm run dev
 ```
 
-Production mode:
+**Dependencies not installing?**
 ```bash
-npm start
+# Clear npm cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
 ```
 
-The server will start on port 5000 by default (or the port specified in your .env file).
+**TypeScript errors?**
+```bash
+# Restart TypeScript server in VS Code
+# Press Cmd/Ctrl + Shift + P → "TypeScript: Restart TS Server"
+```
 
-## API Routes
+---
 
-### Authentication
-- `POST /api/auth/register` - Register a new admin (super admin only)
-- `POST /api/auth/login` - Login admin
-- `GET /api/auth/me` - Get current admin details
-- `GET /api/auth/logout` - Logout admin
+## File Structure Overview
 
-### Admin Management
-- `GET /api/admin` - Get all admins (super admin only)
-- `GET /api/admin/:id` - Get single admin (super admin only)
-- `PUT /api/admin/:id` - Update admin (super admin only)
-- `DELETE /api/admin/:id` - Delete admin (super admin only)
+- `/src` - Main source code directory
+  - `/components` - React components
+    - `/ui` - Shadcn UI components (Radix-based)
+    - `/portals` - Role-based portal components (CEO, Marketing, HR, etc.)
+    - `/admin` - Admin dashboard components
+    - `/gallery` - Gallery management components
+    - `/calendar` - Calendar and event components
+    - `/team` - Team member components
+    - `/announcements` - Announcement system
+    - `/content` - CMS content components
+    - `/forms` - Program registration forms
+    - `/analytics` - Analytics dashboard
+    - `/attendance` - QR scanner and attendance tracking
+    - `/communication` - Messaging and email components
+  - `/hooks` - Custom React hooks (useAuth, useContent, useSupabaseAuth, etc.)
+  - `/lib` - Utility functions and helpers
+  - `/pages` - Main page components
+    - `/about` - About section pages (Team, Who We Are, What We Do)
+    - `/camps` - Camp program pages
+    - `/experiences` - Experience program pages
+    - `/group-activities` - Team building and parties
+    - `/programs` - Program detail pages
+  - `/services` - API service layer for Supabase integration
+  - `/types` - TypeScript type definitions
+  - `/integrations` - Third-party integrations (Supabase client)
+  - `/utils` - Utility functions and default configurations
 
-### Programs
-- `GET /api/programs` - Get all programs
-- `GET /api/programs/:id` - Get single program
-- `POST /api/programs` - Create program (admin only)
-- `PUT /api/programs/:id` - Update program (admin only)
-- `DELETE /api/programs/:id` - Delete program (admin only)
+- `/public/supabase/migrations` - Database migration files
+- `/supabase/functions` - Edge functions for serverless backend logic
 
-### Announcements
-- `GET /api/announcements` - Get all announcements
-- `GET /api/announcements/:id` - Get single announcement
-- `POST /api/announcements` - Create announcement (admin only)
-- `PUT /api/announcements/:id` - Update announcement (admin only)
-- `DELETE /api/announcements/:id` - Delete announcement (admin only)
+---
 
-### Registrations
-- `GET /api/registrations` - Get all registrations (admin only)
-- `GET /api/registrations/:id` - Get single registration (admin only)
-- `POST /api/registrations` - Create registration (public)
-- `PUT /api/registrations/:id` - Update registration (admin only)
-- `DELETE /api/registrations/:id` - Delete registration (admin only)
+## Database Setup
 
-### Contact Form
-- `POST /api/contact` - Submit contact form (public)
-- `GET /api/contact` - Get all contact submissions (admin only)
-- `GET /api/contact/:id` - Get single contact submission (admin only)
-- `PUT /api/contact/:id` - Update contact status (admin only)
-- `POST /api/contact/:id/reply` - Reply to contact (admin only)
-- `DELETE /api/contact/:id` - Delete contact submission (admin only)
+All database migrations are located in `public/supabase/migrations/` and include:
+- Authentication system setup
+- User roles and permissions
+- Content management tables
+- Program registration tables
+- Marketing and CMS tables
+- Email management system
+- Calendar and events
 
-### Payments
-- `POST /api/payment/:registrationId` - Create Stripe checkout session
-- `POST /api/payment/mpesa/:registrationId` - Process M-Pesa payment
-- `POST /api/payment/webhook` - Handle Stripe webhook events
-- `GET /api/payment/verify/:registrationId` - Verify payment status
-- `PUT /api/payment/manual/:registrationId` - Manually update payment status (admin only)
+Migrations are applied through the Supabase dashboard or CLI.
 
-## Frontend Integration
+---
 
-To connect this backend to the frontend:
+## Contributing
 
-1. Update the API URLs in your frontend code to point to this backend server.
-2. Replace the in-memory data service with API calls to these endpoints.
-3. Implement JWT token storage and authentication flows.
+1. Create a feature branch from `main`
+2. Make your changes following the existing code style
+3. Test thoroughly in development
+4. Submit a pull request with a clear description
 
-## Security Notes
+---
 
-- In production, ensure you have proper HTTPS setup.
-- Configure CORS settings in server.js to only allow requests from your frontend domain.
-- Regularly rotate JWT secrets and API keys.
-- Consider implementing rate limiting for public endpoints.
+## License
+
+This project is proprietary and confidential.

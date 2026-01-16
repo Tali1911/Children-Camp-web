@@ -1,10 +1,21 @@
 const { createClient } = require('@supabase/supabase-js');
 
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+// Lazy initialization of Supabase client
+let supabase = null;
+
+function getSupabaseClient() {
+  if (!supabase) {
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL || 'https://rfmyrqzrwamygvyibdbs.supabase.co';
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    
+    if (!supabaseKey) {
+      throw new Error('SUPABASE_SERVICE_ROLE_KEY is required. Please set it in your server/.env file. See LOCAL_SETUP.md for instructions.');
+    }
+    
+    supabase = createClient(supabaseUrl, supabaseKey);
+  }
+  return supabase;
+}
 
 /**
  * Send email using Resend with suppression checking and delivery tracking
@@ -20,8 +31,10 @@ const sendEmail = async (options) => {
   const { email, subject, html, emailType = 'transactional', recipientType, recipientId } = options;
 
   try {
+    const supabaseClient = getSupabaseClient();
+    
     // Step 1: Check if email is suppressed
-    const { data: suppression, error: suppressionError } = await supabase
+    const { data: suppression, error: suppressionError } = await supabaseClient
       .from('email_suppressions')
       .select('email, suppression_type, reason')
       .eq('email', email)
@@ -38,7 +51,7 @@ const sendEmail = async (options) => {
     }
 
     // Step 2: Check if email is marked as invalid in leads table
-    const { data: lead } = await supabase
+    const { data: lead } = await supabaseClient
       .from('leads')
       .select('email_valid')
       .eq('email', email)
@@ -50,7 +63,7 @@ const sendEmail = async (options) => {
     }
 
     // Step 3: Call Supabase Edge Function to send email via Resend
-    const { data: functionResponse, error: functionError } = await supabase.functions.invoke(
+    const { data: functionResponse, error: functionError } = await supabaseClient.functions.invoke(
       'send-confirmation-email',
       {
         body: {

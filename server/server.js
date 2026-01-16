@@ -2,12 +2,13 @@
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const connectDB = require('./config/db');
+// MongoDB connection not needed - project uses Supabase
+// const connectDB = require('./config/db');
 const errorHandler = require('./middleware/error');
 const { apiLimiter } = require('./middleware/rateLimit');
 
-// Connect to database
-connectDB();
+// Database connection skipped - using Supabase instead
+// connectDB();
 
 const app = express();
 
