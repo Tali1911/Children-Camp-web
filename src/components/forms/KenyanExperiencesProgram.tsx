@@ -141,9 +141,9 @@ const KenyanExperiencesProgram = () => {
         console.error("⚠️ Failed to create auto-invoice:", invoiceError);
       }
 
-      // Send confirmation email via Resend
+      // Send confirmation email via Resend (BLOCK submission if email fails)
       const { supabase } = await import("@/integrations/supabase/client");
-      await supabase.functions.invoke("send-confirmation-email", {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke("send-confirmation-email", {
         body: {
           email: data.email,
           programType: "kenyan-experiences",
@@ -157,6 +157,9 @@ const KenyanExperiencesProgram = () => {
         },
       });
 
+      if (emailError) {
+        throw emailError;
+      }
       toast.success("Registration submitted successfully! Check your email for confirmation.");
       reset();
     } catch (error: any) {

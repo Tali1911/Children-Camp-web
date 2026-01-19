@@ -84,9 +84,9 @@ const HomeschoolingProgram = () => {
         source: "website_registration",
       });
 
-      // Send confirmation email via Resend
+      // Send confirmation email via Resend (BLOCK submission if email fails)
       const { supabase } = await import("@/integrations/supabase/client");
-      await supabase.functions.invoke("send-confirmation-email", {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke("send-confirmation-email", {
         body: {
           email: data.email,
           programType: "homeschooling",
@@ -100,6 +100,9 @@ const HomeschoolingProgram = () => {
         },
       });
 
+      if (emailError) {
+        throw emailError;
+      }
       toast.success("Registration submitted successfully! Check your email for confirmation.");
     } catch (error: any) {
       console.error("Registration error:", error);

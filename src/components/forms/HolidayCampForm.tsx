@@ -203,10 +203,10 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
         // Don't fail the registration if invoice creation fails
       }
       
-      // Send confirmation email via Resend
+      // Send confirmation email via Resend (BLOCK submission if email fails)
       console.log('📧 Attempting to send confirmation email...');
       const { supabase } = await import('@/integrations/supabase/client');
-      const emailResponse = await supabase.functions.invoke('send-confirmation-email', {
+      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-confirmation-email', {
         body: {
           email: data.email,
           programType: 'holiday-camp',
@@ -223,16 +223,15 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
           }
         }
       });
-      
-      console.log('📧 Email response:', emailResponse);
-      
-      if (emailResponse.error) {
-        console.error('❌ Email sending failed:', emailResponse.error);
-        toast.warning('Registration successful, but confirmation email failed. We will contact you shortly.');
-      } else {
-        console.log('✅ Email sent successfully');
+
+      console.log('📧 Email response:', { emailData, emailError });
+
+      if (emailError) {
+        console.error('❌ Email sending failed:', emailError);
+        throw emailError;
       }
-      
+
+      console.log('✅ Email sent successfully');
       // Set state for modal
       setRegistrationResult(registration);
       setQrCodeDataUrl(qrUrl);

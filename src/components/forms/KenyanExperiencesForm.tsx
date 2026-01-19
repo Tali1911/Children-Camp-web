@@ -13,6 +13,7 @@ import { toast } from 'sonner';
 import DatePickerField from './DatePickerField';
 import { ConsentDialog } from './ConsentDialog';
 import { RefundPolicyDialog } from './RefundPolicyDialog';
+import { kenyanExperiencesService } from '@/services/programRegistrationService';
 
 const kenyanExperiencesSchema = z.object({
   parentLeader: z.string().min(1, 'Parent/Leader name is required').max(100),
@@ -48,9 +49,23 @@ const KenyanExperiencesForm = () => {
 
   const onSubmit = async (data: KenyanExperiencesFormData) => {
     try {
-      console.log('Kenyan Experiences form submission:', data);
+      await kenyanExperiencesService.create({
+        parentLeader: data.parentLeader,
+        participants: data.participantNames,
+        ageRange: data.ageRange,
+        circuit: data.circuit,
+        preferredDates: [data.startDate.toISOString(), data.endDate.toISOString()],
+        location: data.location,
+        transport: data.transport,
+        specialMedicalNeeds: data.specialNeeds || null,
+        email: data.email,
+        phone: data.phone,
+        consent: data.consent,
+      });
+
       toast.success('Registration submitted successfully! We will contact you soon.');
     } catch (error) {
+      console.error('Registration error:', error);
       toast.error('Failed to submit registration. Please try again.');
     }
   };
