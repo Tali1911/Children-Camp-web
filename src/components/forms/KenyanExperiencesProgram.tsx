@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Mountain, MapPin, Calendar, ArrowLeft, Plus, Trash2, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
-import adventureImage from "@/assets/shule.jpg";
+import adventureImage from "@/assets/adventure.jpg";
 import { ConsentDialog } from "./ConsentDialog";
 import { RefundPolicyDialog } from "./RefundPolicyDialog";
 import DatePickerField from "./DatePickerField";
