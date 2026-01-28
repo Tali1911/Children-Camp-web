@@ -1,43 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2, GripVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { cmsService } from '@/services/cmsService';
-
-interface Package {
-  id: string;
-  title: string;
-  description: string;
-  features: string[];
-  image?: string;
-}
-
-interface SampleFlowItem {
-  title: string;
-  description: string;
-}
-
-interface TeamBuildingConfig {
-  title: string;
-  subtitle: string;
-  description: string;
-  featuredImage: string;
-  packages: Package[];
-  sampleFlow: SampleFlowItem[];
-  formTitle: string;
-  ctaText: string;
-  seo: {
-    metaTitle: string;
-    metaDescription: string;
-    keywords: string;
-  };
-}
+import MediaUploader from './MediaUploader';
+import { TeamBuildingPageConfig, TeamBuildingPackage, SampleFlowItem } from '@/hooks/useTeamBuildingPageConfig';
 
 interface TeamBuildingEditorProps {
   isOpen: boolean;
@@ -45,11 +18,12 @@ interface TeamBuildingEditorProps {
   onSave: () => void;
 }
 
-const defaultConfig: TeamBuildingConfig = {
+const defaultConfig: TeamBuildingPageConfig = {
   title: 'Team Building',
   subtitle: '(All Ages)',
   description: 'Create safe, fun, memory-filled experiences with measurable outcomes. Each package is 90% fun + 10% reflection, focusing on team communication and problem-solving.',
-  featuredImage: '',
+  featuredMediaUrl: '',
+  mediaType: 'photo',
   packages: [
     {
       id: 'adventure',
@@ -84,19 +58,42 @@ const defaultConfig: TeamBuildingConfig = {
     { title: 'Cake & Awards', description: 'Celebration and recognition' },
     { title: 'Closing Circle', description: 'Reflection and key takeaways' }
   ],
-  formTitle: 'Book Your Experience',
-  ctaText: 'Book Experience',
-  seo: {
-    metaTitle: 'Team Building Programs | Amuse Kenya Corporate Events',
-    metaDescription: 'Strengthen your team with nature-based team building activities at Karura Forest. Customized corporate programs focusing on collaboration, communication, and leadership development.',
-    keywords: 'team building Kenya, corporate events, team activities, leadership training, corporate retreats Nairobi'
-  }
+  formConfig: {
+    formTitle: 'Book Your Experience',
+    ctaText: 'Book Experience',
+    fields: {
+      occasion: { label: 'Occasion', placeholder: 'Select occasion' },
+      adultsNumber: { label: 'Number of Adults', placeholder: 'e.g., 10' },
+      childrenNumber: { label: 'Number of Children', placeholder: 'e.g., 5' },
+      ageRange: { label: 'Age Range', placeholder: 'Select age range' },
+      package: { label: 'Package', placeholder: 'Select a package' },
+      eventDate: { label: 'Event Date', placeholder: 'Select date' },
+      location: { label: 'Location', placeholder: 'Select location' },
+      decor: { label: 'Decoration Package' },
+      catering: { label: 'Catering Services' },
+      email: { label: 'Email Address', placeholder: 'your@email.com' },
+      phone: { label: 'Phone Number', placeholder: '+254 700 000 000' }
+    },
+    buttons: {
+      submit: 'Book Experience',
+      back: 'Back to Home'
+    },
+    messages: {
+      successMessage: 'Booking submitted successfully! We\'ll contact you shortly.',
+      errorMessage: 'Failed to submit booking. Please try again.',
+      loadingMessage: 'Submitting...'
+    }
+  },
+  metaTitle: 'Team Building Programs | Amuse Kenya Corporate Events',
+  metaDescription: 'Strengthen your team with nature-based team building activities at Karura Forest. Customized corporate programs focusing on collaboration, communication, and leadership development.',
+  keywords: 'team building Kenya, corporate events, team activities, leadership training, corporate retreats Nairobi'
 };
 
 export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, onClose, onSave }) => {
-  const [config, setConfig] = useState<TeamBuildingConfig>(defaultConfig);
+  const [config, setConfig] = useState<TeamBuildingPageConfig>(defaultConfig);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [existingId, setExistingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
@@ -107,9 +104,12 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
   const loadConfig = async () => {
     setIsLoading(true);
     try {
-      const content = await cmsService.getContentBySlug('team-building-page', 'camp_page');
-      if (content?.metadata) {
-        setConfig({ ...defaultConfig, ...content.metadata });
+      const content = await cmsService.getContentBySlug('team-building-page', 'experience_page');
+      if (content) {
+        setExistingId(content.id);
+        if (content.metadata?.pageConfig) {
+          setConfig({ ...defaultConfig, ...content.metadata.pageConfig });
+        }
       }
     } catch (error) {
       console.error('Error loading team building config:', error);
@@ -121,25 +121,31 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      const existingContent = await cmsService.getContentBySlug('team-building-page', 'camp_page');
-      
       const contentData = {
         title: config.title,
         slug: 'team-building-page',
         content: config.description,
-        content_type: 'camp_page' as const,
+        content_type: 'experience_page' as const,
         status: 'published' as const,
-        metadata: config
+        metadata: {
+          pageConfig: config,
+          mediaUrl: config.featuredMediaUrl,
+          mediaType: config.mediaType
+        }
       };
 
-      if (existingContent) {
-        await cmsService.updateContent(existingContent.id, contentData);
+      if (existingId) {
+        await cmsService.updateContent(existingId, contentData);
       } else {
         await cmsService.createContent(contentData);
       }
 
+      // Dispatch event to notify public pages
+      window.dispatchEvent(new CustomEvent('cms-content-updated'));
+      
       toast.success('Team Building page updated successfully');
       onSave();
+      onClose();
     } catch (error) {
       console.error('Error saving team building config:', error);
       toast.error('Failed to save changes');
@@ -148,7 +154,7 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
     }
   };
 
-  const updatePackage = (index: number, field: keyof Package, value: any) => {
+  const updatePackage = (index: number, field: keyof TeamBuildingPackage, value: any) => {
     const updated = [...config.packages];
     updated[index] = { ...updated[index], [field]: value };
     setConfig({ ...config, packages: updated });
@@ -176,7 +182,7 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
   };
 
   const addPackage = () => {
-    const newPackage: Package = {
+    const newPackage: TeamBuildingPackage = {
       id: `package-${Date.now()}`,
       title: 'New Package',
       description: 'Package description',
@@ -208,21 +214,39 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
     setConfig({ ...config, sampleFlow: updated });
   };
 
+  const updateFormField = (fieldKey: string, property: string, value: string) => {
+    setConfig({
+      ...config,
+      formConfig: {
+        ...config.formConfig,
+        fields: {
+          ...config.formConfig.fields,
+          [fieldKey]: {
+            ...config.formConfig.fields[fieldKey],
+            [property]: value
+          }
+        }
+      }
+    });
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Team Building Page</DialogTitle>
+          <DialogDescription>Update page content, packages, form labels, and SEO settings</DialogDescription>
         </DialogHeader>
 
         {isLoading ? (
           <div className="flex items-center justify-center py-8">Loading...</div>
         ) : (
           <Tabs defaultValue="content" className="space-y-4">
-            <TabsList>
+            <TabsList className="grid w-full grid-cols-5">
               <TabsTrigger value="content">Content</TabsTrigger>
               <TabsTrigger value="packages">Packages</TabsTrigger>
               <TabsTrigger value="flow">Sample Flow</TabsTrigger>
+              <TabsTrigger value="form">Form Config</TabsTrigger>
               <TabsTrigger value="seo">SEO</TabsTrigger>
             </TabsList>
 
@@ -254,29 +278,14 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
               </div>
 
               <div className="space-y-2">
-                <Label>Featured Image URL</Label>
-                <Input
-                  value={config.featuredImage}
-                  onChange={(e) => setConfig({ ...config, featuredImage: e.target.value })}
-                  placeholder="https://example.com/image.jpg or leave empty for default"
+                <Label>Featured Media</Label>
+                <MediaUploader
+                  mediaUrl={config.featuredMediaUrl}
+                  mediaType={config.mediaType}
+                  onMediaTypeChange={(type) => setConfig({ ...config, mediaType: type })}
+                  onMediaUrlChange={(url) => setConfig({ ...config, featuredMediaUrl: url })}
+                  storagePath="team-building"
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Form Title</Label>
-                  <Input
-                    value={config.formTitle}
-                    onChange={(e) => setConfig({ ...config, formTitle: e.target.value })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>CTA Button Text</Label>
-                  <Input
-                    value={config.ctaText}
-                    onChange={(e) => setConfig({ ...config, ctaText: e.target.value })}
-                  />
-                </div>
               </div>
             </TabsContent>
 
@@ -317,15 +326,6 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
                           value={pkg.description}
                           onChange={(e) => updatePackage(pkgIndex, 'description', e.target.value)}
                           rows={2}
-                        />
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <Label>Image URL (optional)</Label>
-                        <Input
-                          value={pkg.image || ''}
-                          onChange={(e) => updatePackage(pkgIndex, 'image', e.target.value)}
-                          placeholder="https://example.com/package-image.jpg"
                         />
                       </div>
 
@@ -404,50 +404,140 @@ export const TeamBuildingEditor: React.FC<TeamBuildingEditorProps> = ({ isOpen, 
               </div>
             </TabsContent>
 
+            <TabsContent value="form" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Form Settings</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>Form Title</Label>
+                      <Input
+                        value={config.formConfig.formTitle}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          formConfig: { ...config.formConfig, formTitle: e.target.value }
+                        })}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Submit Button Text</Label>
+                      <Input
+                        value={config.formConfig.ctaText}
+                        onChange={(e) => setConfig({
+                          ...config,
+                          formConfig: { ...config.formConfig, ctaText: e.target.value }
+                        })}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Field Labels</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {Object.entries(config.formConfig.fields).map(([key, field]) => (
+                    <div key={key} className="grid grid-cols-2 gap-3 pb-3 border-b last:border-b-0">
+                      <div className="space-y-1">
+                        <Label className="text-xs capitalize">{key.replace(/([A-Z])/g, ' $1').trim()} Label</Label>
+                        <Input
+                          value={field.label}
+                          onChange={(e) => updateFormField(key, 'label', e.target.value)}
+                        />
+                      </div>
+                      {field.placeholder !== undefined && (
+                        <div className="space-y-1">
+                          <Label className="text-xs">Placeholder</Label>
+                          <Input
+                            value={field.placeholder || ''}
+                            onChange={(e) => updateFormField(key, 'placeholder', e.target.value)}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Messages</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2">
+                    <Label>Success Message</Label>
+                    <Textarea
+                      value={config.formConfig.messages.successMessage}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        formConfig: {
+                          ...config.formConfig,
+                          messages: { ...config.formConfig.messages, successMessage: e.target.value }
+                        }
+                      })}
+                      rows={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Error Message</Label>
+                    <Input
+                      value={config.formConfig.messages.errorMessage}
+                      onChange={(e) => setConfig({
+                        ...config,
+                        formConfig: {
+                          ...config.formConfig,
+                          messages: { ...config.formConfig.messages, errorMessage: e.target.value }
+                        }
+                      })}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             <TabsContent value="seo" className="space-y-4">
               <div className="space-y-2">
                 <Label>Meta Title</Label>
                 <Input
-                  value={config.seo.metaTitle}
-                  onChange={(e) => setConfig({ 
-                    ...config, 
-                    seo: { ...config.seo, metaTitle: e.target.value } 
-                  })}
+                  value={config.metaTitle}
+                  onChange={(e) => setConfig({ ...config, metaTitle: e.target.value })}
+                  maxLength={60}
                 />
+                <p className="text-sm text-muted-foreground">{config.metaTitle.length}/60</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Meta Description</Label>
                 <Textarea
-                  value={config.seo.metaDescription}
-                  onChange={(e) => setConfig({ 
-                    ...config, 
-                    seo: { ...config.seo, metaDescription: e.target.value } 
-                  })}
+                  value={config.metaDescription}
+                  onChange={(e) => setConfig({ ...config, metaDescription: e.target.value })}
                   rows={3}
+                  maxLength={160}
                 />
+                <p className="text-sm text-muted-foreground">{config.metaDescription.length}/160</p>
               </div>
 
               <div className="space-y-2">
                 <Label>Keywords (comma-separated)</Label>
                 <Input
-                  value={config.seo.keywords}
-                  onChange={(e) => setConfig({ 
-                    ...config, 
-                    seo: { ...config.seo, keywords: e.target.value } 
-                  })}
+                  value={config.keywords}
+                  onChange={(e) => setConfig({ ...config, keywords: e.target.value })}
                 />
               </div>
             </TabsContent>
           </Tabs>
         )}
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2 pt-4 border-t">
           <Button variant="outline" onClick={onClose}>Cancel</Button>
           <Button onClick={handleSave} disabled={isSaving}>
             {isSaving ? 'Saving...' : 'Save Changes'}
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );

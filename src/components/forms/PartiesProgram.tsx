@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, Controller, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -12,13 +12,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { PartyPopper, Gift, ArrowLeft, Plus, Trash2, TreePine, Home, Moon, CheckCircle } from "lucide-react";
 import { Link } from "react-router-dom";
-import birthdayImage from "@/assets/birthday.jpg";
+import birthdayImage from "@/assets/party.jpg";
 import campingImage from "@/assets/camping.jpg";
 import adventureImage from "@/assets/adventure.jpg";
 import DatePickerField from "./DatePickerField";
 import { RefundPolicyDialog } from "./RefundPolicyDialog";
 import { leadsService } from '@/services/leadsService';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
+import { cmsService } from '@/services/cmsService';
+import { usePartiesPageConfig, PartiesPageConfig } from '@/hooks/usePartiesPageConfig';
 
 const childSchema = z.object({
   childName: z.string().min(1, "Child name is required").max(100),
@@ -110,6 +112,7 @@ const partyOptions: PartyOption[] = [
 
 const PartiesProgram = () => {
   const [selectedPartyOption, setSelectedPartyOption] = useState<PartyOption | null>(null);
+  const { config: cmsConfig, isLoading: isCmsLoading } = usePartiesPageConfig();
 
   const {
     register,

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { toast } from "sonner";
 import { PartyPopper, Users, Target, ArrowLeft, CheckCircle, Mountain, Compass, Flame, Focus, Building, School, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
-import adventureImage from "@/assets/adventure.jpg";
+import adventureImage from "@/assets/teambuilding.png";
 import DatePickerField from "./DatePickerField";
 import { RefundPolicyDialog } from "./RefundPolicyDialog";
 import { leadsService } from '@/services/leadsService';
@@ -140,9 +140,16 @@ const TeamBuildingProgram = () => {
   useEffect(() => {
     const loadCMSContent = async () => {
       try {
-        const content = await cmsService.getContentBySlug('team-building-page', 'camp_page');
-        if (content?.metadata) {
-          setCmsConfig(content.metadata as CMSConfig);
+        // Try experience_page first (new unified format)
+        let content = await cmsService.getContentBySlug('team-building-page', 'experience_page');
+        if (content?.metadata?.pageConfig) {
+          setCmsConfig(content.metadata.pageConfig as CMSConfig);
+        } else {
+          // Fallback to camp_page for backwards compatibility
+          content = await cmsService.getContentBySlug('team-building-page', 'camp_page');
+          if (content?.metadata) {
+            setCmsConfig(content.metadata as CMSConfig);
+          }
         }
       } catch (error) {
         console.error('Error loading CMS content:', error);

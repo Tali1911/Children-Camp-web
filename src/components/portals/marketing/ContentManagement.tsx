@@ -587,6 +587,28 @@ const ContentManagement = () => {
                     </Button>
                   </CardContent>
                 </Card>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Team Building</CardTitle>
+                    <p className="text-xs text-muted-foreground">/group-activities/team-building</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setActiveEditor('team-building-page')}>
+                      <Edit className="h-4 w-4 mr-2" /> Edit Page
+                    </Button>
+                  </CardContent>
+                </Card>
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">Parties</CardTitle>
+                    <p className="text-xs text-muted-foreground">/group-activities/parties</p>
+                  </CardHeader>
+                  <CardContent>
+                    <Button variant="outline" size="sm" className="w-full" onClick={() => setActiveEditor('parties-page')}>
+                      <Edit className="h-4 w-4 mr-2" /> Edit Page
+                    </Button>
+                  </CardContent>
+                </Card>
               </div>
             </CardContent>
           </Card>
