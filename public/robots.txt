@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Important pages
-Allow: /#about
+Allow: /#about-2
 Allow: /#programs
 Allow: /#calendar
 Allow: /#contact
@@ -14,7 +14,7 @@ Disallow: /login
 Disallow: /api/
 
 # Block old/legacy URLs (redirected to new structure)
-Disallow: /about-2
+
 Disallow: /amuse-camp
 Disallow: /school-holiday-camps
 Disallow: /schools
