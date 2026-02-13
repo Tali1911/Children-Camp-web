@@ -10,6 +10,16 @@
 /services/          /programs               301
 /services           /programs               301
 
+# Additional legacy WordPress URL redirects
+/book-a-service/        /contact                301
+/book-a-service         /contact                301
+/book-now/              /contact                301
+/book-now               /contact                301
+/summer-camp-2/         /camps/summer           301
+/summer-camp-2          /camps/summer           301
+/activities/            /programs               301
+/activities             /programs               301
+
 # Redirect legacy/auto-generated sitemaps to the canonical sitemap
 /page-sitemap.xml   /sitemap.xml            301
 /wp-sitemap.xml     /sitemap.xml            301

@@ -347,12 +347,8 @@ const EventCalendar: React.FC<EventCalendarProps> = ({
                       
                       <div className="grid grid-cols-7 gap-px">
                         {monthDays.map((day, index) => {
-                          const dayEvents = events.filter(event => {
-                            const eventStart = event.start instanceof Date ? event.start : new Date(event.start);
-                            const eventEnd = event.end instanceof Date ? event.end : new Date(event.end);
-                            return day >= new Date(eventStart.getFullYear(), eventStart.getMonth(), eventStart.getDate()) && 
-                                   day <= new Date(eventEnd.getFullYear(), eventEnd.getMonth(), eventEnd.getDate());
-                          });
+                          // Use getEventsByDay to properly respect eventDates array
+                          const dayEvents = getEventsByDay(day);
                           const isCurrentDay = isToday(day);
                           const inMonth = isSameMonth(day, monthDate);
                           

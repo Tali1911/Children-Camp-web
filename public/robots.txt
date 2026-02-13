@@ -19,6 +19,10 @@ Disallow: /amuse-camp
 Disallow: /school-holiday-camps
 Disallow: /schools
 Disallow: /services
+Disallow: /book-a-service
+Disallow: /book-now
+Disallow: /summer-camp-2
+Disallow: /activities
 
 # Sitemap location
 Sitemap: https://amusekenya.co.ke/sitemap.xml

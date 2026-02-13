@@ -4,7 +4,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Plus, X, Loader2 } from 'lucide-react';
+import { Plus, X, Loader2, Mail } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,6 +17,7 @@ import { leadsService } from '@/services/leadsService';
 import { CampRegistration } from '@/types/campRegistration';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
+import { supabase } from '@/integrations/supabase/client';
 
 const childSchema = z.object({
   childName: z.string().min(2, 'Name required'),
@@ -64,6 +66,7 @@ interface QuickGroundRegistrationProps {
 export const QuickGroundRegistration: React.FC<QuickGroundRegistrationProps> = ({ onComplete }) => {
   const { user } = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [sendEmail, setSendEmail] = useState(true);
 
   const { register, control, handleSubmit, watch, setValue, reset, formState: { errors } } = useForm<QuickRegForm>({
     resolver: zodResolver(quickRegSchema),
@@ -159,7 +162,39 @@ export const QuickGroundRegistration: React.FC<QuickGroundRegistrationProps> = (
         });
 
         toast.success(`Registered! #${registration.registration_number}`);
-        
+
+        // Send confirmation + admin notification emails (if enabled)
+        if (sendEmail) {
+        try {
+          const campLabel = CAMP_TYPES.find(c => c.value === data.campType)?.label || data.campType;
+          await supabase.functions.invoke('send-confirmation-email', {
+            body: {
+              email: data.email,
+              programType: data.campType,
+              registrationDetails: {
+                parentName: data.parentName,
+                campTitle: `${campLabel} (Walk-in)`,
+                registrationId: registration.id,
+                registrationNumber: registration.registration_number,
+                children: data.children.map(child => ({
+                  childName: child.childName,
+                  ageRange: child.ageRange,
+                  selectedDates: [new Date().toISOString().split('T')[0]],
+                  selectedSessions: { [new Date().toISOString().split('T')[0]]: data.sessionType },
+                  price: sessionPrice,
+                })),
+              },
+              invoiceDetails: {
+                totalAmount,
+                paymentMethod: 'cash_ground',
+              },
+            },
+          });
+        } catch (emailError) {
+          console.error('Email notification failed:', emailError);
+        }
+        }
+
         // Record successful submission for duplicate prevention
         await recordSubmission(data, 'ground-registration');
         
@@ -283,6 +318,19 @@ export const QuickGroundRegistration: React.FC<QuickGroundRegistrationProps> = (
             placeholder="0"
           />
         </div>
+      </div>
+
+      {/* Email Toggle */}
+      <div className="flex items-center space-x-2">
+        <Checkbox
+          id="sendEmail"
+          checked={sendEmail}
+          onCheckedChange={(checked) => setSendEmail(checked === true)}
+        />
+        <Label htmlFor="sendEmail" className="flex items-center gap-1.5 text-sm cursor-pointer">
+          <Mail className="h-3.5 w-3.5" />
+          Send confirmation email to client
+        </Label>
       </div>
 
       {/* Notes */}

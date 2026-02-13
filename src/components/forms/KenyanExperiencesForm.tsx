@@ -15,6 +15,7 @@ import { ConsentDialog } from './ConsentDialog';
 import { RefundPolicyDialog } from './RefundPolicyDialog';
 import { kenyanExperiencesService } from '@/services/programRegistrationService';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
+import { leadsService } from '@/services/leadsService';
 
 const kenyanExperiencesSchema = z.object({
   parentLeader: z.string().min(1, 'Parent/Leader name is required').max(100),
@@ -57,7 +58,7 @@ const KenyanExperiencesForm = () => {
     }
     
     try {
-      await kenyanExperiencesService.create({
+      const registration = await kenyanExperiencesService.create({
         parentLeader: data.parentLeader,
         participants: data.participantNames,
         ageRange: data.ageRange,
@@ -71,7 +72,42 @@ const KenyanExperiencesForm = () => {
         consent: data.consent,
       });
 
-      toast.success('Registration submitted successfully! We will contact you soon.');
+      // Create lead for marketing tracking
+      await leadsService.createLead({
+        full_name: data.parentLeader,
+        email: data.email,
+        phone: data.phone,
+        program_type: 'kenyan-experiences',
+        program_name: data.circuit,
+        form_data: data,
+        source: 'website_registration'
+      });
+
+      // Send confirmation email via Resend
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { error: emailError } = await supabase.functions.invoke('send-confirmation-email', {
+        body: {
+          email: data.email,
+          programType: 'kenyan-experiences',
+          registrationDetails: {
+            parentLeader: data.parentLeader,
+            participants: data.participantNames,
+            circuit: data.circuit,
+            ageRange: data.ageRange,
+            startDate: data.startDate,
+            endDate: data.endDate,
+            location: data.location,
+            registrationId: registration && 'id' in registration ? registration.id : undefined
+          }
+        }
+      });
+
+      if (emailError) {
+        console.error('Email sending failed:', emailError);
+        throw emailError;
+      }
+
+      toast.success('Registration submitted successfully! Check your email for confirmation.');
       
       // Record successful submission for duplicate prevention
       await recordSubmission(data, 'kenyan-experiences');

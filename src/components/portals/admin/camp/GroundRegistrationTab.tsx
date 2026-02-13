@@ -5,7 +5,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { UserPlus, Plus, X, Loader2 } from 'lucide-react';
+import { UserPlus, Plus, X, Loader2, Mail, CalendarCheck, CalendarPlus, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { Checkbox } from '@/components/ui/checkbox';
+import { supabase } from '@/integrations/supabase/client';
+import { attendanceService } from '@/services/attendanceService';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -63,6 +70,9 @@ const SESSIONS = [
 export const GroundRegistrationTab: React.FC = () => {
   const { user } = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
+  const [sendEmail, setSendEmail] = useState(true);
+  const [registrationMode, setRegistrationMode] = useState<'walkin_today' | 'book_future'>('walkin_today');
+  const [bookingDate, setBookingDate] = useState<Date | undefined>(undefined);
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState('');
   const [completedRegistration, setCompletedRegistration] = useState<any>(null);
@@ -133,6 +143,12 @@ export const GroundRegistrationTab: React.FC = () => {
   };
 
   const onSubmit = async (data: GroundRegistrationForm) => {
+    // Validate booking date for future bookings
+    if (registrationMode === 'book_future' && !bookingDate) {
+      toast.error('Please select a booking date for the future reservation.');
+      return;
+    }
+
     // Security checks: prevent duplicates and rate limiting
     const securityCheck = await performSecurityChecks(data, 'ground-registration');
     if (!securityCheck.allowed) {
@@ -152,16 +168,35 @@ export const GroundRegistrationTab: React.FC = () => {
         email: data.email,
         phone: data.phone,
         emergency_contact: `${data.emergencyContact} (${data.emergencyPhone})`,
-        children: data.children.map(child => ({
-          childName: child.childName || '',
-          dateOfBirth: child.dateOfBirth || '',
-          ageRange: child.ageRange || '',
-          specialNeeds: child.specialNeeds || '',
-          selectedDays: child.selectedDays || [],
-          selectedDates: child.selectedDates || [],
-          selectedSessions: child.selectedSessions || [],
-          price: child.price || 0
-        })),
+        children: data.children.map(child => {
+          // Determine actual dates for attendance tracking
+          const today = new Date().toISOString().split('T')[0];
+          let actualDates: string[] = child.selectedDates || [];
+          
+          if (registrationMode === 'walkin_today') {
+            // Ensure today's date is in selectedDates for attendance tracking
+            if (!actualDates.includes(today)) {
+              actualDates = [...actualDates, today];
+            }
+          } else if (registrationMode === 'book_future' && bookingDate) {
+            // Add the future booking date to selectedDates
+            const futureDate = bookingDate.toISOString().split('T')[0];
+            if (!actualDates.includes(futureDate)) {
+              actualDates = [...actualDates, futureDate];
+            }
+          }
+
+          return {
+            childName: child.childName || '',
+            dateOfBirth: child.dateOfBirth || '',
+            ageRange: child.ageRange || '',
+            specialNeeds: child.specialNeeds || '',
+            selectedDays: child.selectedDays || [],
+            selectedDates: actualDates,
+            selectedSessions: child.selectedSessions || [],
+            price: child.price || 0
+          };
+        }),
         total_amount: totalAmount,
         payment_status: paymentStatus,
         payment_method: 'cash_ground',
@@ -214,10 +249,62 @@ export const GroundRegistrationTab: React.FC = () => {
         setCompletedRegistration(registration);
         setShowQRModal(true);
 
+        // Auto-mark attendance if walk-in today
+        if (registrationMode === 'walkin_today') {
+          try {
+            for (const child of data.children) {
+              await attendanceService.checkInForDate(
+                registration.id,
+                child.childName,
+                user?.id || '',
+                new Date().toISOString().split('T')[0],
+                'Auto check-in from ground registration (walk-in today)'
+              );
+            }
+            toast.success('Walk-in registration completed & attendance marked!');
+          } catch (attendanceError) {
+            console.error('Auto attendance marking failed:', attendanceError);
+            toast.success('Registration completed! (Attendance marking failed - please mark manually)');
+          }
+        } else {
+          const formattedDate = bookingDate ? format(bookingDate, 'PPP') : '';
+          toast.success(`Booking registered for ${formattedDate}!`);
+        }
+
+        // Send confirmation + admin notification emails (if enabled)
+        if (sendEmail) {
+          try {
+            const campLabel = CAMP_TYPES.find(c => c.value === data.campType)?.label || data.campType;
+            await supabase.functions.invoke('send-confirmation-email', {
+              body: {
+                email: data.email,
+                programType: data.campType,
+                registrationDetails: {
+                  parentName: data.parentName,
+                  campTitle: `${campLabel} (Walk-in)`,
+                  registrationId: registration.id,
+                  registrationNumber: registration.registration_number,
+                  children: data.children.map(child => ({
+                    childName: child.childName,
+                    ageRange: child.ageRange,
+                    selectedDates: child.selectedDates || child.selectedDays,
+                    selectedSessions: child.selectedSessions,
+                    price: child.price,
+                  })),
+                },
+                invoiceDetails: {
+                  totalAmount,
+                  paymentMethod: 'cash_ground',
+                },
+              },
+            });
+          } catch (emailError) {
+            console.error('Email notification failed:', emailError);
+          }
+        }
+
         // Record successful submission for duplicate prevention
         await recordSubmission(data, 'ground-registration');
-
-        toast.success('Ground registration completed successfully!');
       }
     } catch (error) {
       console.error('Ground registration error:', error);
@@ -241,6 +328,78 @@ export const GroundRegistrationTab: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            {/* Registration Mode */}
+            <div className="space-y-3">
+              <Label className="text-base font-semibold">Registration Type</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setRegistrationMode('walkin_today')}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-colors text-left ${
+                    registrationMode === 'walkin_today'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <CalendarCheck className={`h-5 w-5 flex-shrink-0 ${registrationMode === 'walkin_today' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <div>
+                    <p className="font-medium text-sm">Walk-in Today</p>
+                    <p className="text-xs text-muted-foreground">Register & mark attendance for today</p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRegistrationMode('book_future')}
+                  className={`flex items-center gap-3 p-4 rounded-lg border-2 transition-colors text-left ${
+                    registrationMode === 'book_future'
+                      ? 'border-primary bg-primary/10'
+                      : 'border-border hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <CalendarPlus className={`h-5 w-5 flex-shrink-0 ${registrationMode === 'book_future' ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <div>
+                    <p className="font-medium text-sm">Book for Another Day</p>
+                    <p className="text-xs text-muted-foreground">Register for a future date only</p>
+                  </div>
+                </button>
+              </div>
+
+              {/* Future date picker */}
+              {registrationMode === 'book_future' && (
+                <div className="mt-3">
+                  <Label className="text-sm font-medium">Booking Date *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className={cn(
+                          "w-full sm:w-[280px] justify-start text-left font-normal mt-1",
+                          !bookingDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {bookingDate ? format(bookingDate, "PPP") : <span>Select booking date</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={bookingDate}
+                        onSelect={setBookingDate}
+                        disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {registrationMode === 'book_future' && !bookingDate && (
+                    <p className="text-xs text-muted-foreground mt-1">Please select the date the child will attend</p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {/* Parent/Guardian Information */}
             <div className="space-y-4">
               <h3 className="text-lg font-semibold">Parent/Guardian Information</h3>
@@ -511,6 +670,19 @@ export const GroundRegistrationTab: React.FC = () => {
                   />
                 </div>
               </div>
+            </div>
+
+            {/* Email Toggle */}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="sendEmailFull"
+                checked={sendEmail}
+                onCheckedChange={(checked) => setSendEmail(checked === true)}
+              />
+              <Label htmlFor="sendEmailFull" className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <Mail className="h-3.5 w-3.5" />
+                Send confirmation email to client
+              </Label>
             </div>
 
             {/* Submit Button */}

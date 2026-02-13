@@ -101,6 +101,10 @@ function App() {
               <Route path="/school-holiday-camps" element={<Navigate to="/camps/day-camps" replace />} />
               <Route path="/schools" element={<Navigate to="/programs/school-experience" replace />} />
               <Route path="/services" element={<Navigate to="/programs" replace />} />
+              <Route path="/book-a-service" element={<Navigate to="/contact" replace />} />
+              <Route path="/book-now" element={<Navigate to="/contact" replace />} />
+              <Route path="/summer-camp-2" element={<Navigate to="/camps/summer" replace />} />
+              <Route path="/activities" element={<Navigate to="/programs" replace />} />
 
               {/* Legacy sitemap redirects (client-side fallback) */}
               <Route path="/page-sitemap.xml" element={<Navigate to="/sitemap.xml" replace />} />
