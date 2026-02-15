@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Important pages
-Allow: /#about
+Allow: /#about-2
 Allow: /#programs
 Allow: /#calendar
 Allow: /#contact
@@ -12,6 +12,17 @@ Allow: /#gallery
 Disallow: /admin
 Disallow: /login
 Disallow: /api/
+
+# Block old/legacy URLs (redirected to new structure)
+
+Disallow: /amuse-camp
+Disallow: /school-holiday-camps
+Disallow: /schools
+Disallow: /services
+Disallow: /book-a-service
+Disallow: /book-now
+Disallow: /summer-camp-2
+Disallow: /activities
 
 # Sitemap location
 Sitemap: https://amusekenya.co.ke/sitemap.xml
