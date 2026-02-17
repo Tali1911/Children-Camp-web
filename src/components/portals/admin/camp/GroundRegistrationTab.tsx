@@ -60,11 +60,16 @@ const CAMP_TYPES = [
   { value: 'day-camps', label: 'Day Camps' },
 ];
 
-const AGE_RANGES = ['3-5', '6-9', '10-13', '14-17'];
+const AGE_RANGES = [
+  { value: '3 & below', label: '3 & below (Neem)' },
+  { value: '4-6', label: '4-6 years (Grevillea)' },
+  { value: '7-10', label: '7-10 years (Croton)' },
+  { value: '11-15', label: '11-15 years (Mighty Oaks)' },
+];
 const DAYS = ['Day 1', 'Day 2', 'Day 3', 'Day 4', 'Day 5'];
 const SESSIONS = [
-  { value: 'full', label: 'Full Day (8AM-5PM)', price: 2500 },
-  { value: 'half', label: 'Half Day (8AM-12PM)', price: 1500 }
+  { value: 'full', label: 'Full Day (9 AM-3 PM)', price: 2500 },
+  { value: 'half', label: 'Half Day (9 AM-1 PM)', price: 1500 }
 ];
 
 export const GroundRegistrationTab: React.FC = () => {
@@ -561,7 +566,7 @@ export const GroundRegistrationTab: React.FC = () => {
                         </SelectTrigger>
                         <SelectContent>
                           {AGE_RANGES.map(range => (
-                            <SelectItem key={range} value={range}>{range} years</SelectItem>
+                            <SelectItem key={range.value} value={range.value}>{range.label}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
