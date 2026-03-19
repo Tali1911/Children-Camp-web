@@ -237,8 +237,14 @@ export const invoiceService = {
       doc.text(`Notes: ${invoice.notes}`, 14, finalY + 42);
     }
 
+    // Refund Policy
+    doc.setFontSize(7);
+    doc.setTextColor(220, 38, 38);
+    doc.text('Refund Policy: 7+ days before: full refund minus 10% admin fee | 3–6 days before: 50% refund | Less than 3 days: non-refundable | No-shows: non-refundable', pageWidth / 2, 272, { align: 'center', maxWidth: pageWidth - 28 });
+
     // Footer
     doc.setFontSize(8);
+    doc.setTextColor(100);
     doc.text('Thank you for your business!', pageWidth / 2, 280, { align: 'center' });
 
     return doc.output('blob');

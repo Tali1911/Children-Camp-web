@@ -62,8 +62,9 @@ const calculateAgeRange = (dateOfBirth: Date): '3-below' | '4-6' | '7-10' | '11-
 };
 
 const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
-  const formKey = campType.includes('mid-term') ? 'mid-term' : campType;
-  const { config, isLoading } = useCampFormConfig(formKey);
+  // Pass the specific campType directly so calendar date sync matches exactly
+  // (e.g., 'mid-term-february' only gets mid-term-feb dates, not all mid-term dates)
+  const { config, isLoading } = useCampFormConfig(campType);
   const [selectedLocation, setSelectedLocation] = useState('');
 
   const calculatePrice = (selectedDates: string[], sessionTypes: Record<string, 'half' | 'full'>, activityType: 'camp' | 'archery' = 'camp'): number => {

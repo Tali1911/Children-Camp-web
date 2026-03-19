@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cmsService } from '@/services/cmsService';
+import { getCalendarDatesForCampType } from '@/services/calendarService';
 
 export interface ScheduleItem {
   time: string;
@@ -154,6 +155,10 @@ export const useLittleForestConfig = () => {
         const cmsPageConfig = data.metadata.pageConfig;
         
         // Merge page config with defaults
+        // Get dates from calendar (primary source)
+        const calendarDates = await getCalendarDatesForCampType('little-forest');
+        const cmsAvailableDates = cmsPageConfig.formConfig?.availableDates || defaultFormConfig.availableDates;
+        
         const mergedPageConfig: LittleForestPageConfig = {
           ...defaultPageConfig,
           ...cmsPageConfig,
@@ -166,7 +171,7 @@ export const useLittleForestConfig = () => {
               ...defaultFormConfig.pricing,
               ...cmsPageConfig.formConfig?.pricing
             },
-            availableDates: cmsPageConfig.formConfig?.availableDates || defaultFormConfig.availableDates,
+            availableDates: calendarDates.length > 0 ? calendarDates : cmsAvailableDates,
             ageOptions: cmsPageConfig.formConfig?.ageOptions || defaultFormConfig.ageOptions
           }
         };
@@ -175,6 +180,7 @@ export const useLittleForestConfig = () => {
         setConfig(mergedPageConfig.formConfig);
       } else {
         // Try legacy format (little-forest-form)
+        const calendarDates = await getCalendarDatesForCampType('little-forest');
         const legacyData = await cmsService.getContentBySlug('little-forest-form');
         if (legacyData?.metadata?.formConfig) {
           const cmsConfig = legacyData.metadata.formConfig;
@@ -185,14 +191,17 @@ export const useLittleForestConfig = () => {
               ...defaultFormConfig.pricing,
               ...cmsConfig.pricing
             },
-            availableDates: cmsConfig.availableDates || defaultFormConfig.availableDates,
+            availableDates: calendarDates.length > 0 ? calendarDates : (cmsConfig.availableDates || defaultFormConfig.availableDates),
             ageOptions: cmsConfig.ageOptions || defaultFormConfig.ageOptions
           };
           setConfig(mergedConfig);
           setPageConfig({ ...defaultPageConfig, formConfig: mergedConfig });
         } else {
-          setConfig(defaultFormConfig);
-          setPageConfig(defaultPageConfig);
+          const fallbackConfig = calendarDates.length > 0 
+            ? { ...defaultFormConfig, availableDates: calendarDates }
+            : defaultFormConfig;
+          setConfig(fallbackConfig);
+          setPageConfig({ ...defaultPageConfig, formConfig: fallbackConfig });
         }
       }
     } catch (err) {

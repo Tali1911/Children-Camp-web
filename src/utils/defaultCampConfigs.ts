@@ -195,6 +195,27 @@ export const defaultCampFormConfigs: Record<string, CampFormConfig> = {
       endDate: '2025-10-24'
     }
   },
+  'mid-term-feb-march': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-02-17',
+      endDate: '2025-02-21'
+    }
+  },
+  'mid-term-may-june': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-05-26',
+      endDate: '2025-05-30'
+    }
+  },
+  'mid-term-october': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-10-20',
+      endDate: '2025-10-24'
+    }
+  },
   'holiday-camp': {
     ...baseFormConfig,
     sessionDates: {

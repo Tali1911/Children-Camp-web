@@ -106,7 +106,7 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
       <Card className="p-4 bg-muted/50">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Calendar className="w-4 h-4" />
-          <p className="text-sm">No available dates configured. Please contact support.</p>
+          <p className="text-sm">No upcoming dates available for this camp. Please check back later or contact support.</p>
         </div>
       </Card>
     );

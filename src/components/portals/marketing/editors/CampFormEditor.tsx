@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cmsService } from '@/services/cmsService';
-import { MultiDatePicker } from '@/components/forms/MultiDatePicker';
+
 
 interface CampFormEditorProps {
   isOpen: boolean;
@@ -168,17 +168,20 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
 
             <TabsContent value="dates" className="space-y-4 pt-4">
               <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Available Camp Dates</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select specific dates when this camp will be available. Supports complex schedules like weekdays only, specific weeks, or custom date combinations.
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    📅 Dates are now synced from the Calendar
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Camp dates are automatically pulled from your Calendar events. When you create or edit a calendar event with a matching program type, the registration form will show those dates automatically.
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Past dates are automatically hidden from registration forms but remain visible in the calendar.
+                  </p>
+                  <p className="text-sm font-medium text-primary">
+                    To manage dates → go to the <strong>Calendar</strong> tab and create/edit events with the correct program type.
                   </p>
                 </div>
-
-                <MultiDatePicker
-                  selectedDates={formData.availableDates}
-                  onChange={(dates) => setFormData({ ...formData, availableDates: dates })}
-                />
               </div>
             </TabsContent>
 

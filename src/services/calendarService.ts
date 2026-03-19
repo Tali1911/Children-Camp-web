@@ -415,6 +415,80 @@ export const calculateProgramCost = async (
   return totalCost;
 };
 
+// Mapping from camp form keys to calendar programType values
+const campTypeToCalendarProgram: Record<string, string[]> = {
+  'easter': ['easter-camp'],
+  'summer': ['summer-camp'],
+  'end-year': ['end-year-camp'],
+  // Specific mid-term mappings so each form only gets its own dates
+  'mid-term-feb-march': ['mid-term-feb'],
+  'mid-term-may-june': ['mid-term-may'],
+  'mid-term-october': ['mid-term-oct'],
+  // Legacy fallback: generic 'mid-term' maps to all mid-term types
+  'mid-term': ['mid-term-feb', 'mid-term-may', 'mid-term-oct'],
+  'day-camps': ['day-camps'],
+  'little-forest': ['little-forest'],
+};
+
+/**
+ * Get available dates for a camp type by reading calendar events.
+ * Filters out past dates so registration forms only show upcoming dates.
+ * Calendar views are NOT affected — past dates remain visible there.
+ */
+export const getCalendarDatesForCampType = async (campFormKey: string): Promise<string[]> => {
+  try {
+    const events = await loadEvents();
+    const programTypes = campTypeToCalendarProgram[campFormKey];
+    
+    if (!programTypes || programTypes.length === 0) {
+      return [];
+    }
+
+    // Filter events matching this camp type
+    const matchingEvents = events.filter(
+      (e) => e.programType && programTypes.includes(e.programType)
+    );
+
+    if (matchingEvents.length === 0) {
+      return [];
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayStr = format(today, 'yyyy-MM-dd');
+
+    const allDates = new Set<string>();
+
+    for (const event of matchingEvents) {
+      if (event.eventDates && event.eventDates.length > 0) {
+        // Use specific dates array
+        event.eventDates.forEach((d) => allDates.add(d));
+      } else {
+        // Generate dates from start/end range
+        const start = event.start instanceof Date ? event.start : new Date(event.start);
+        const end = event.end instanceof Date ? event.end : new Date(event.end);
+        const current = new Date(start);
+        current.setHours(0, 0, 0, 0);
+        const endNorm = new Date(end);
+        endNorm.setHours(0, 0, 0, 0);
+
+        while (current <= endNorm) {
+          allDates.add(format(current, 'yyyy-MM-dd'));
+          current.setDate(current.getDate() + 1);
+        }
+      }
+    }
+
+    // Filter out past dates and sort
+    return Array.from(allDates)
+      .filter((d) => d >= todayStr)
+      .sort();
+  } catch (error) {
+    console.error('Failed to get calendar dates for camp type:', campFormKey, error);
+    return [];
+  }
+};
+
 export default {
   saveEvent,
   loadEvents,
@@ -423,6 +497,7 @@ export default {
   createProgramDownload,
   getAvailablePrograms,
   calculateProgramCost,
+  getCalendarDatesForCampType,
   defaultCampAgeGroups,
   defaultActivities
 };

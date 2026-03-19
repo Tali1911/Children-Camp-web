@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import {
   LayoutDashboard,
   Users,
@@ -78,107 +79,107 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
     switch (role) {
       case ROLES.CEO:
         return [
-          ...baseTabs,
-          { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-          { id: 'reports', label: 'Reports', icon: FileText },
-          { id: 'approvals', label: 'Approvals', icon: CheckSquare },
-          { id: 'planning', label: 'Planning', icon: Calendar },
-          { id: 'communication', label: 'Communication', icon: MessageSquare },
-          { id: 'cross-analytics', label: 'Cross Analytics', icon: TrendingUp },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'settings', label: 'Settings', icon: Settings }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'High-level overview of company performance, KPIs, and key metrics' },
+          { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Deep-dive into business analytics and data-driven insights' },
+          { id: 'reports', label: 'Reports', icon: FileText, description: 'Generate and review executive reports across all departments' },
+          { id: 'approvals', label: 'Approvals', icon: CheckSquare, description: 'Review and approve pending requests from department heads' },
+          { id: 'planning', label: 'Planning', icon: Calendar, description: 'Strategic planning tools for goals, milestones, and initiatives' },
+          { id: 'communication', label: 'Communication', icon: MessageSquare, description: 'Send and receive messages across the organisation' },
+          { id: 'cross-analytics', label: 'Cross Analytics', icon: TrendingUp, description: 'Compare performance metrics across multiple departments' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'settings', label: 'Settings', icon: Settings, description: 'Configure system-wide preferences and options' }
         ];
       
       case ROLES.MARKETING:
         return [
-          ...baseTabs,
-          { id: 'leads', label: 'Leads (CRM)', icon: Target },
-          { id: 'content', label: 'Content (CMS)', icon: FileText },
-          { id: 'customers', label: 'Customers', icon: Users },
-          { id: 'campaigns', label: 'Campaigns', icon: Megaphone },
-          { id: 'email-health', label: 'Email Health', icon: TrendingUp },
-          { id: 'email-deliveries', label: 'Email Deliveries', icon: Mail },
-          { id: 'email-segments', label: 'Email Segments', icon: Users },
-          { id: 'email-suppressions', label: 'Suppressions', icon: Ban },
-          { id: 'user-engagement', label: 'User Engagement', icon: MousePointerClick },
-          { id: 'site-analytics', label: 'Site Analytics', icon: LineChart },
-          { id: 'realtime', label: 'Real-Time', icon: Activity },
-          { id: 'faq', label: 'FAQ Manager', icon: MessageSquare },
-          { id: 'analytics', label: 'Analytics', icon: BarChart3 },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Marketing performance overview — leads, campaigns, and engagement at a glance' },
+          { id: 'leads', label: 'Leads (CRM)', icon: Target, description: 'Track and manage potential customer leads through the sales pipeline' },
+          { id: 'content', label: 'Content (CMS)', icon: FileText, description: 'Create, edit, and publish website and marketing content' },
+          { id: 'customers', label: 'Customers', icon: Users, description: 'View and manage your customer database and profiles' },
+          { id: 'campaigns', label: 'Campaigns', icon: Megaphone, description: 'Plan, launch, and track marketing campaigns and promotions' },
+          { id: 'email-health', label: 'Email Health', icon: TrendingUp, description: 'Monitor email deliverability, open rates, and sender reputation' },
+          { id: 'email-deliveries', label: 'Email Deliveries', icon: Mail, description: 'Track sent emails and their delivery status in real-time' },
+          { id: 'email-segments', label: 'Email Segments', icon: Users, description: 'Create and manage audience segments for targeted email campaigns' },
+          { id: 'email-suppressions', label: 'Suppressions', icon: Ban, description: 'Manage unsubscribed, bounced, and suppressed email addresses' },
+          { id: 'user-engagement', label: 'User Engagement', icon: MousePointerClick, description: 'Analyse how users interact with your website and content' },
+          { id: 'site-analytics', label: 'Site Analytics', icon: LineChart, description: 'Website traffic, page views, and visitor behaviour analytics' },
+          { id: 'realtime', label: 'Real-Time', icon: Activity, description: 'Live view of current website visitors and their activity' },
+          { id: 'faq', label: 'FAQ Manager', icon: MessageSquare, description: 'Create and manage frequently asked questions for the website' },
+          { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Detailed marketing analytics and performance reports' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       case ROLES.HR:
         return [
-          ...baseTabs,
-          { id: 'employees', label: 'Employees', icon: Users },
-          { id: 'recruitment', label: 'Recruitment', icon: UserPlus },
-          { id: 'performance', label: 'Performance', icon: TrendingUp },
-          { id: 'training', label: 'Training', icon: BookOpen },
-          { id: 'reports', label: 'Reports', icon: FileText },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'HR overview — headcount, open positions, and recent activity' },
+          { id: 'employees', label: 'Employees', icon: Users, description: 'View and manage employee records, roles, and contact details' },
+          { id: 'recruitment', label: 'Recruitment', icon: UserPlus, description: 'Post jobs, track applicants, and manage the hiring pipeline' },
+          { id: 'performance', label: 'Performance', icon: TrendingUp, description: 'Track employee performance reviews, goals, and feedback' },
+          { id: 'training', label: 'Training', icon: BookOpen, description: 'Schedule and manage employee training programmes and certifications' },
+          { id: 'reports', label: 'Reports', icon: FileText, description: 'Generate HR reports on attendance, turnover, and workforce metrics' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       case ROLES.ACCOUNTS:
         return [
-          ...baseTabs,
-          { id: 'collections', label: 'Pending Collections', icon: Receipt },
-          { id: 'invoices', label: 'Invoices', icon: FileText },
-          { id: 'bills', label: 'Bills (AP)', icon: FileText },
-          { id: 'vendors', label: 'Vendors', icon: Building },
-          { id: 'budget', label: 'Budget', icon: DollarSign },
-          { id: 'expenses', label: 'Expenses', icon: Receipt },
-          { id: 'reports', label: 'Reports', icon: BarChart3 },
-          { id: 'camp-analytics', label: 'Camp Analytics', icon: Tent },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Overview of revenue, expenses, outstanding balances and recent activity' },
+          { id: 'collections', label: 'Pending Collections', icon: Receipt, description: 'Children who attended but haven\'t paid — follow up and record payments here' },
+          { id: 'invoices', label: 'Invoices', icon: FileText, description: 'Create, send and track invoices for clients and registrations' },
+          { id: 'bills', label: 'Bills (AP)', icon: FileText, description: 'Track bills owed to suppliers and vendors (Accounts Payable)' },
+          { id: 'vendors', label: 'Vendors', icon: Building, description: 'Manage supplier and vendor contact details and payment terms' },
+          { id: 'budget', label: 'Budget', icon: DollarSign, description: 'Set and monitor budgets by category to control spending' },
+          { id: 'expenses', label: 'Expenses', icon: Receipt, description: 'Record and categorize business expenses and receipts' },
+          { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Financial reports: Profit & Loss, Aging, and Daily Sales summaries' },
+          { id: 'camp-analytics', label: 'Camp Analytics', icon: Tent, description: 'Registration and revenue analytics across all camp programs' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       case ROLES.COACH:
         return [
-          ...baseTabs,
-          { id: 'programs', label: 'Programs', icon: Calendar },
-          { id: 'students', label: 'Students', icon: Users },
-          { id: 'schedule', label: 'Schedule', icon: Clock },
-          { id: 'availability', label: 'My Availability', icon: CalendarOff },
-          { id: 'resources', label: 'Resources', icon: BookOpen },
-          ...(hasRecordPortalAccess ? [{ id: 'record-portal', label: 'Record Portal', icon: Tent }] : []),
-          { id: 'reports', label: 'Reports', icon: FileText },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Your coaching overview — upcoming sessions, student count, and alerts' },
+          { id: 'programs', label: 'Programs', icon: Calendar, description: 'View and manage the coaching programmes you are assigned to' },
+          { id: 'students', label: 'Students', icon: Users, description: 'Browse student profiles, progress, and attendance records' },
+          { id: 'schedule', label: 'Schedule', icon: Clock, description: 'View your upcoming sessions, classes, and time slots' },
+          { id: 'availability', label: 'My Availability', icon: CalendarOff, description: 'Set the days and times you are available or unavailable to coach' },
+          { id: 'resources', label: 'Resources', icon: BookOpen, description: 'Access training materials, drills, and coaching guides' },
+          ...(hasRecordPortalAccess ? [{ id: 'record-portal', label: 'Record Portal', icon: Tent, description: 'Check in attendees and manage daily camp operations' }] : []),
+          { id: 'reports', label: 'Reports', icon: FileText, description: 'View session reports and coaching performance summaries' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       case ROLES.GOVERNANCE:
         return [
-          ...baseTabs,
-          { id: 'documents', label: 'Document Management', icon: FileText },
-          { id: 'compliance', label: 'GDPR Compliance', icon: Shield },
-          { id: 'risk', label: 'Risk Management', icon: TrendingUp },
-          { id: 'policies', label: 'Policy Management', icon: BookOpen },
-          { id: 'audit', label: 'Audit Logs', icon: Database },
-          { id: 'data-governance', label: 'Data Governance', icon: Settings },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'Governance overview — compliance status, risk scores, and pending actions' },
+          { id: 'documents', label: 'Document Management', icon: FileText, description: 'Upload, organise, and version-control official company documents' },
+          { id: 'compliance', label: 'GDPR Compliance', icon: Shield, description: 'Monitor data protection compliance and manage consent records' },
+          { id: 'risk', label: 'Risk Management', icon: TrendingUp, description: 'Identify, assess, and track organisational risks and mitigations' },
+          { id: 'policies', label: 'Policy Management', icon: BookOpen, description: 'Create, review, and publish company policies and procedures' },
+          { id: 'audit', label: 'Audit Logs', icon: Database, description: 'View a chronological record of system actions and user activity' },
+          { id: 'data-governance', label: 'Data Governance', icon: Settings, description: 'Define data ownership, quality standards, and access controls' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       case ROLES.ADMIN:
         return [
-          ...baseTabs,
-          { id: 'users', label: 'User Management', icon: Users },
-          { id: 'customer-management', label: 'Customer Management', icon: Users },
-          { id: 'camp-registrations', label: 'Camp Registrations', icon: Tent },
-          { id: 'program-registrations', label: 'Program Registrations', icon: Calendar },
-          { id: 'camp-analytics', label: 'Camp Analytics', icon: TrendingUp },
-          { id: 'system', label: 'System Admin', icon: Database },
-          { id: 'settings', label: 'System Settings', icon: Settings },
-          { id: 'audit-logs', label: 'Audit Logs', icon: FileText },
-          { id: 'company', label: 'Company Config', icon: Building },
-          { id: 'security', label: 'Security', icon: Shield },
-          { id: 'coach-availability', label: 'Coach Availability', icon: CalendarOff },
-          { id: 'my-profile', label: 'My Profile', icon: UserCircle },
-          { id: 'communication', label: 'Messages', icon: MessageSquare }
+          { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, description: 'System administration overview — users, activity, and system health' },
+          { id: 'users', label: 'User Management', icon: Users, description: 'Create, edit, and deactivate user accounts and assign roles' },
+          { id: 'customer-management', label: 'Customer Management', icon: Users, description: 'View and manage customer records and contact information' },
+          { id: 'camp-registrations', label: 'Camp Registrations', icon: Tent, description: 'Manage camp sign-ups, check-ins, and attendance records' },
+          { id: 'program-registrations', label: 'Program Registrations', icon: Calendar, description: 'Manage enrolments and registrations for coaching programmes' },
+          { id: 'camp-analytics', label: 'Camp Analytics', icon: TrendingUp, description: 'Registration and revenue analytics across all camp programs' },
+          { id: 'system', label: 'System Admin', icon: Database, description: 'Database management, backups, and system maintenance tools' },
+          { id: 'settings', label: 'System Settings', icon: Settings, description: 'Configure global system settings and feature toggles' },
+          { id: 'audit-logs', label: 'Audit Logs', icon: FileText, description: 'View a chronological record of all system actions and changes' },
+          { id: 'company', label: 'Company Config', icon: Building, description: 'Set up company details, branding, and organisational structure' },
+          { id: 'security', label: 'Security', icon: Shield, description: 'Manage authentication policies, permissions, and security rules' },
+          { id: 'coach-availability', label: 'Coach Availability', icon: CalendarOff, description: 'View and manage coach availability schedules across programmes' },
+          { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
+          { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
       
       default:
@@ -200,7 +201,7 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
     navigate('/');
   };
 
-  const SidebarContent = () => (
+  const SidebarContent = ({ mobile = false }: { mobile?: boolean }) => (
     <div className="h-full flex flex-col bg-white">
       {/* Brand */}
       <div className="px-6 py-4 border-b">
@@ -234,17 +235,41 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
 
       {/* Nav Links */}
       <nav className="flex-1 px-2 py-4 space-y-1 overflow-y-auto">
-        {tabs.map((tab) => (
-          <Button
-            key={tab.id}
-            variant="ghost"
-            className={`w-full justify-start ${activeTab === tab.id ? 'text-blue-600 bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
-            onClick={() => handleTabChange(tab.id)}
-          >
-            <tab.icon className="w-4 h-4 mr-2 flex-shrink-0" />
-            <span className="truncate">{tab.label}</span>
-          </Button>
-        ))}
+        <TooltipProvider delayDuration={300}>
+          {tabs.map((tab) => {
+            const desc = (tab as any).description;
+
+            const btn = (
+              <Button
+                key={tab.id}
+                variant="ghost"
+                className={`w-full justify-start ${mobile && desc ? 'h-auto py-2' : ''} ${activeTab === tab.id ? 'text-blue-600 bg-gray-100' : 'text-gray-600 hover:bg-gray-50'}`}
+                onClick={() => handleTabChange(tab.id)}
+              >
+                <tab.icon className="w-4 h-4 mr-2 flex-shrink-0" />
+                <span className={mobile && desc ? 'flex flex-col items-start' : 'truncate'}>
+                  <span className="truncate">{tab.label}</span>
+                  {mobile && desc && (
+                    <span className="text-[10px] leading-tight text-gray-400 font-normal whitespace-normal text-left">{desc}</span>
+                  )}
+                </span>
+              </Button>
+            );
+
+            if (!mobile && desc) {
+              return (
+                <Tooltip key={tab.id}>
+                  <TooltipTrigger asChild>{btn}</TooltipTrigger>
+                  <TooltipContent side="right" className="max-w-[220px] text-xs">
+                    {desc}
+                  </TooltipContent>
+                </Tooltip>
+              );
+            }
+
+            return <React.Fragment key={tab.id}>{btn}</React.Fragment>;
+          })}
+        </TooltipProvider>
       </nav>
     </div>
   );
@@ -260,8 +285,8 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
                 <Menu className="h-6 w-6" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="p-0 w-64">
-              <SidebarContent />
+            <SheetContent side="left" className="p-0 w-72">
+              <SidebarContent mobile />
             </SheetContent>
           </Sheet>
           

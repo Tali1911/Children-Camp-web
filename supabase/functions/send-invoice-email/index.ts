@@ -206,6 +206,10 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
           </div>
           
+          <div style="padding: 12px 30px; text-align: center; background-color: white; border-left: 1px solid #ddd; border-right: 1px solid #ddd;">
+            <p style="color: #dc2626; font-size: 12px; margin: 0;"><strong>Refund Policy:</strong> 7+ days before: full refund minus 10% admin fee | 3–6 days before: 50% refund | Less than 3 days: non-refundable | No-shows: non-refundable</p>
+          </div>
+
           <div style="background-color: #2d5016; color: white; padding: 20px; text-align: center; border-radius: 0 0 8px 8px;">
             <p style="margin: 0;">Questions? Contact us at info@amusekenya.co.ke or +254 114 705 763</p>
             <p style="margin: 10px 0 0 0; font-size: 12px; opacity: 0.8;">&copy; 2025 Amuse Kenya. All rights reserved.</p>

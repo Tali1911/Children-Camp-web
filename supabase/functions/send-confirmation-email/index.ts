@@ -326,6 +326,10 @@ const handler = async (req: Request): Promise<Response> => {
             </div>
           </div>
           
+          <div style="margin-top: 20px; padding: 12px; text-align: center;">
+            <p style="color: #dc2626; font-size: 12px; margin: 0;"><strong>Refund Policy:</strong> 7+ days before: full refund minus 10% admin fee | 3–6 days before: 50% refund | Less than 3 days: non-refundable | No-shows: non-refundable</p>
+          </div>
+
           <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
             <p>Follow us on social media for updates and photos!</p>
             <p style="margin-top: 10px;">&copy; 2025 Amuse Kenya. All rights reserved.</p>

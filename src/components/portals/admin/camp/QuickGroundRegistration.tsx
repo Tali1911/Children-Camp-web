@@ -14,6 +14,7 @@ import { campRegistrationService } from '@/services/campRegistrationService';
 import { financialService } from '@/services/financialService';
 import { qrCodeService } from '@/services/qrCodeService';
 import { leadsService } from '@/services/leadsService';
+import { accountsActionService } from '@/services/accountsActionService';
 import { CampRegistration } from '@/types/campRegistration';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
@@ -199,6 +200,27 @@ export const QuickGroundRegistration: React.FC<QuickGroundRegistrationProps> = (
         } catch (emailError) {
           console.error('Email notification failed:', emailError);
         }
+        }
+
+        // Create pending collection items for unpaid walk-ins
+        if (paymentStatus !== 'paid') {
+          for (const child of data.children) {
+            try {
+              await accountsActionService.createUnpaidCheckInItem(
+                registration.id,
+                child.childName,
+                data.parentName,
+                data.email,
+                data.phone,
+                totalAmount,
+                data.amountPaid,
+                data.campType
+              );
+            } catch (actionError) {
+              console.error('Failed to create pending collection item:', actionError);
+              toast.warning(`Pending collection item for ${child.childName} could not be created. Please notify accounts manually.`);
+            }
+          }
         }
 
         // Record successful submission for duplicate prevention
