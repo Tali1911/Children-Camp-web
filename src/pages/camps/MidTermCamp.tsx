@@ -7,6 +7,7 @@ import HolidayCampForm from '@/components/forms/HolidayCampForm';
 import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import RegistrationPageSkeleton from '@/components/skeletons/RegistrationPageSkeleton';
+import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
 
 const MidTermCamp = () => {
   const { period } = useParams<{ period: string }>();
@@ -77,61 +78,26 @@ const MidTermCamp = () => {
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
             </div>
 
-            {/* Camp Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="flex items-start gap-3">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <Calendar className="w-5 h-5 text-primary" />
+            {config.locationDetails && config.locationDetails.length > 0 ? (
+              <LocationDetailsAccordion locations={config.locationDetails} />
+            ) : (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="flex items-start gap-3"><div className="bg-primary/10 rounded-full p-2"><Calendar className="w-5 h-5 text-primary" /></div><div><h3 className="font-semibold text-primary">Duration</h3><p className="text-muted-foreground">{config.duration}</p></div></div>
+                  <div className="flex items-start gap-3"><div className="bg-primary/10 rounded-full p-2"><Users className="w-5 h-5 text-primary" /></div><div><h3 className="font-semibold text-primary">Age Group</h3><p className="text-muted-foreground">{config.ageGroup}</p></div></div>
+                  <div className="flex items-start gap-3"><div className="bg-primary/10 rounded-full p-2"><MapPin className="w-5 h-5 text-primary" /></div><div><h3 className="font-semibold text-primary">Location</h3><p className="text-muted-foreground">{config.location}</p></div></div>
+                  <div className="flex items-start gap-3"><div className="bg-primary/10 rounded-full p-2"><Clock className="w-5 h-5 text-primary" /></div><div><h3 className="font-semibold text-primary">Time</h3><p className="text-muted-foreground">{config.time}</p></div></div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-primary">Duration</h3>
-                  <p className="text-muted-foreground">{config.duration}</p>
+                  <h3 className="text-2xl font-bold text-primary mb-4">Camp Highlights</h3>
+                  <ul className="space-y-2 text-muted-foreground">
+                    {config.highlights.map((highlight, index) => (
+                      <li key={index} className="flex items-start gap-2"><span className="text-primary mt-1">•</span>{highlight}</li>
+                    ))}
+                  </ul>
                 </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <Users className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-primary">Age Group</h3>
-                  <p className="text-muted-foreground">{config.ageGroup}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <MapPin className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-primary">Location</h3>
-                  <p className="text-muted-foreground">{config.location}</p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3">
-                <div className="bg-primary/10 rounded-full p-2">
-                  <Clock className="w-5 h-5 text-primary" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-primary">Time</h3>
-                  <p className="text-muted-foreground">{config.time}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Highlights */}
-            <div>
-              <h3 className="text-2xl font-bold text-primary mb-4">Camp Highlights</h3>
-              <ul className="space-y-2 text-muted-foreground">
-                {config.highlights.map((highlight, index) => (
-                  <li key={index} className="flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
-                    {highlight}
-                  </li>
-                ))}
-              </ul>
-            </div>
+              </>
+            )}
           </div>
 
           {/* Registration Form */}

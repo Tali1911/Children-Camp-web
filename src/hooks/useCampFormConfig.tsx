@@ -9,6 +9,7 @@ export interface CampFormConfig {
     halfDayRate: number;
     fullDayRate: number;
     currency: string;
+    ngongDayRate?: number; // Flat day rate for Ngong Sanctuary (no half/full day)
   };
   fields: {
     parentName: { label: string; placeholder: string; required: boolean };

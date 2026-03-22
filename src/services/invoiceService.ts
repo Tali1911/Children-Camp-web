@@ -269,6 +269,29 @@ export const invoiceService = {
       return { success: false, error: 'No customer email provided' };
     }
 
+    const extractFunctionError = async (error: any): Promise<string> => {
+      if (error?.message && error.message !== 'Edge Function returned a non-2xx status code') {
+        return error.message;
+      }
+
+      const response = error?.context;
+      if (response instanceof Response) {
+        try {
+          const payload = await response.clone().json();
+          if (payload?.error) return payload.error;
+        } catch {
+          try {
+            const text = await response.clone().text();
+            if (text) return text;
+          } catch {
+            // Ignore parse failures and fall through to generic message
+          }
+        }
+      }
+
+      return error?.message || 'Failed to send invoice email.';
+    };
+
     try {
       const { data, error } = await supabase.functions.invoke('send-invoice-email', {
         body: {
@@ -287,11 +310,23 @@ export const invoiceService = {
         }
       });
 
-      if (error) throw error;
+      if (error) {
+        return { success: false, error: await extractFunctionError(error) };
+      }
+
+      if (data?.success === false) {
+        return { success: false, error: data.error || 'Failed to send invoice email.' };
+      }
+
+      if (data?.warnings?.length) {
+        console.warn('Invoice email warnings:', data.warnings);
+      }
+
       return { success: true };
     } catch (error: any) {
+      const message = await extractFunctionError(error);
       console.error('Error sending invoice email:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: message };
     }
   },
 

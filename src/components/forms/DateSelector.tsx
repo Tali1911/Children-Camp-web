@@ -24,6 +24,7 @@ interface DateSelectorProps {
   fullDayRate: number;
   currency: string;
   disabled?: boolean;
+  flatRate?: number; // When set, hides half/full day toggle and uses this flat rate per day
 }
 
 export const DateSelector: React.FC<DateSelectorProps> = ({
@@ -35,7 +36,8 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
   halfDayRate,
   fullDayRate,
   currency,
-  disabled = false
+  disabled = false,
+  flatRate
 }) => {
   // Group dates by week for better UX
   const groupDatesByWeek = (dates: string[]): Map<number, DateOption[]> => {
@@ -95,6 +97,9 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
   };
 
   const calculateTotalPrice = () => {
+    if (flatRate) {
+      return selectedDates.length * flatRate;
+    }
     return selectedDates.reduce((sum, date) => {
       const sessionType = sessionTypes[date] || 'full';
       return sum + (sessionType === 'half' ? halfDayRate : fullDayRate);
@@ -160,14 +165,19 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
                         >
                           {dateOption.displayLabel}
                         </Label>
-                        {isSelected && (
+                        {isSelected && !flatRate && (
                           <Badge variant="outline" className="text-xs">
                             {sessionType === 'half' ? 'Half Day' : 'Full Day'}
                           </Badge>
                         )}
+                        {isSelected && flatRate && (
+                          <Badge variant="outline" className="text-xs">
+                            {flatRate.toLocaleString()} {currency}/day
+                          </Badge>
+                        )}
                       </div>
                       
-                      {isSelected && (
+                      {isSelected && !flatRate && (
                         <div className="ml-8 flex gap-2">
                           <Button
                             type="button"

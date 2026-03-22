@@ -2,6 +2,14 @@ import { useState, useEffect } from 'react';
 import { cmsService } from '@/services/cmsService';
 import { defaultCampPageConfigs } from '@/utils/defaultCampConfigs';
 
+export interface LocationDetail {
+  name: string;
+  duration: string;
+  ageGroup: string;
+  time: string;
+  highlights: string[];
+}
+
 export interface CampPageConfig {
   title: string;
   description: string;
@@ -16,6 +24,7 @@ export interface CampPageConfig {
   location: string;
   time: string;
   highlights: string[];
+  locationDetails?: LocationDetail[];
 }
 
 export const useCampPageConfig = (campType: string) => {

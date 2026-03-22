@@ -21,7 +21,8 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
     pricing: {
       halfDayRate: 1500,
       fullDayRate: 2500,
-      currency: 'KES'
+      currency: 'KES',
+      ngongDayRate: 2000
     },
     fields: {
       parentName: { label: 'Parent/Guardian Name', placeholder: 'Enter your full name', required: true },
@@ -244,6 +245,18 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
                     Add
                   </Button>
                 </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-medium mb-2">Ngong Sanctuary Day Rate</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Flat rate per day when Ngong Sanctuary is selected (no half/full day distinction).
+                </p>
+                <Input
+                  type="number"
+                  value={formData.pricing.ngongDayRate || 2000}
+                  onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, ngongDayRate: Number(e.target.value) } })}
+                />
               </div>
 
               <div className="border-t pt-4 mt-4">
