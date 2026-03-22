@@ -99,7 +99,8 @@ export const useCampFormConfig = (formType: string) => {
             locations: data.metadata.formConfig.locations || defaultConfig?.locations,
             archeryRate: data.metadata.formConfig.archeryRate || defaultConfig?.archeryRate,
             sessionDates: data.metadata.formConfig.sessionDates || defaultConfig?.sessionDates,
-            ageGroups: data.metadata.formConfig.ageGroups || defaultConfig?.ageGroups
+            ageGroups: data.metadata.formConfig.ageGroups || defaultConfig?.ageGroups,
+            emailContent: data.metadata.formConfig.emailContent || undefined
           };
           setConfig(mergedConfig);
         } else {

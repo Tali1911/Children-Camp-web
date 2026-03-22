@@ -248,7 +248,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
             children: data.children,
             campType: campType,
             registrationId: registration.id,
-            location: selectedLocation
+            location: selectedLocation,
+            emailContent: (config as any).emailContent
           },
           invoiceDetails: {
             totalAmount: totalAmount,

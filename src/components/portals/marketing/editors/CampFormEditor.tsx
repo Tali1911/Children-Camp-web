@@ -54,7 +54,19 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
     },
     availableDates: [] as string[],
     locations: ['Kurura Gate F', 'Ngong Sanctuary'] as string[],
-    archeryRate: 1000
+    archeryRate: 1000,
+    emailContent: {
+      karura: {
+        timing: 'Full Day: 9:00 AM - 3:00 PM / Half Day: 9:00 AM - 1:00 PM',
+        activities: ['Nature exploration', 'Adventure activities', 'Team games', 'Creative crafts', 'Environmental education'],
+        whatToBring: ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed lunch (full day)']
+      },
+      ngong: {
+        timing: '9:00 AM - 1:00 PM',
+        activities: ['Archery', 'Outdoor exploration', 'Team-building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'],
+        whatToBring: ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed snack']
+      }
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
   const [newLocation, setNewLocation] = useState('');
@@ -79,7 +91,17 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
         },
         availableDates: data.metadata.formConfig.availableDates || [],
         locations: data.metadata.formConfig.locations || ['Kurura Gate F', 'Ngong Sanctuary'],
-        archeryRate: data.metadata.formConfig.archeryRate || 1000
+        archeryRate: data.metadata.formConfig.archeryRate || 1000,
+        emailContent: {
+          karura: {
+            ...formData.emailContent.karura,
+            ...(data.metadata.formConfig.emailContent?.karura || {})
+          },
+          ngong: {
+            ...formData.emailContent.ngong,
+            ...(data.metadata.formConfig.emailContent?.ngong || {})
+          }
+        }
       });
     }
   };
@@ -118,13 +140,14 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="pricing" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
               <TabsTrigger value="dates">Dates</TabsTrigger>
               <TabsTrigger value="locations">Locations</TabsTrigger>
               <TabsTrigger value="fields">Fields</TabsTrigger>
               <TabsTrigger value="buttons">Buttons</TabsTrigger>
               <TabsTrigger value="messages">Messages</TabsTrigger>
+              <TabsTrigger value="email">Email Content</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pricing" className="space-y-4 pt-4">
@@ -383,6 +406,86 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
                     onChange={(e) => setFormData({
                       ...formData,
                       specialNeedsSection: { ...formData.specialNeedsSection, description: e.target.value }
+                    })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="email" className="space-y-6 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Customise the camp information shown in confirmation emails for each location. These details appear in the "Camp Information" section of the email.
+              </p>
+
+              {/* Karura Gate F */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-primary">Karura Gate F — Email Details</h4>
+                <div>
+                  <Label>Timing</Label>
+                  <Input
+                    value={formData.emailContent.karura.timing}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, timing: e.target.value } }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Activities (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.karura.activities.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, activities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>What to Bring (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.karura.whatToBring.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, whatToBring: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Ngong Sanctuary */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-primary">Ngong Sanctuary — Email Details</h4>
+                <div>
+                  <Label>Timing</Label>
+                  <Input
+                    value={formData.emailContent.ngong.timing}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, timing: e.target.value } }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Activities (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.ngong.activities.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, activities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>What to Bring (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.ngong.whatToBring.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, whatToBring: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
                     })}
                     rows={2}
                   />

@@ -218,7 +218,8 @@ const DayCampsProgram = ({ campTitle }: DayCampsProgramProps) => {
             children: data.children,
             campType: 'day-camps',
             registrationId: registration.id,
-            location: selectedLocation
+            location: selectedLocation,
+            emailContent: (config as any).emailContent
           },
           invoiceDetails: {
             totalAmount: totalAmount,
