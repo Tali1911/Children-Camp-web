@@ -115,20 +115,22 @@ export const DailyOperationsView: React.FC = () => {
       
       // If unpaid, create action item for accounts
       if (reg.payment_status !== 'paid') {
-        const child = reg.children.find(c => c.childName === childName);
-        const childAmount = child?.price || 0;
-        
-        await accountsActionService.createUnpaidCheckInItem(
-          reg.id!,
-          childName,
-          reg.parent_name,
-          reg.email,
-          reg.phone,
-          reg.total_amount,
-          0,
-          reg.camp_type
-        );
-        toast.info(`Invoice request sent to accounts for ${childName}`);
+        try {
+          await accountsActionService.createUnpaidCheckInItem(
+            reg.id!,
+            childName,
+            reg.parent_name,
+            reg.email,
+            reg.phone,
+            reg.total_amount,
+            0,
+            reg.camp_type
+          );
+          toast.info(`Invoice request sent to accounts for ${childName}`);
+        } catch (actionError) {
+          console.error('Failed to create pending collection item:', actionError);
+          toast.warning(`${childName} checked in, but pending collection item could not be created. Please notify accounts manually.`);
+        }
       }
 
       toast.success(`${childName} checked in`);
@@ -237,16 +239,21 @@ export const DailyOperationsView: React.FC = () => {
           
           // Create action item if unpaid
           if (registration.payment_status !== 'paid') {
-            await accountsActionService.createUnpaidCheckInItem(
-              registration.id!,
-              child.childName,
-              registration.parent_name,
-              registration.email,
-              registration.phone,
-              registration.total_amount,
-              0,
-              registration.camp_type
-            );
+            try {
+              await accountsActionService.createUnpaidCheckInItem(
+                registration.id!,
+                child.childName,
+                registration.parent_name,
+                registration.email,
+                registration.phone,
+                registration.total_amount,
+                0,
+                registration.camp_type
+              );
+            } catch (actionError) {
+              console.error('Failed to create pending collection item:', actionError);
+              toast.warning(`Checked in ${child.childName}, but pending collection item could not be created.`);
+            }
           }
           checkedInCount++;
         }

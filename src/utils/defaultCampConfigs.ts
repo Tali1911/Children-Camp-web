@@ -1,6 +1,14 @@
 import { CampPageConfig } from '@/hooks/useCampPageConfig';
 import { CampFormConfig } from '@/hooks/useCampFormConfig';
 
+const NGONG_LOCATION_DETAIL = {
+  name: 'Ngong Sanctuary',
+  duration: '5 Days',
+  ageGroup: '4-15 years',
+  time: '9:00 AM - 1:00 PM',
+  highlights: ['Archery', 'Outdoor exploration', 'Team-building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education']
+};
+
 // Default camp page configurations
 export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
   'easter': {
@@ -18,6 +26,37 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
       'Outdoor games and team challenges',
       'Nature scavenger hunts',
       'Storytelling under the trees'
+    ],
+    locationDetails: [
+      {
+        name: 'Karura Gate F',
+        duration: '5 Days',
+        ageGroup: '4-12 years',
+        time: '8:00 AM - 5:00 PM',
+        highlights: [
+          'Easter egg hunts in nature',
+          'Wildlife exploration and bird watching',
+          'Creative arts and crafts',
+          'Outdoor games and team challenges',
+          'Nature scavenger hunts',
+          'Storytelling under the trees'
+        ]
+      },
+      {
+        name: 'Ngong Sanctuary',
+        duration: '5 Days',
+        ageGroup: '4-15 years',
+        time: '9:00 AM - 1:00 PM',
+        highlights: [
+          'Archery',
+          'Outdoor exploration',
+          'Team-building activities',
+          'Creative workshops',
+          'Nature walks',
+          'Group games',
+          'Environmental education'
+        ]
+      }
     ]
   },
   'summer': {
@@ -35,6 +74,16 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
       'Arts, crafts, and music',
       'Science experiments and discovery',
       'Field trips and adventure outings'
+    ],
+    locationDetails: [
+      {
+        name: 'Karura Gate F',
+        duration: '4-8 Weeks',
+        ageGroup: '4-12 years',
+        time: '8:00 AM - 5:00 PM',
+        highlights: ['Swimming and water activities', 'Nature trails and camping skills', 'Sports and team building', 'Arts, crafts, and music', 'Science experiments and discovery', 'Field trips and adventure outings']
+      },
+      NGONG_LOCATION_DETAIL
     ]
   },
   'end-year': {
@@ -52,6 +101,16 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
       'Creative workshops',
       'Nature discovery walks',
       'Campfire stories and songs'
+    ],
+    locationDetails: [
+      {
+        name: 'Karura Gate F',
+        duration: '5 Days',
+        ageGroup: '4-12 years',
+        time: '8:00 AM - 5:00 PM',
+        highlights: ['Year-end celebration activities', 'Outdoor adventures and exploration', 'Team building and group games', 'Creative workshops', 'Nature discovery walks', 'Campfire stories and songs']
+      },
+      NGONG_LOCATION_DETAIL
     ]
   },
   'day-camps': {
@@ -69,6 +128,16 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
       'Indoor and outdoor play',
       'Creative arts and crafts',
       'Healthy snacks and meals'
+    ],
+    locationDetails: [
+      {
+        name: 'Karura Gate F',
+        duration: 'Flexible (1-60 days)',
+        ageGroup: '4-12 years',
+        time: 'Half Day (8AM-12PM) or Full Day (8AM-5PM)',
+        highlights: ['Flexible scheduling options', 'Age-appropriate activities', 'Nature exploration and learning', 'Indoor and outdoor play', 'Creative arts and crafts', 'Healthy snacks and meals']
+      },
+      NGONG_LOCATION_DETAIL
     ]
   },
   'mid-term-feb-march': {
@@ -79,13 +148,10 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
     ageGroup: '4-12 years',
     location: 'Amuse Nature Experience Center',
     time: '8:00 AM - 5:00 PM',
-    highlights: [
-      'Outdoor exploration',
-      'Team building activities',
-      'Creative workshops',
-      'Nature walks',
-      'Group games',
-      'Environmental education'
+    highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'],
+    locationDetails: [
+      { name: 'Karura Gate F', duration: '5 Days', ageGroup: '4-12 years', time: '8:00 AM - 5:00 PM', highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'] },
+      NGONG_LOCATION_DETAIL
     ]
   },
   'mid-term-may-june': {
@@ -96,13 +162,10 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
     ageGroup: '4-12 years',
     location: 'Amuse Nature Experience Center',
     time: '8:00 AM - 5:00 PM',
-    highlights: [
-      'Outdoor exploration',
-      'Team building activities',
-      'Creative workshops',
-      'Nature walks',
-      'Group games',
-      'Environmental education'
+    highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'],
+    locationDetails: [
+      { name: 'Karura Gate F', duration: '5 Days', ageGroup: '4-12 years', time: '8:00 AM - 5:00 PM', highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'] },
+      NGONG_LOCATION_DETAIL
     ]
   },
   'mid-term-october': {
@@ -113,13 +176,10 @@ export const defaultCampPageConfigs: Record<string, CampPageConfig> = {
     ageGroup: '4-12 years',
     location: 'Amuse Nature Experience Center',
     time: '8:00 AM - 5:00 PM',
-    highlights: [
-      'Outdoor exploration',
-      'Team building activities',
-      'Creative workshops',
-      'Nature walks',
-      'Group games',
-      'Environmental education'
+    highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'],
+    locationDetails: [
+      { name: 'Karura Gate F', duration: '5 Days', ageGroup: '4-12 years', time: '8:00 AM - 5:00 PM', highlights: ['Outdoor exploration', 'Team building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'] },
+      NGONG_LOCATION_DETAIL
     ]
   }
 };
@@ -132,7 +192,8 @@ const baseFormConfig: Omit<CampFormConfig, 'ageGroups'> = {
   pricing: {
     halfDayRate: 1500,
     fullDayRate: 2500,
-    currency: 'KES'
+    currency: 'KES',
+    ngongDayRate: 2000
   },
   locations: DEFAULT_LOCATIONS,
   archeryRate: DEFAULT_ARCHERY_RATE,
@@ -189,6 +250,27 @@ export const defaultCampFormConfigs: Record<string, CampFormConfig> = {
     }
   },
   'mid-term': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-10-20',
+      endDate: '2025-10-24'
+    }
+  },
+  'mid-term-feb-march': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-02-17',
+      endDate: '2025-02-21'
+    }
+  },
+  'mid-term-may-june': { 
+    ...baseFormConfig,
+    sessionDates: {
+      startDate: '2025-05-26',
+      endDate: '2025-05-30'
+    }
+  },
+  'mid-term-october': { 
     ...baseFormConfig,
     sessionDates: {
       startDate: '2025-10-20',

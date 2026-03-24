@@ -30,6 +30,11 @@ interface ProgramConfirmationRequest {
     campType?: string;
     registrationId?: string;
     registrationNumber?: string;
+    location?: string;
+    emailContent?: {
+      karura?: { timing: string; activities: string[]; whatToBring: string[] };
+      ngong?: { timing: string; activities: string[]; whatToBring: string[] };
+    };
     // Other program-specific fields
     childName?: string;
     schoolName?: string;
@@ -249,19 +254,43 @@ const handler = async (req: Request): Promise<Response> => {
         break;
       case 'day-camps':
       case 'holiday-camp':
-      case 'little-forest':
+      case 'little-forest': {
+        const location = registrationDetails?.location || 'Karura Gate F';
+        const emailContent = registrationDetails?.emailContent;
+        const isNgong = location.toLowerCase().includes('ngong');
+        
+        let timing: string;
+        let activities: string[];
+        let whatToBring: string[];
+        let locationDisplay: string;
+
+        if (isNgong) {
+          const ngongContent = emailContent?.ngong;
+          timing = ngongContent?.timing || '9:00 AM - 1:00 PM';
+          activities = ngongContent?.activities || ['Archery', 'Outdoor exploration', 'Team-building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'];
+          whatToBring = ngongContent?.whatToBring || ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed snack'];
+          locationDisplay = 'Ngong Sanctuary';
+        } else {
+          const karuraContent = emailContent?.karura;
+          timing = karuraContent?.timing || 'Full Day: 9:00 AM - 3:00 PM / Half Day: 9:00 AM - 1:00 PM';
+          activities = karuraContent?.activities || ['Nature exploration', 'Adventure activities', 'Team games', 'Creative crafts', 'Environmental education'];
+          whatToBring = karuraContent?.whatToBring || ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed lunch (full day)'];
+          locationDisplay = 'Karura Forest, Gate F';
+        }
+
         programDetails = `
           <div style="margin: 20px 0;">
             <h3 style="color: #2d5016;">Camp Information</h3>
             <ul style="padding-left: 20px;">
-              <li><strong>Location:</strong> Karura Forest, Nairobi</li>
-              <li><strong>Time:</strong> 8:00 AM - 5:00 PM (Full Day) / 8:00 AM - 12:00 PM (Half Day)</li>
-              <li><strong>Activities:</strong> Nature exploration, adventure activities, team games, creative crafts</li>
-              <li><strong>What to Bring:</strong> Comfortable clothes, closed shoes, water bottle, sunscreen, packed lunch (full day)</li>
+              <li><strong>Location:</strong> ${locationDisplay}</li>
+              <li><strong>Time:</strong> ${timing}</li>
+              <li><strong>Activities:</strong> ${activities.join(', ')}</li>
+              <li><strong>What to Bring:</strong> ${whatToBring.join(', ')}</li>
             </ul>
           </div>
         `;
         break;
+      }
       default:
         programDetails = '';
     }
@@ -321,11 +350,15 @@ const handler = async (req: Request): Promise<Response> => {
                 <strong>📧 Email:</strong> info@amusekenya.co.ke<br>
                 <strong>📞 Phone:</strong> +254 114 705 763<br>
                 <strong>🌐 Website:</strong> <a href="https://amusekenya.co.ke" style="color: #2d5016;">amusekenya.co.ke</a><br>
-                <strong>📍 Location:</strong> Karura Forest, Gate F, Thigiri Ridge, Nairobi
+                <strong>📍 Location:</strong> ${(['day-camps','holiday-camp','little-forest'].includes(programType) && registrationDetails?.location) ? registrationDetails.location + ', Nairobi' : 'Karura Forest, Gate F, Thigiri Ridge, Nairobi'}
               </p>
             </div>
           </div>
           
+          <div style="margin-top: 20px; padding: 12px; text-align: center;">
+            <p style="color: #dc2626; font-size: 12px; margin: 0;"><strong>Refund Policy:</strong> 7+ days before: full refund minus 10% admin fee | 3–6 days before: 50% refund | Less than 3 days: non-refundable | No-shows: non-refundable</p>
+          </div>
+
           <div style="text-align: center; margin-top: 20px; color: #666; font-size: 12px;">
             <p>Follow us on social media for updates and photos!</p>
             <p style="margin-top: 10px;">&copy; 2025 Amuse Kenya. All rights reserved.</p>

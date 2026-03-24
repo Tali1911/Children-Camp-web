@@ -11,8 +11,8 @@ interface DashboardData {
   outstandingAmount: number;
   monthlyExpenses: number;
   expenseChange: number;
-  pendingCollections: number;
-  pendingCollectionsAmount: number;
+  totalOutstanding: number;
+  totalOutstandingCount: number;
   recentTransactions: Array<{
     type: 'payment' | 'expense' | 'invoice';
     description: string;
@@ -39,7 +39,7 @@ const AccountsDashboard: React.FC = () => {
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString();
 
-      const [invoicesRes, paymentsRes, expensesRes, budgetsRes, collectionsRes, lastMonthPaymentsRes, lastMonthExpensesRes] = await Promise.all([
+      const [invoicesRes, paymentsRes, expensesRes, budgetsRes, collectionsRes, lastMonthPaymentsRes, lastMonthExpensesRes, campPaidRes] = await Promise.all([
         supabase.from('invoices' as any).select('*'),
         supabase.from('payments' as any).select('*').eq('status', 'completed'),
         supabase.from('expenses' as any).select('*'),
@@ -47,6 +47,7 @@ const AccountsDashboard: React.FC = () => {
         supabase.from('accounts_action_items' as any).select('*').eq('status', 'pending'),
         supabase.from('payments' as any).select('amount').eq('status', 'completed').gte('payment_date', startOfLastMonth).lte('payment_date', endOfLastMonth),
         supabase.from('expenses' as any).select('amount').gte('expense_date', startOfLastMonth).lte('expense_date', endOfLastMonth),
+        supabase.from('camp_registrations' as any).select('total_amount').eq('payment_status', 'paid'),
       ]);
 
       const invoices = (invoicesRes.data || []) as any[];
@@ -55,8 +56,12 @@ const AccountsDashboard: React.FC = () => {
       const budgets = (budgetsRes.data || []) as any[];
       const collections = (collectionsRes.data || []) as any[];
 
-      // Total revenue from completed payments
-      const totalRevenue = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      // Camp paid revenue
+      const campPaidRevenue = (campPaidRes.data || []).reduce((sum: number, r: any) => sum + Number(r.total_amount || 0), 0);
+
+      // Total revenue = paid invoices + camp paid revenue
+      const invoicePaidRevenue = payments.reduce((sum, p) => sum + Number(p.amount), 0);
+      const totalRevenue = invoicePaidRevenue + campPaidRevenue;
       const lastMonthRevenue = (lastMonthPaymentsRes.data || []).reduce((sum: number, p: any) => sum + Number(p.amount), 0);
       const revenueChange = lastMonthRevenue > 0 ? ((totalRevenue - lastMonthRevenue) / lastMonthRevenue) * 100 : 0;
 
@@ -69,8 +74,8 @@ const AccountsDashboard: React.FC = () => {
       const lastMonthExpenseTotal = (lastMonthExpensesRes.data || []).reduce((sum: number, e: any) => sum + Number(e.amount), 0);
       const expenseChange = lastMonthExpenseTotal > 0 ? ((monthlyExpenses - lastMonthExpenseTotal) / lastMonthExpenseTotal) * 100 : 0;
 
-      // Pending collections
-      const pendingCollectionsAmount = collections.reduce((sum: number, c: any) => sum + Number(c.amount_due || 0) - Number(c.amount_paid || 0), 0);
+      // Total outstanding from pending collections (attended but unpaid)
+      const totalOutstanding = collections.reduce((sum: number, c: any) => sum + Number(c.amount_due || 0) - Number(c.amount_paid || 0), 0);
 
       // Recent transactions - combine payments, expenses, and new invoices
       const recentTransactions: DashboardData['recentTransactions'] = [];
@@ -119,8 +124,8 @@ const AccountsDashboard: React.FC = () => {
         outstandingAmount: outstanding.reduce((sum, i) => sum + Number(i.total_amount), 0),
         monthlyExpenses,
         expenseChange: Math.round(expenseChange * 10) / 10,
-        pendingCollections: collections.length,
-        pendingCollectionsAmount,
+        totalOutstanding,
+        totalOutstandingCount: collections.length,
         recentTransactions: recentTransactions.slice(0, 5),
         budgets: budgetData,
       });
@@ -211,12 +216,12 @@ const AccountsDashboard: React.FC = () => {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Due Amount</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
+            <CardTitle className="text-sm font-medium">Total Outstanding</CardTitle>
+            <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(data.outstandingAmount)}</div>
-            <p className="text-xs text-muted-foreground">{data.outstandingInvoices} unpaid invoice{data.outstandingInvoices !== 1 ? 's' : ''}</p>
+            <div className="text-2xl font-bold">{formatCurrency(data.totalOutstanding)}</div>
+            <p className="text-xs text-muted-foreground">{data.totalOutstandingCount} attended but unpaid</p>
           </CardContent>
         </Card>
       </div>

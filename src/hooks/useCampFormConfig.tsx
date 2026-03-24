@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { format, addDays } from 'date-fns';
 import { cmsService } from '@/services/cmsService';
 import { defaultCampFormConfigs } from '@/utils/defaultCampConfigs';
+import { getCalendarDatesForCampType } from '@/services/calendarService';
 
 export interface CampFormConfig {
   pricing: {
     halfDayRate: number;
     fullDayRate: number;
     currency: string;
+    ngongDayRate?: number; // Flat day rate for Ngong Sanctuary (no half/full day)
   };
   fields: {
     parentName: { label: string; placeholder: string; required: boolean };
@@ -86,19 +88,29 @@ export const useCampFormConfig = (formType: string) => {
             }
           }
           
+          // Try to get dates from calendar events (primary source)
+          const calendarDates = await getCalendarDatesForCampType(formType);
+          
           const mergedConfig = {
             ...defaultConfig,
             ...data.metadata.formConfig,
-            availableDates,
+            // Calendar dates take priority, then CMS dates, then defaults
+            availableDates: calendarDates.length > 0 ? calendarDates : (availableDates || []),
             locations: data.metadata.formConfig.locations || defaultConfig?.locations,
             archeryRate: data.metadata.formConfig.archeryRate || defaultConfig?.archeryRate,
             sessionDates: data.metadata.formConfig.sessionDates || defaultConfig?.sessionDates,
-            ageGroups: data.metadata.formConfig.ageGroups || defaultConfig?.ageGroups
+            ageGroups: data.metadata.formConfig.ageGroups || defaultConfig?.ageGroups,
+            emailContent: data.metadata.formConfig.emailContent || undefined
           };
           setConfig(mergedConfig);
         } else {
-          // Use default config if CMS data not found
-          setConfig(defaultConfig || null);
+          // No CMS data — still try calendar dates
+          const calendarDates = await getCalendarDatesForCampType(formType);
+          if (calendarDates.length > 0 && defaultConfig) {
+            setConfig({ ...defaultConfig, availableDates: calendarDates });
+          } else {
+            setConfig(defaultConfig || null);
+          }
         }
       } catch (err) {
         console.error('Error fetching camp form config:', err);

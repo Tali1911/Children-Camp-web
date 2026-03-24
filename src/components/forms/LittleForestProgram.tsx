@@ -208,6 +208,8 @@ const LittleForestProgram = () => {
               campTitle: 'Little Forest Explorers',
               campType: 'little-forest',
               registrationId: result.id,
+              location: selectedLocation,
+              emailContent: (config as any).emailContent,
               children: data.children.map((child, index) => ({
                 childName: child.childName,
                 ageRange: child.childAge,

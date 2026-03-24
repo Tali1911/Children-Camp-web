@@ -7,7 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { cmsService } from '@/services/cmsService';
-import { MultiDatePicker } from '@/components/forms/MultiDatePicker';
+
 
 interface CampFormEditorProps {
   isOpen: boolean;
@@ -21,7 +21,8 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
     pricing: {
       halfDayRate: 1500,
       fullDayRate: 2500,
-      currency: 'KES'
+      currency: 'KES',
+      ngongDayRate: 2000
     },
     fields: {
       parentName: { label: 'Parent/Guardian Name', placeholder: 'Enter your full name', required: true },
@@ -53,7 +54,19 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
     },
     availableDates: [] as string[],
     locations: ['Kurura Gate F', 'Ngong Sanctuary'] as string[],
-    archeryRate: 1000
+    archeryRate: 1000,
+    emailContent: {
+      karura: {
+        timing: 'Full Day: 9:00 AM - 3:00 PM / Half Day: 9:00 AM - 1:00 PM',
+        activities: ['Nature exploration', 'Adventure activities', 'Team games', 'Creative crafts', 'Environmental education'],
+        whatToBring: ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed lunch (full day)']
+      },
+      ngong: {
+        timing: '9:00 AM - 1:00 PM',
+        activities: ['Archery', 'Outdoor exploration', 'Team-building activities', 'Creative workshops', 'Nature walks', 'Group games', 'Environmental education'],
+        whatToBring: ['Comfortable clothes', 'Closed shoes', 'Water bottle', 'Sunscreen', 'Packed snack']
+      }
+    }
   });
   const [isLoading, setIsLoading] = useState(false);
   const [newLocation, setNewLocation] = useState('');
@@ -78,7 +91,17 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
         },
         availableDates: data.metadata.formConfig.availableDates || [],
         locations: data.metadata.formConfig.locations || ['Kurura Gate F', 'Ngong Sanctuary'],
-        archeryRate: data.metadata.formConfig.archeryRate || 1000
+        archeryRate: data.metadata.formConfig.archeryRate || 1000,
+        emailContent: {
+          karura: {
+            ...formData.emailContent.karura,
+            ...(data.metadata.formConfig.emailContent?.karura || {})
+          },
+          ngong: {
+            ...formData.emailContent.ngong,
+            ...(data.metadata.formConfig.emailContent?.ngong || {})
+          }
+        }
       });
     }
   };
@@ -117,13 +140,14 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <Tabs defaultValue="pricing" className="w-full">
-            <TabsList className="grid w-full grid-cols-6">
+            <TabsList className="grid w-full grid-cols-7">
               <TabsTrigger value="pricing">Pricing</TabsTrigger>
               <TabsTrigger value="dates">Dates</TabsTrigger>
               <TabsTrigger value="locations">Locations</TabsTrigger>
               <TabsTrigger value="fields">Fields</TabsTrigger>
               <TabsTrigger value="buttons">Buttons</TabsTrigger>
               <TabsTrigger value="messages">Messages</TabsTrigger>
+              <TabsTrigger value="email">Email Content</TabsTrigger>
             </TabsList>
 
             <TabsContent value="pricing" className="space-y-4 pt-4">
@@ -168,17 +192,20 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
 
             <TabsContent value="dates" className="space-y-4 pt-4">
               <div className="space-y-4">
-                <div>
-                  <h4 className="font-medium mb-2">Available Camp Dates</h4>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    Select specific dates when this camp will be available. Supports complex schedules like weekdays only, specific weeks, or custom date combinations.
+                <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
+                  <h4 className="font-medium mb-2 flex items-center gap-2">
+                    📅 Dates are now synced from the Calendar
+                  </h4>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Camp dates are automatically pulled from your Calendar events. When you create or edit a calendar event with a matching program type, the registration form will show those dates automatically.
+                  </p>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Past dates are automatically hidden from registration forms but remain visible in the calendar.
+                  </p>
+                  <p className="text-sm font-medium text-primary">
+                    To manage dates → go to the <strong>Calendar</strong> tab and create/edit events with the correct program type.
                   </p>
                 </div>
-
-                <MultiDatePicker
-                  selectedDates={formData.availableDates}
-                  onChange={(dates) => setFormData({ ...formData, availableDates: dates })}
-                />
               </div>
             </TabsContent>
 
@@ -241,6 +268,18 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
                     Add
                   </Button>
                 </div>
+              </div>
+
+              <div className="border-t pt-4 mt-4">
+                <h4 className="font-medium mb-2">Ngong Sanctuary Day Rate</h4>
+                <p className="text-sm text-muted-foreground mb-2">
+                  Flat rate per day when Ngong Sanctuary is selected (no half/full day distinction).
+                </p>
+                <Input
+                  type="number"
+                  value={formData.pricing.ngongDayRate || 2000}
+                  onChange={(e) => setFormData({ ...formData, pricing: { ...formData.pricing, ngongDayRate: Number(e.target.value) } })}
+                />
               </div>
 
               <div className="border-t pt-4 mt-4">
@@ -367,6 +406,86 @@ export const CampFormEditor: React.FC<CampFormEditorProps> = ({ isOpen, onClose,
                     onChange={(e) => setFormData({
                       ...formData,
                       specialNeedsSection: { ...formData.specialNeedsSection, description: e.target.value }
+                    })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="email" className="space-y-6 pt-4">
+              <p className="text-sm text-muted-foreground">
+                Customise the camp information shown in confirmation emails for each location. These details appear in the "Camp Information" section of the email.
+              </p>
+
+              {/* Karura Gate F */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-primary">Karura Gate F — Email Details</h4>
+                <div>
+                  <Label>Timing</Label>
+                  <Input
+                    value={formData.emailContent.karura.timing}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, timing: e.target.value } }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Activities (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.karura.activities.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, activities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>What to Bring (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.karura.whatToBring.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, karura: { ...formData.emailContent.karura, whatToBring: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+              </div>
+
+              {/* Ngong Sanctuary */}
+              <div className="border rounded-lg p-4 space-y-3">
+                <h4 className="font-medium text-primary">Ngong Sanctuary — Email Details</h4>
+                <div>
+                  <Label>Timing</Label>
+                  <Input
+                    value={formData.emailContent.ngong.timing}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, timing: e.target.value } }
+                    })}
+                  />
+                </div>
+                <div>
+                  <Label>Activities (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.ngong.activities.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, activities: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
+                    })}
+                    rows={2}
+                  />
+                </div>
+                <div>
+                  <Label>What to Bring (comma-separated)</Label>
+                  <Textarea
+                    value={formData.emailContent.ngong.whatToBring.join(', ')}
+                    onChange={(e) => setFormData({
+                      ...formData,
+                      emailContent: { ...formData.emailContent, ngong: { ...formData.emailContent.ngong, whatToBring: e.target.value.split(',').map(s => s.trim()).filter(Boolean) } }
                     })}
                     rows={2}
                   />

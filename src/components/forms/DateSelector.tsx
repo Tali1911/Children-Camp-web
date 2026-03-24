@@ -24,6 +24,7 @@ interface DateSelectorProps {
   fullDayRate: number;
   currency: string;
   disabled?: boolean;
+  flatRate?: number; // When set, hides half/full day toggle and uses this flat rate per day
 }
 
 export const DateSelector: React.FC<DateSelectorProps> = ({
@@ -35,7 +36,8 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
   halfDayRate,
   fullDayRate,
   currency,
-  disabled = false
+  disabled = false,
+  flatRate
 }) => {
   // Group dates by week for better UX
   const groupDatesByWeek = (dates: string[]): Map<number, DateOption[]> => {
@@ -95,6 +97,9 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
   };
 
   const calculateTotalPrice = () => {
+    if (flatRate) {
+      return selectedDates.length * flatRate;
+    }
     return selectedDates.reduce((sum, date) => {
       const sessionType = sessionTypes[date] || 'full';
       return sum + (sessionType === 'half' ? halfDayRate : fullDayRate);
@@ -106,7 +111,7 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
       <Card className="p-4 bg-muted/50">
         <div className="flex items-center gap-2 text-muted-foreground">
           <Calendar className="w-4 h-4" />
-          <p className="text-sm">No available dates configured. Please contact support.</p>
+          <p className="text-sm">No upcoming dates available for this camp. Please check back later or contact support.</p>
         </div>
       </Card>
     );
@@ -160,14 +165,19 @@ export const DateSelector: React.FC<DateSelectorProps> = ({
                         >
                           {dateOption.displayLabel}
                         </Label>
-                        {isSelected && (
+                        {isSelected && !flatRate && (
                           <Badge variant="outline" className="text-xs">
                             {sessionType === 'half' ? 'Half Day' : 'Full Day'}
                           </Badge>
                         )}
+                        {isSelected && flatRate && (
+                          <Badge variant="outline" className="text-xs">
+                            {flatRate.toLocaleString()} {currency}/day
+                          </Badge>
+                        )}
                       </div>
                       
-                      {isSelected && (
+                      {isSelected && !flatRate && (
                         <div className="ml-8 flex gap-2">
                           <Button
                             type="button"

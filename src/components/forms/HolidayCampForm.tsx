@@ -62,14 +62,19 @@ const calculateAgeRange = (dateOfBirth: Date): '3-below' | '4-6' | '7-10' | '11-
 };
 
 const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
-  const formKey = campType.includes('mid-term') ? 'mid-term' : campType;
-  const { config, isLoading } = useCampFormConfig(formKey);
+  // Pass the specific campType directly so calendar date sync matches exactly
+  // (e.g., 'mid-term-february' only gets mid-term-feb dates, not all mid-term dates)
+  const { config, isLoading } = useCampFormConfig(campType);
   const [selectedLocation, setSelectedLocation] = useState('');
 
-  const calculatePrice = (selectedDates: string[], sessionTypes: Record<string, 'half' | 'full'>, activityType: 'camp' | 'archery' = 'camp'): number => {
+  const calculatePrice = (selectedDates: string[], sessionTypes: Record<string, 'half' | 'full'>, activityType: 'camp' | 'archery' = 'camp', location?: string): number => {
     if (!config) return 0;
     if (activityType === 'archery') {
       return selectedDates.length * (config.archeryRate || 1000);
+    }
+    // Ngong Sanctuary uses flat day rate (no half/full day)
+    if (location === 'Ngong Sanctuary') {
+      return selectedDates.length * (config.pricing.ngongDayRate || 2000);
     }
     return selectedDates.reduce((sum, date) => {
       const sessionType = sessionTypes[date] || 'full';
@@ -131,13 +136,13 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
       }
       
       if (child.selectedDates && child.sessionTypes) {
-        const calculatedPrice = calculatePrice(child.selectedDates, child.sessionTypes, child.activityType);
+        const calculatedPrice = calculatePrice(child.selectedDates, child.sessionTypes, child.activityType, selectedLocation);
         if (child.totalPrice !== calculatedPrice) {
           setValue(`children.${index}.totalPrice`, calculatedPrice, { shouldValidate: false });
         }
       }
     });
-  }, [watchedChildren.map(c => `${c.dateOfBirth?.getTime()}-${c.selectedDates?.join(',')}-${JSON.stringify(c.sessionTypes)}-${c.activityType}`).join('|'), setValue, config]);
+  }, [watchedChildren.map(c => `${c.dateOfBirth?.getTime()}-${c.selectedDates?.join(',')}-${JSON.stringify(c.sessionTypes)}-${c.activityType}`).join('|'), setValue, config, selectedLocation]);
 
   // Reset activity types when location changes away from Ngong Sanctuary
   useEffect(() => {
@@ -243,7 +248,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
             children: data.children,
             campType: campType,
             registrationId: registration.id,
-            location: selectedLocation
+            location: selectedLocation,
+            emailContent: (config as any).emailContent
           },
           invoiceDetails: {
             totalAmount: totalAmount,
@@ -420,15 +426,18 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
                   <DateSelector
                     availableDates={config.availableDates || []}
                     selectedDates={watchedChildren[index]?.selectedDates || []}
-                    sessionTypes={watchedChildren[index]?.sessionTypes || {}}
+                    sessionTypes={isNgongSanctuary ? {} : (watchedChildren[index]?.sessionTypes || {})}
                     onDatesChange={(dates) => setValue(`children.${index}.selectedDates`, dates, { shouldValidate: true })}
                     onSessionTypeChange={(date, type) => {
-                      const currentTypes = watchedChildren[index]?.sessionTypes || {};
-                      setValue(`children.${index}.sessionTypes`, { ...currentTypes, [date]: type }, { shouldValidate: true });
+                      if (!isNgongSanctuary) {
+                        const currentTypes = watchedChildren[index]?.sessionTypes || {};
+                        setValue(`children.${index}.sessionTypes`, { ...currentTypes, [date]: type }, { shouldValidate: true });
+                      }
                     }}
                     halfDayRate={config.pricing.halfDayRate}
                     fullDayRate={config.pricing.fullDayRate}
                     currency={config.pricing.currency}
+                    flatRate={isNgongSanctuary ? (config.pricing.ngongDayRate || 2000) : undefined}
                   />
                 ) : (
                   <DateSelector
