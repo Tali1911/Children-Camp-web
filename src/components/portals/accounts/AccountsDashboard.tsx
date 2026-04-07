@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, FileText, Receipt, TrendingUp, TrendingDown, AlertTriangle, Clock } from "lucide-react";
+import { DollarSign, FileText, Receipt, TrendingUp, TrendingDown, AlertTriangle, Clock, Target, BarChart3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -13,6 +13,8 @@ interface DashboardData {
   expenseChange: number;
   totalOutstanding: number;
   totalOutstandingCount: number;
+  potentialRevenue: number;
+  collectionRate: number;
   recentTransactions: Array<{
     type: 'payment' | 'expense' | 'invoice';
     description: string;
@@ -39,7 +41,7 @@ const AccountsDashboard: React.FC = () => {
       const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString();
       const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0).toISOString();
 
-      const [invoicesRes, paymentsRes, expensesRes, budgetsRes, collectionsRes, lastMonthPaymentsRes, lastMonthExpensesRes, campPaidRes] = await Promise.all([
+      const [invoicesRes, paymentsRes, expensesRes, budgetsRes, collectionsRes, lastMonthPaymentsRes, lastMonthExpensesRes, campPaidRes, campAllRes] = await Promise.all([
         supabase.from('invoices' as any).select('*'),
         supabase.from('payments' as any).select('*').eq('status', 'completed'),
         supabase.from('expenses' as any).select('*'),
@@ -48,6 +50,7 @@ const AccountsDashboard: React.FC = () => {
         supabase.from('payments' as any).select('amount').eq('status', 'completed').gte('payment_date', startOfLastMonth).lte('payment_date', endOfLastMonth),
         supabase.from('expenses' as any).select('amount').gte('expense_date', startOfLastMonth).lte('expense_date', endOfLastMonth),
         supabase.from('camp_registrations' as any).select('total_amount').eq('payment_status', 'paid'),
+        supabase.from('camp_registrations' as any).select('total_amount, payment_status'),
       ]);
 
       const invoices = (invoicesRes.data || []) as any[];
@@ -76,6 +79,11 @@ const AccountsDashboard: React.FC = () => {
 
       // Total outstanding from pending collections (attended but unpaid)
       const totalOutstanding = collections.reduce((sum: number, c: any) => sum + Number(c.amount_due || 0) - Number(c.amount_paid || 0), 0);
+
+      // Potential vs Actual revenue
+      const allCampRegs = (campAllRes.data || []) as any[];
+      const potentialRevenue = allCampRegs.reduce((sum: number, r: any) => sum + Number(r.total_amount || 0), 0);
+      const collectionRate = potentialRevenue > 0 ? (totalRevenue / potentialRevenue) * 100 : 0;
 
       // Recent transactions - combine payments, expenses, and new invoices
       const recentTransactions: DashboardData['recentTransactions'] = [];
@@ -126,6 +134,8 @@ const AccountsDashboard: React.FC = () => {
         expenseChange: Math.round(expenseChange * 10) / 10,
         totalOutstanding,
         totalOutstandingCount: collections.length,
+        potentialRevenue,
+        collectionRate: Math.round(collectionRate * 10) / 10,
         recentTransactions: recentTransactions.slice(0, 5),
         budgets: budgetData,
       });
@@ -166,7 +176,7 @@ const AccountsDashboard: React.FC = () => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
@@ -182,6 +192,28 @@ const AccountsDashboard: React.FC = () => {
               )}
               {data.revenueChange >= 0 ? '+' : ''}{data.revenueChange}% from last month
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Potential Revenue</CardTitle>
+            <Target className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(data.potentialRevenue)}</div>
+            <p className="text-xs text-muted-foreground">If all registrations were paid</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Collection Rate</CardTitle>
+            <BarChart3 className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{data.collectionRate}%</div>
+            <p className="text-xs text-muted-foreground">Of potential revenue collected</p>
           </CardContent>
         </Card>
 
