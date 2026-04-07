@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { TrendingUp, PieChart, BarChart3, Calendar as CalendarIcon, FileText, Clock } from 'lucide-react';
+import { TrendingUp, PieChart, BarChart3, Calendar as CalendarIcon, FileText, Clock, Activity } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { DateRange } from '@/services/financialReportService';
 import ProfitLossStatement from './reports/ProfitLossStatement';
 import ARAgingReport from './reports/ARAgingReport';
 import DailySalesSummary from './reports/DailySalesSummary';
+import ActivityProfitLoss from './reports/ActivityProfitLoss';
 import { cn } from '@/lib/utils';
 
 const FinancialReports: React.FC = () => {
@@ -91,10 +92,14 @@ const FinancialReports: React.FC = () => {
       </div>
 
       <Tabs defaultValue="profit-loss" className="space-y-4">
-        <TabsList className="grid grid-cols-5 w-full">
+        <TabsList className="grid grid-cols-6 w-full">
           <TabsTrigger value="profit-loss" className="flex items-center justify-center gap-1 px-1 sm:px-3">
             <FileText className="h-4 w-4" />
             <span className="hidden sm:inline text-xs sm:text-sm">P&L</span>
+          </TabsTrigger>
+          <TabsTrigger value="activity-pl" className="flex items-center justify-center gap-1 px-1 sm:px-3">
+            <Activity className="h-4 w-4" />
+            <span className="hidden sm:inline text-xs sm:text-sm">Activity P&L</span>
           </TabsTrigger>
           <TabsTrigger value="ar-aging" className="flex items-center justify-center gap-1 px-1 sm:px-3">
             <Clock className="h-4 w-4" />
@@ -116,6 +121,10 @@ const FinancialReports: React.FC = () => {
 
         <TabsContent value="profit-loss">
           <ProfitLossStatement dateRange={dateRange} />
+        </TabsContent>
+
+        <TabsContent value="activity-pl">
+          <ActivityProfitLoss dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="ar-aging">
