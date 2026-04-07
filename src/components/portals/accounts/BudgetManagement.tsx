@@ -13,11 +13,14 @@ import { Plus, Wallet, TrendingUp, AlertTriangle, Trash2 } from "lucide-react";
 import { financialService, Budget } from '@/services/financialService';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
+import { ACTIVITY_CATEGORIES, DEPARTMENT_LIST, smartCapitalize } from '@/lib/activityCategories';
 
 const BudgetManagement = () => {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [customCategory, setCustomCategory] = useState('');
+  const [customDepartment, setCustomDepartment] = useState('');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -28,25 +31,6 @@ const BudgetManagement = () => {
     department: '',
     notes: ''
   });
-
-  const categories = [
-    'Operations',
-    'Marketing',
-    'Staff',
-    'Equipment',
-    'Facilities',
-    'Programs',
-    'Events',
-    'Other'
-  ];
-
-  const departments = [
-    'Administration',
-    'Programs',
-    'Marketing',
-    'Operations',
-    'HR'
-  ];
 
   useEffect(() => {
     loadData();
@@ -68,17 +52,25 @@ const BudgetManagement = () => {
     }
   };
 
+  const getEffectiveCategory = () => {
+    return formData.category === 'Others' ? customCategory : formData.category;
+  };
+
+  const getEffectiveDepartment = () => {
+    return formData.department === 'Others' ? customDepartment : formData.department;
+  };
+
   const handleCreateBudget = async () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       
       const newBudget = {
         name: formData.name,
-        category: formData.category,
+        category: getEffectiveCategory(),
         allocated_amount: parseFloat(formData.allocated_amount),
         period_start: formData.period_start,
         period_end: formData.period_end,
-        department: formData.department,
+        department: getEffectiveDepartment(),
         status: 'active' as const,
         notes: formData.notes,
         created_by: user?.id
@@ -96,6 +88,8 @@ const BudgetManagement = () => {
         department: '',
         notes: ''
       });
+      setCustomCategory('');
+      setCustomDepartment('');
 
       toast({
         title: "Success",
@@ -150,6 +144,8 @@ const BudgetManagement = () => {
   const activeBudgets = budgets.filter(b => b.status === 'active').length;
   const exceededBudgets = budgets.filter(b => b.status === 'exceeded').length;
 
+  const isFormValid = formData.name && getEffectiveCategory() && formData.allocated_amount && formData.period_start && formData.period_end;
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
@@ -182,29 +178,51 @@ const BudgetManagement = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="category">Category *</Label>
-                  <Select value={formData.category} onValueChange={(value) => setFormData({...formData, category: value})}>
+                  <Select value={formData.category} onValueChange={(value) => {
+                    setFormData({...formData, category: value});
+                    if (value !== 'Others') setCustomCategory('');
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select category" />
                     </SelectTrigger>
                     <SelectContent>
-                      {categories.map(cat => (
+                      {ACTIVITY_CATEGORIES.map(cat => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.category === 'Others' && (
+                    <Input
+                      className="mt-2"
+                      value={customCategory}
+                      onChange={(e) => setCustomCategory(smartCapitalize(e.target.value))}
+                      placeholder="Enter category name"
+                    />
+                  )}
                 </div>
                 <div>
                   <Label htmlFor="department">Department</Label>
-                  <Select value={formData.department} onValueChange={(value) => setFormData({...formData, department: value})}>
+                  <Select value={formData.department} onValueChange={(value) => {
+                    setFormData({...formData, department: value});
+                    if (value !== 'Others') setCustomDepartment('');
+                  }}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      {departments.map(dept => (
+                      {DEPARTMENT_LIST.map(dept => (
                         <SelectItem key={dept} value={dept}>{dept}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {formData.department === 'Others' && (
+                    <Input
+                      className="mt-2"
+                      value={customDepartment}
+                      onChange={(e) => setCustomDepartment(smartCapitalize(e.target.value))}
+                      placeholder="Enter department name"
+                    />
+                  )}
                 </div>
               </div>
               <div>
@@ -254,7 +272,7 @@ const BudgetManagement = () => {
               </Button>
               <Button 
                 onClick={handleCreateBudget}
-                disabled={!formData.name || !formData.category || !formData.allocated_amount || !formData.period_start || !formData.period_end}
+                disabled={!isFormValid}
                 className="w-full sm:w-auto"
               >
                 Create Budget

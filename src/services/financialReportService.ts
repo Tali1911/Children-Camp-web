@@ -442,6 +442,70 @@ export const financialReportService = {
     saveAs(blob, filename || `daily-sales-${format(new Date(), 'yyyy-MM-dd')}.csv`);
   },
 
+  // Generate Activity-level Profit & Loss
+  async generateActivityProfitLoss(dateRange: DateRange): Promise<Array<{ activity: string; revenue: number; expenses: number; netProfit: number }>> {
+    const { payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange);
+
+    // Revenue by camp_type from registrations
+    const revenueByActivity: Record<string, number> = {};
+    campRegistrations.forEach(reg => {
+      const activity = (reg as any).camp_type || 'Unknown';
+      const amount = reg.payment_status === 'paid' ? reg.total_amount : 0;
+      revenueByActivity[activity] = (revenueByActivity[activity] || 0) + amount;
+    });
+
+    // Also add payment revenue not linked to camp registrations
+    payments.filter(p => p.status === 'completed' && !p.registration_id && p.program_name).forEach(p => {
+      const activity = p.program_name || 'Other';
+      revenueByActivity[activity] = (revenueByActivity[activity] || 0) + Number(p.amount);
+    });
+
+    // Expenses by category (category maps to activity)
+    const expensesByActivity: Record<string, number> = {};
+    expenses
+      .filter(e => (e.status === 'approved' || e.status === 'paid') && isWithinInterval(parseISO(e.expense_date), { start: dateRange.startDate, end: dateRange.endDate }))
+      .forEach(exp => {
+        const category = exp.category || 'Uncategorized';
+        expensesByActivity[category] = (expensesByActivity[category] || 0) + Number(exp.amount);
+      });
+
+    // Merge all activities
+    const allActivities = new Set([...Object.keys(revenueByActivity), ...Object.keys(expensesByActivity)]);
+    const result = Array.from(allActivities).map(activity => {
+      const revenue = revenueByActivity[activity] || 0;
+      const activityExpenses = expensesByActivity[activity] || 0;
+      return { activity, revenue, expenses: activityExpenses, netProfit: revenue - activityExpenses };
+    });
+
+    return result.sort((a, b) => b.revenue - a.revenue);
+  },
+
+  // Generate Potential vs Actual revenue analysis
+  async generatePotentialVsActual(dateRange: DateRange): Promise<{ potentialRevenue: number; actualRevenue: number; outstanding: number; collectionRate: number }> {
+    const { payments, campRegistrations } = await this.fetchFinancialData(dateRange);
+
+    // Potential = total_amount of ALL registrations in period
+    const potentialRevenue = campRegistrations.reduce((sum, r) => sum + r.total_amount, 0);
+
+    // Actual = payments completed + paid camp registrations
+    const paidCampRevenue = campRegistrations
+      .filter(r => r.payment_status === 'paid')
+      .reduce((sum, r) => sum + r.total_amount, 0);
+
+    // Add partial payments from payments table for camp registrations
+    const campRegIds = new Set(campRegistrations.map(r => r.id));
+    const campPayments = payments
+      .filter(p => p.status === 'completed' && p.registration_id && campRegIds.has(p.registration_id))
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+
+    // Use the higher of paid registrations or actual payments to avoid double counting
+    const actualRevenue = Math.max(paidCampRevenue, campPayments);
+    const outstanding = potentialRevenue - actualRevenue;
+    const collectionRate = potentialRevenue > 0 ? (actualRevenue / potentialRevenue) * 100 : 0;
+
+    return { potentialRevenue, actualRevenue, outstanding, collectionRate };
+  },
+
   exportDailySalesToPDF(data: DailySalesData[], filename?: string) {
     const doc = new jsPDF('landscape');
     

@@ -11,7 +11,8 @@ import { toast } from "@/hooks/use-toast";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CheckCircle, XCircle, Clock, Users, UserCheck, UserX, Edit, Settings2 } from "lucide-react";
+import { CheckCircle, XCircle, Clock, Users, UserCheck, UserX, Edit, Settings2, Trash2, AlertTriangle } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { ROLES } from '@/services/roleService';
 import { auditLogService } from '@/services/auditLogService';
 import { coachAccessService, CAMP_TABS, CampTabId, ALL_TAB_IDS } from '@/services/coachAccessService';
@@ -45,6 +46,10 @@ const UserManagement: React.FC = () => {
   const [showRejectionDialog, setShowRejectionDialog] = useState(false);
   const [showChangeRoleDialog, setShowChangeRoleDialog] = useState(false);
   const [rejectionReason, setRejectionReason] = useState('');
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<ApprovedUser | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
   const [coachAccessMap, setCoachAccessMap] = useState<Record<string, { granted: boolean; visibleTabs: CampTabId[] }>>({});
   const [togglingAccess, setTogglingAccess] = useState<string | null>(null);
 
@@ -253,6 +258,61 @@ const UserManagement: React.FC = () => {
       toast({ title: "Error", description: "Failed to update coach access", variant: "destructive" });
     } finally {
       setTogglingAccess(null);
+    }
+  };
+
+  const handleDeleteUser = (user: ApprovedUser) => {
+    setUserToDelete(user);
+    setDeleteConfirmText('');
+    setShowDeleteDialog(true);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!userToDelete || deleteConfirmText !== 'DELETE') return;
+
+    try {
+      setDeleting(true);
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Not authenticated');
+
+      const { error } = await (supabase as any).rpc('delete_user_completely', {
+        _user_id: userToDelete.id,
+        _deleted_by: user.id
+      });
+
+      if (error) throw error;
+
+      await auditLogService.logEvent({
+        action: 'user_deleted',
+        entityType: 'user',
+        entityId: userToDelete.id,
+        details: `Permanently deleted user ${userToDelete.email}`,
+        metadata: {
+          user_email: userToDelete.email,
+          full_name: userToDelete.full_name,
+          role: userToDelete.role
+        },
+        severity: 'critical'
+      });
+
+      toast({
+        title: "User Deleted",
+        description: `${userToDelete.email} has been permanently deleted`
+      });
+
+      setShowDeleteDialog(false);
+      setUserToDelete(null);
+      setDeleteConfirmText('');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete user",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -502,10 +562,16 @@ const UserManagement: React.FC = () => {
                     {user.approved_at ? new Date(user.approved_at).toLocaleDateString() : '-'}
                   </TableCell>
                   <TableCell>
-                    <Button size="sm" variant="outline" onClick={() => handleChangeRole(user)}>
-                      <Edit className="h-4 w-4 mr-1" />
-                      Change Role
-                    </Button>
+                    <div className="flex gap-2">
+                      <Button size="sm" variant="outline" onClick={() => handleChangeRole(user)}>
+                        <Edit className="h-4 w-4 mr-1" />
+                        Change Role
+                      </Button>
+                      <Button size="sm" variant="destructive" onClick={() => handleDeleteUser(user)}>
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Delete
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}
@@ -618,6 +684,52 @@ const UserManagement: React.FC = () => {
             </Button>
             <Button onClick={confirmChangeRole} disabled={!selectedRole || selectedRole === selectedApprovedUser?.role}>
               Change Role
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete User Dialog */}
+      <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertTriangle className="h-5 w-5" />
+              Permanently Delete User
+            </DialogTitle>
+            <DialogDescription>
+              This action cannot be undone. This will permanently delete the user
+              <strong> {userToDelete?.email}</strong> and all their associated data from the database.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 border border-destructive/30 rounded-md bg-destructive/5">
+              <p className="text-sm font-medium">User Details:</p>
+              <p className="text-sm text-muted-foreground">Name: {userToDelete?.full_name || 'N/A'}</p>
+              <p className="text-sm text-muted-foreground">Email: {userToDelete?.email}</p>
+              <p className="text-sm text-muted-foreground">Role: {userToDelete?.role?.toUpperCase()}</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">
+                Type <strong>DELETE</strong> to confirm
+              </label>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                placeholder="Type DELETE to confirm"
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={confirmDeleteUser}
+              disabled={deleteConfirmText !== 'DELETE' || deleting}
+            >
+              {deleting ? 'Deleting...' : 'Permanently Delete User'}
             </Button>
           </DialogFooter>
         </DialogContent>
