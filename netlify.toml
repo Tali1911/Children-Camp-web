@@ -8,10 +8,10 @@
 
 [build.processing.html]
   pretty_urls = true
-
+    
 [build.environment]
   NODE_VERSION = "20"
-  
+
 # Bot prerendering - serves pre-rendered HTML to crawlers
 [[plugins]]
   package = "@netlify/plugin-sitemap"
