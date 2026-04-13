@@ -12,8 +12,10 @@ const AnnouncementsPage = () => {
   return (
     <>
       <SEOHead 
-        title="Announcements & Calendar | Amuse.Ke"
-        description="Stay updated with the latest news, events, and schedules from Amuse Kenya. View our announcements and yearly calendar for upcoming programs and activities."
+        title="Announcements & Calendar | Amuse Kenya Updates"
+        description="Stay updated with the latest news, upcoming events, and program schedules from Amuse Kenya. View our yearly calendar for holiday camps, daily activities, and special events."
+        keywords="Amuse Kenya announcements, camp schedule Nairobi, holiday program calendar, kids activities updates, Karura Forest events"
+        canonical="https://amusekenya.co.ke/announcements"
       />
       <div className="min-h-screen bg-gradient-to-b from-forest-50 to-white">
         <Navbar />

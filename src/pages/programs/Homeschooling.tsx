@@ -8,9 +8,10 @@ const Homeschooling = () => {
   return (
     <>
       <SEOHead
-        title="Homeschooling Outdoor Experiences | Amuse Bush Camp"
-        description="Structured integration of physical education and nature immersion with sports modules for homeschooling families. Ages 4-17, flexible 1 day to 4 weeks programs."
-        keywords="homeschooling, outdoor education, physical education, nature immersion, sports modules, STEM integration"
+        title="Homeschooling Outdoor Experiences | Amuse Kenya Nairobi"
+        description="Structured nature-based education for homeschooling families. Physical education, sports modules, STEM integration, and nature immersion for ages 4-17 at Karura Forest, Nairobi."
+        keywords="homeschooling Kenya, outdoor education Nairobi, physical education homeschool, nature immersion, sports modules, STEM outdoor learning, Karura Forest homeschool"
+        canonical="https://amusekenya.co.ke/programs/homeschooling"
       />
       <div className="min-h-screen bg-background">
         <Navbar />

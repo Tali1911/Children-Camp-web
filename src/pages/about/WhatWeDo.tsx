@@ -41,8 +41,10 @@ const WhatWeDo = () => {
   return (
     <div className="min-h-screen bg-background">
       <SEOHead
-        title="What We Do - Amuse Kenya"
-        description="Discover our range of nature-based programs including camps, homeschooling experiences, and team-building activities."
+        title="What We Do | Amuse Kenya Programs & Services"
+        description="Discover Amuse Kenya's nature-based programs: daily adventures, holiday camps, homeschooling, birthday parties, team building, and school experiences at Karura Forest, Nairobi."
+        keywords="outdoor programs Kenya, nature activities Nairobi, kids camps, homeschooling outdoor, team building Karura, school field trips Kenya"
+        canonical="https://amusekenya.co.ke/about/what-we-do"
       />
       <Navbar />
       <main className="pt-20">
