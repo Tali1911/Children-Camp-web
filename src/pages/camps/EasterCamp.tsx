@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import SEOHead from '@/components/SEOHead';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import RegistrationPageSkeleton from '@/components/skeletons/RegistrationPageSkeleton';
 import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
+import RelatedPrograms from '@/components/RelatedPrograms';
 
 const EasterCamp = () => {
   const { config, isLoading, refresh } = useCampPageConfig('easter');
@@ -34,6 +36,12 @@ const EasterCamp = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Easter Holiday Camp for Kids | Amuse Kenya Nairobi"
+        description="Fun-filled Easter holiday camp for children aged 3-17 at Karura Forest, Nairobi. Outdoor games, nature exploration, arts & crafts. Book your child's spot today!"
+        keywords="Easter camp Nairobi, Easter holiday camp kids Kenya, Karura Forest Easter activities, children Easter camp"
+        canonical="https://amusekenya.co.ke/camps/easter"
+      />
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 pt-24">
@@ -138,6 +146,8 @@ const EasterCamp = () => {
           {/* Registration Form */}
           <HolidayCampForm campType="easter" campTitle={config.title} />
         </div>
+
+        <RelatedPrograms currentPath="/camps/easter" />
       </div>
       
       <Footer />

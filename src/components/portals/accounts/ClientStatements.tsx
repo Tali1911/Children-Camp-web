@@ -463,6 +463,78 @@ const ClientStatements: React.FC = () => {
     toast.success('CSV statement downloaded');
   };
 
+  const handleDownloadAllStatementsPDF = () => {
+    if (filteredClients.length === 0) {
+      toast.error('No client statements to export');
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    // Cover page
+    doc.setFontSize(18);
+    doc.text('All Client Statements', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy')}`, 14, 28);
+    doc.text(`Total Clients: ${filteredClients.length}`, 14, 34);
+
+    const grandCharged = filteredClients.reduce((s, c) => s + c.totalCharged, 0);
+    const grandPaid = filteredClients.reduce((s, c) => s + c.totalPaid, 0);
+    const grandBalance = filteredClients.reduce((s, c) => s + c.balanceDue, 0);
+
+    doc.text(`Total Charged: KES ${grandCharged.toLocaleString()}`, 130, 28);
+    doc.text(`Total Paid: KES ${grandPaid.toLocaleString()}`, 130, 34);
+    doc.text(`Total Outstanding: KES ${grandBalance.toLocaleString()}`, 130, 40);
+
+    // Summary table
+    autoTable(doc, {
+      startY: 48,
+      head: [['Parent Name', 'Phone', 'Children', 'Charged', 'Paid', 'Balance']],
+      body: filteredClients.map(c => [
+        c.parentName,
+        c.phone,
+        c.children.join(', '),
+        `KES ${c.totalCharged.toLocaleString()}`,
+        `KES ${c.totalPaid.toLocaleString()}`,
+        `KES ${c.balanceDue.toLocaleString()}`,
+      ]),
+      foot: [['', '', 'Totals', `KES ${grandCharged.toLocaleString()}`, `KES ${grandPaid.toLocaleString()}`, `KES ${grandBalance.toLocaleString()}`]],
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [34, 87, 60] },
+      footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+    });
+
+    // Individual statements
+    filteredClients.forEach(client => {
+      doc.addPage();
+      const lines = buildStatementLines(client);
+
+      doc.setFontSize(14);
+      doc.text(`Statement — ${client.parentName}`, 14, 20);
+      doc.setFontSize(9);
+      doc.text(`Email: ${client.email}  |  Phone: ${client.phone}`, 14, 28);
+      doc.text(`Children: ${client.children.join(', ')}`, 14, 34);
+      doc.text(`Charges: KES ${client.totalCharged.toLocaleString()}  |  Paid: KES ${client.totalPaid.toLocaleString()}  |  Balance: KES ${client.balanceDue.toLocaleString()}`, 14, 40);
+
+      autoTable(doc, {
+        startY: 46,
+        head: [['Date', 'Description', 'Charges', 'Payments', 'Balance']],
+        body: lines.map(line => [
+          format(new Date(line.date), 'dd MMM yyyy'),
+          line.description,
+          line.charges > 0 ? `KES ${line.charges.toLocaleString()}` : '—',
+          line.payments > 0 ? `KES ${line.payments.toLocaleString()}` : '—',
+          `KES ${line.balance.toLocaleString()}`,
+        ]),
+        styles: { fontSize: 7 },
+        headStyles: { fillColor: [34, 87, 60] },
+      });
+    });
+
+    doc.save(`All_Client_Statements_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast.success('All client statements downloaded');
+  };
+
   const handlePrint = (client: ClientSummary) => {
     const lines = buildStatementLines(client);
     const printWindow = window.open('', '_blank');
@@ -646,10 +718,16 @@ const ClientStatements: React.FC = () => {
               <FileText className="h-5 w-5" />
               Client Statements
             </CardTitle>
-            <Button variant="outline" size="sm" onClick={loadData}>
-              <RefreshCw className="h-4 w-4 mr-1" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <Button variant="outline" size="sm" onClick={handleDownloadAllStatementsPDF}>
+                <Download className="h-4 w-4 mr-1" />
+                Download All
+              </Button>
+              <Button variant="outline" size="sm" onClick={loadData}>
+                <RefreshCw className="h-4 w-4 mr-1" />
+                Refresh
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

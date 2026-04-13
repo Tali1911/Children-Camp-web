@@ -13,6 +13,11 @@ export interface DateRange {
   endDate: Date;
 }
 
+export interface ReportFilters {
+  dateRange: DateRange;
+  activities?: string[]; // camp_type or program_name filter
+}
+
 export interface ProfitLossData {
   revenue: {
     invoices: number;
@@ -63,8 +68,8 @@ export interface DailySalesData {
 }
 
 export const financialReportService = {
-  // Fetch all financial data for a date range
-  async fetchFinancialData(dateRange: DateRange) {
+  // Fetch all financial data for a date range with optional activity filter
+  async fetchFinancialData(dateRange: DateRange, activities?: string[]) {
     const [invoices, payments, expenses, budgets, campRegistrations] = await Promise.all([
       financialService.getInvoices(),
       financialService.getPayments(),
@@ -76,12 +81,36 @@ export const financialReportService = {
       }),
     ]);
 
-    return { invoices, payments, expenses, budgets, campRegistrations };
+    // Apply activity filter if provided
+    const hasActivityFilter = activities && activities.length > 0;
+    const filteredCampRegistrations = hasActivityFilter
+      ? campRegistrations.filter(r => activities.includes((r as any).camp_type || ''))
+      : campRegistrations;
+
+    const filteredPayments = hasActivityFilter
+      ? payments.filter(p => {
+          // Include payments linked to filtered registrations, or matching program_name
+          if (p.registration_id) {
+            return filteredCampRegistrations.some(r => r.id === p.registration_id);
+          }
+          if (p.program_name) {
+            return activities.includes(p.program_name);
+          }
+          // Include unlinked payments only when no activity filter
+          return false;
+        })
+      : payments;
+
+    const filteredExpenses = hasActivityFilter
+      ? expenses.filter(e => activities.includes(e.category || ''))
+      : expenses;
+
+    return { invoices, payments: filteredPayments, expenses: filteredExpenses, budgets, campRegistrations: filteredCampRegistrations };
   },
 
-  // Generate Profit & Loss Statement
-  async generateProfitLoss(dateRange: DateRange): Promise<ProfitLossData> {
-    const { invoices, payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange);
+  // Generate Profit & Loss Statement — uses payments table as source of truth for revenue
+  async generateProfitLoss(dateRange: DateRange, activities?: string[]): Promise<ProfitLossData> {
+    const { invoices, payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     // Filter by date range
     const filteredInvoices = invoices.filter(inv => {
@@ -89,6 +118,7 @@ export const financialReportService = {
       return isWithinInterval(date, { start: dateRange.startDate, end: dateRange.endDate });
     });
 
+    // Payments table = source of truth for revenue (matches dashboard)
     const filteredPayments = payments.filter(p => {
       const date = parseISO(p.payment_date);
       return isWithinInterval(date, { start: dateRange.startDate, end: dateRange.endDate }) && p.status === 'completed';
@@ -100,12 +130,18 @@ export const financialReportService = {
              (e.status === 'approved' || e.status === 'paid');
     });
 
-    // Calculate revenue
-    const invoiceRevenue = filteredInvoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
+    // Revenue from payments table (single source of truth)
     const paymentRevenue = filteredPayments.reduce((sum, p) => sum + Number(p.amount), 0);
-    const campRevenue = campRegistrations
-      .filter(r => r.payment_status === 'paid')
-      .reduce((sum, r) => sum + r.total_amount, 0);
+
+    // For breakdown: split payments linked to camp registrations vs other
+    const campRegIds = new Set(campRegistrations.map(r => r.id));
+    const campPaymentRevenue = filteredPayments
+      .filter(p => (p.registration_id && campRegIds.has(p.registration_id)) || p.source === 'camp_registration')
+      .reduce((sum, p) => sum + Number(p.amount), 0);
+    const otherPaymentRevenue = paymentRevenue - campPaymentRevenue;
+
+    // Invoice revenue for reference only (not counted in total to avoid double-counting)
+    const invoiceRevenue = filteredInvoices.reduce((sum, inv) => sum + Number(inv.total_amount), 0);
 
     // Calculate expenses by category
     const expensesByCategory: Record<string, number> = {};
@@ -115,13 +151,13 @@ export const financialReportService = {
     });
 
     const totalExpenses = Object.values(expensesByCategory).reduce((sum, val) => sum + val, 0);
-    const totalRevenue = paymentRevenue + campRevenue;
+    const totalRevenue = paymentRevenue;
 
     return {
       revenue: {
         invoices: invoiceRevenue,
-        payments: paymentRevenue,
-        campRegistrations: campRevenue,
+        payments: otherPaymentRevenue,
+        campRegistrations: campPaymentRevenue,
         total: totalRevenue,
       },
       expenses: {
@@ -198,8 +234,8 @@ export const financialReportService = {
   },
 
   // Generate Daily Sales Summary
-  async generateDailySalesSummary(dateRange: DateRange): Promise<DailySalesData[]> {
-    const { invoices, payments, campRegistrations } = await this.fetchFinancialData(dateRange);
+  async generateDailySalesSummary(dateRange: DateRange, activities?: string[]): Promise<DailySalesData[]> {
+    const { invoices, payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     // Create a map for each day in range
     const dailyData: Record<string, DailySalesData> = {};
@@ -229,29 +265,31 @@ export const financialReportService = {
       }
     });
 
-    // Populate with payment data
+    // Populate with payment data — payments table is source of truth for revenue
+    const campRegIds = new Set(campRegistrations.map(r => r.id));
     payments.filter(p => p.status === 'completed').forEach(p => {
       const dateKey = format(parseISO(p.payment_date), 'yyyy-MM-dd');
       if (dailyData[dateKey]) {
         dailyData[dateKey].paymentsReceived++;
         dailyData[dateKey].paymentsAmount += Number(p.amount);
-      }
-    });
-
-    // Populate with camp registration data
-    campRegistrations.forEach(reg => {
-      const dateKey = format(parseISO(reg.created_at!), 'yyyy-MM-dd');
-      if (dailyData[dateKey]) {
-        dailyData[dateKey].campRegistrations++;
-        if (reg.payment_status === 'paid') {
-          dailyData[dateKey].campRevenue += reg.total_amount;
+        // Track camp-linked payments separately for breakdown
+        if ((p.registration_id && campRegIds.has(p.registration_id)) || p.source === 'camp_registration') {
+          dailyData[dateKey].campRevenue += Number(p.amount);
         }
       }
     });
 
-    // Calculate total revenue for each day
+    // Track registration count (not revenue, just count)
+    campRegistrations.forEach(reg => {
+      const dateKey = format(parseISO(reg.created_at!), 'yyyy-MM-dd');
+      if (dailyData[dateKey]) {
+        dailyData[dateKey].campRegistrations++;
+      }
+    });
+
+    // Total revenue = payments amount (single source of truth)
     Object.values(dailyData).forEach(day => {
-      day.totalRevenue = day.paymentsAmount + day.campRevenue;
+      day.totalRevenue = day.paymentsAmount;
     });
 
     return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
@@ -443,20 +481,26 @@ export const financialReportService = {
   },
 
   // Generate Activity-level Profit & Loss
-  async generateActivityProfitLoss(dateRange: DateRange): Promise<Array<{ activity: string; revenue: number; expenses: number; netProfit: number }>> {
-    const { payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange);
+  async generateActivityProfitLoss(dateRange: DateRange, activities?: string[]): Promise<Array<{ activity: string; revenue: number; expenses: number; netProfit: number }>> {
+    const { payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
-    // Revenue by camp_type from registrations
+    // Revenue by activity using payments table as source of truth
     const revenueByActivity: Record<string, number> = {};
+    
+    // Build a map of registration_id -> camp_type
+    const regCampTypeMap: Record<string, string> = {};
     campRegistrations.forEach(reg => {
-      const activity = (reg as any).camp_type || 'Unknown';
-      const amount = reg.payment_status === 'paid' ? reg.total_amount : 0;
-      revenueByActivity[activity] = (revenueByActivity[activity] || 0) + amount;
+      regCampTypeMap[reg.id] = (reg as any).camp_type || 'Unknown';
     });
 
-    // Also add payment revenue not linked to camp registrations
-    payments.filter(p => p.status === 'completed' && !p.registration_id && p.program_name).forEach(p => {
-      const activity = p.program_name || 'Other';
+    // All completed payments in date range
+    payments.filter(p => p.status === 'completed' && isWithinInterval(parseISO(p.payment_date), { start: dateRange.startDate, end: dateRange.endDate })).forEach(p => {
+      let activity = 'Other';
+      if (p.registration_id && regCampTypeMap[p.registration_id]) {
+        activity = regCampTypeMap[p.registration_id];
+      } else if (p.program_name) {
+        activity = p.program_name;
+      }
       revenueByActivity[activity] = (revenueByActivity[activity] || 0) + Number(p.amount);
     });
 
@@ -481,25 +525,19 @@ export const financialReportService = {
   },
 
   // Generate Potential vs Actual revenue analysis
-  async generatePotentialVsActual(dateRange: DateRange): Promise<{ potentialRevenue: number; actualRevenue: number; outstanding: number; collectionRate: number }> {
-    const { payments, campRegistrations } = await this.fetchFinancialData(dateRange);
+  async generatePotentialVsActual(dateRange: DateRange, activities?: string[]): Promise<{ potentialRevenue: number; actualRevenue: number; outstanding: number; collectionRate: number }> {
+    const { payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     // Potential = total_amount of ALL registrations in period
     const potentialRevenue = campRegistrations.reduce((sum, r) => sum + r.total_amount, 0);
 
-    // Actual = payments completed + paid camp registrations
-    const paidCampRevenue = campRegistrations
-      .filter(r => r.payment_status === 'paid')
-      .reduce((sum, r) => sum + r.total_amount, 0);
-
-    // Add partial payments from payments table for camp registrations
+    // Actual = from payments table (source of truth)
     const campRegIds = new Set(campRegistrations.map(r => r.id));
-    const campPayments = payments
-      .filter(p => p.status === 'completed' && p.registration_id && campRegIds.has(p.registration_id))
+    const actualRevenue = payments
+      .filter(p => p.status === 'completed' && isWithinInterval(parseISO(p.payment_date), { start: dateRange.startDate, end: dateRange.endDate }))
+      .filter(p => (p.registration_id && campRegIds.has(p.registration_id)) || p.source === 'camp_registration')
       .reduce((sum, p) => sum + Number(p.amount), 0);
 
-    // Use the higher of paid registrations or actual payments to avoid double counting
-    const actualRevenue = Math.max(paidCampRevenue, campPayments);
     const outstanding = potentialRevenue - actualRevenue;
     const collectionRate = potentialRevenue > 0 ? (actualRevenue / potentialRevenue) * 100 : 0;
 

@@ -85,8 +85,8 @@ const Footer = () => {
   return (
     <footer className="bg-gray-900 text-white">
       <div className="container mx-auto px-4 py-16">
-        <div className="flex flex-col md:flex-row justify-between gap-8">
-          <div className="md:w-1/3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div>
             <h3 className="text-2xl font-bold mb-4">Amuse Kenya</h3>
             <p className="text-gray-300 mb-6 leading-relaxed">
               {footerDesc}
@@ -116,7 +116,7 @@ const Footer = () => {
             </div>
           </div>
           
-          <div className="md:w-1/3">
+          <div>
             <h4 className="text-lg font-semibold mb-4">Quick Links</h4>
             <ul className="space-y-2">
               {[
@@ -136,8 +136,31 @@ const Footer = () => {
               ))}
             </ul>
           </div>
+
+          <div>
+            <h4 className="text-lg font-semibold mb-4">Camps & Programs</h4>
+            <ul className="space-y-2">
+              {[
+                { label: 'Day Camps', path: '/camps/day-camps' },
+                { label: 'Summer Camp', path: '/camps/summer' },
+                { label: 'Easter Camp', path: '/camps/easter' },
+                { label: 'Mid-Term Camp', path: '/camps/mid-term' },
+                { label: 'End of Year Camp', path: '/camps/end-year' },
+                { label: 'Birthday Parties', path: '/group-activities/parties' },
+                { label: 'Team Building', path: '/group-activities/team-building' },
+                { label: 'Homeschooling', path: '/programs/homeschooling' },
+                { label: 'Kenyan Experiences', path: '/experiences/kenyan-experiences' }
+              ].map(item => (
+                <li key={item.label}>
+                  <Link to={item.path} className="text-gray-300 hover:text-white transition-colors duration-300">
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
           
-          <div className="md:w-1/3">
+          <div>
             <h4 className="text-lg font-semibold mb-4">Contact Us</h4>
             <address className="not-italic text-gray-300 leading-relaxed">
               {address.split('\n').map((line, i) => (

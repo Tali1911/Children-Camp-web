@@ -32,20 +32,21 @@ const COLORS = [
 
 interface Props {
   dateRange: DateRange;
+  activities?: string[];
 }
 
-const ProfitLossStatement: React.FC<Props> = ({ dateRange }) => {
+const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ProfitLossData | null>(null);
 
   useEffect(() => {
     loadData();
-  }, [dateRange]);
+  }, [dateRange, activities]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const plData = await financialReportService.generateProfitLoss(dateRange);
+      const plData = await financialReportService.generateProfitLoss(dateRange, activities);
       setData(plData);
     } catch (error) {
       console.error('Error loading P&L data:', error);
