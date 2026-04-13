@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import SEOHead from '@/components/SEOHead';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Link, useParams } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import RegistrationPageSkeleton from '@/components/skeletons/RegistrationPageSkeleton';
 import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
+import RelatedPrograms from '@/components/RelatedPrograms';
 
 const MidTermCamp = () => {
   const { period } = useParams<{ period: string }>();
@@ -36,6 +38,12 @@ const MidTermCamp = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="Mid-Term Break Camp for Kids | Amuse Kenya Nairobi"
+        description="Exciting mid-term break adventure camp for children aged 3-17 in Nairobi. Outdoor activities, nature walks, and team games at Karura Forest. Register now!"
+        keywords="mid-term camp Nairobi, school break camp kids Kenya, Karura Forest mid-term activities, children holiday camp"
+        canonical="https://amusekenya.co.ke/camps/mid-term"
+      />
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 pt-24">
@@ -103,6 +111,8 @@ const MidTermCamp = () => {
           {/* Registration Form */}
           <HolidayCampForm campType={campType} campTitle={config.title} />
         </div>
+
+        <RelatedPrograms currentPath="/camps/mid-term" />
       </div>
       
       <Footer />

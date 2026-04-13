@@ -36,23 +36,24 @@ export interface PotentialVsActual {
 
 interface Props {
   dateRange: DateRange;
+  activities?: string[];
 }
 
-const ActivityProfitLoss: React.FC<Props> = ({ dateRange }) => {
+const ActivityProfitLoss: React.FC<Props> = ({ dateRange, activities }) => {
   const [loading, setLoading] = useState(true);
   const [activityData, setActivityData] = useState<ActivityPLItem[]>([]);
   const [potentialVsActual, setPotentialVsActual] = useState<PotentialVsActual | null>(null);
 
   useEffect(() => {
     loadData();
-  }, [dateRange]);
+  }, [dateRange, activities]);
 
   const loadData = async () => {
     setLoading(true);
     try {
       const [activityPL, pva] = await Promise.all([
-        financialReportService.generateActivityProfitLoss(dateRange),
-        financialReportService.generatePotentialVsActual(dateRange),
+        financialReportService.generateActivityProfitLoss(dateRange, activities),
+        financialReportService.generatePotentialVsActual(dateRange, activities),
       ]);
       setActivityData(activityPL);
       setPotentialVsActual(pva);

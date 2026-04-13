@@ -9,6 +9,7 @@ import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import RegistrationPageSkeleton from '@/components/skeletons/RegistrationPageSkeleton';
 import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
+import RelatedPrograms from '@/components/RelatedPrograms';
 
 const SummerCamp = () => {
   const { config, isLoading, refresh } = useCampPageConfig('summer');
@@ -117,6 +118,8 @@ const SummerCamp = () => {
           {/* Registration Form */}
           <HolidayCampForm campType="summer" campTitle={config.title} />
         </div>
+
+        <RelatedPrograms currentPath="/camps/summer" />
       </div>
       
       <Footer />

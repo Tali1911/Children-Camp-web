@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { TrendingUp, PieChart, BarChart3, Calendar as CalendarIcon, FileText, Clock, Activity } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { TrendingUp, PieChart, BarChart3, Calendar as CalendarIcon, FileText, Clock, Activity, Filter, X } from 'lucide-react';
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { DateRange } from '@/services/financialReportService';
+import { ACTIVITY_CATEGORIES } from '@/lib/activityCategories';
 import ProfitLossStatement from './reports/ProfitLossStatement';
 import ARAgingReport from './reports/ARAgingReport';
 import DailySalesSummary from './reports/DailySalesSummary';
@@ -19,6 +22,8 @@ const FinancialReports: React.FC = () => {
     endDate: new Date(),
   });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+  const [isActivityFilterOpen, setIsActivityFilterOpen] = useState(false);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
 
   const presetRanges = [
     { label: 'Last 7 days', value: () => ({ startDate: subDays(new Date(), 7), endDate: new Date() }) },
@@ -35,6 +40,16 @@ const FinancialReports: React.FC = () => {
     setIsCalendarOpen(false);
   };
 
+  const toggleActivity = (activity: string) => {
+    setSelectedActivities(prev =>
+      prev.includes(activity)
+        ? prev.filter(a => a !== activity)
+        : [...prev, activity]
+    );
+  };
+
+  const clearActivities = () => setSelectedActivities([]);
+
   return (
     <div className="space-y-4 sm:space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -43,53 +58,104 @@ const FinancialReports: React.FC = () => {
           <p className="text-sm text-muted-foreground">Financial analysis and reporting</p>
         </div>
         
-        {/* Date Range Picker */}
-        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
-          <PopoverTrigger asChild>
-            <Button variant="outline" className="w-full sm:w-auto sm:min-w-[280px] justify-start text-left font-normal">
-              <CalendarIcon className="mr-2 h-4 w-4" />
-              <span className="truncate">
-                {format(dateRange.startDate, 'dd MMM')} - {format(dateRange.endDate, 'dd MMM yyyy')}
-              </span>
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end">
-            <div className="flex flex-col sm:flex-row">
-              <div className="border-b sm:border-b-0 sm:border-r border-border p-3 space-y-1">
-                <p className="text-sm font-medium text-muted-foreground mb-2">Quick Select</p>
-                <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
-                  {presetRanges.map((preset) => (
-                    <Button
-                      key={preset.label}
-                      variant="ghost"
-                      size="sm"
-                      className="w-full justify-start text-sm"
-                      onClick={() => handlePresetClick(preset)}
-                    >
-                      {preset.label}
+        <div className="flex flex-col sm:flex-row gap-2">
+          {/* Activity Filter */}
+          <Popover open={isActivityFilterOpen} onOpenChange={setIsActivityFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto justify-start text-left font-normal">
+                <Filter className="mr-2 h-4 w-4" />
+                <span className="truncate">
+                  {selectedActivities.length === 0
+                    ? 'All Activities'
+                    : `${selectedActivities.length} selected`}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-3" align="end">
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium text-foreground">Filter by Activity</p>
+                  {selectedActivities.length > 0 && (
+                    <Button variant="ghost" size="sm" onClick={clearActivities} className="h-auto p-1 text-xs text-muted-foreground">
+                      <X className="h-3 w-3 mr-1" /> Clear
                     </Button>
+                  )}
+                </div>
+                <div className="space-y-2 max-h-[250px] overflow-y-auto">
+                  {ACTIVITY_CATEGORIES.map((activity) => (
+                    <label key={activity} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded p-1">
+                      <Checkbox
+                        checked={selectedActivities.includes(activity)}
+                        onCheckedChange={() => toggleActivity(activity)}
+                      />
+                      <span className="text-foreground">{activity}</span>
+                    </label>
                   ))}
                 </div>
               </div>
-              <div className="p-3">
-                <Calendar
-                  mode="range"
-                  selected={{ from: dateRange.startDate, to: dateRange.endDate }}
-                  onSelect={(range) => {
-                    if (range?.from && range?.to) {
-                      setDateRange({ startDate: range.from, endDate: range.to });
-                    } else if (range?.from) {
-                      setDateRange({ startDate: range.from, endDate: range.from });
-                    }
-                  }}
-                  numberOfMonths={1}
-                  className={cn("rounded-md pointer-events-auto")}
-                />
+            </PopoverContent>
+          </Popover>
+
+          {/* Date Range Picker */}
+          <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-full sm:w-auto sm:min-w-[280px] justify-start text-left font-normal">
+                <CalendarIcon className="mr-2 h-4 w-4" />
+                <span className="truncate">
+                  {format(dateRange.startDate, 'dd MMM')} - {format(dateRange.endDate, 'dd MMM yyyy')}
+                </span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end">
+              <div className="flex flex-col sm:flex-row">
+                <div className="border-b sm:border-b-0 sm:border-r border-border p-3 space-y-1">
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Quick Select</p>
+                  <div className="grid grid-cols-2 sm:grid-cols-1 gap-1">
+                    {presetRanges.map((preset) => (
+                      <Button
+                        key={preset.label}
+                        variant="ghost"
+                        size="sm"
+                        className="w-full justify-start text-sm"
+                        onClick={() => handlePresetClick(preset)}
+                      >
+                        {preset.label}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-3">
+                  <Calendar
+                    mode="range"
+                    selected={{ from: dateRange.startDate, to: dateRange.endDate }}
+                    onSelect={(range) => {
+                      if (range?.from && range?.to) {
+                        setDateRange({ startDate: range.from, endDate: range.to });
+                      } else if (range?.from) {
+                        setDateRange({ startDate: range.from, endDate: range.from });
+                      }
+                    }}
+                    numberOfMonths={1}
+                    className={cn("rounded-md pointer-events-auto")}
+                  />
+                </div>
               </div>
-            </div>
-          </PopoverContent>
-        </Popover>
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
+
+      {/* Active filter badges */}
+      {selectedActivities.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-muted-foreground">Filtering:</span>
+          {selectedActivities.map(a => (
+            <Badge key={a} variant="secondary" className="text-xs cursor-pointer" onClick={() => toggleActivity(a)}>
+              {a} <X className="h-3 w-3 ml-1" />
+            </Badge>
+          ))}
+        </div>
+      )}
 
       <Tabs defaultValue="profit-loss" className="space-y-4">
         <TabsList className="grid grid-cols-6 w-full">
@@ -120,11 +186,11 @@ const FinancialReports: React.FC = () => {
         </TabsList>
 
         <TabsContent value="profit-loss">
-          <ProfitLossStatement dateRange={dateRange} />
+          <ProfitLossStatement dateRange={dateRange} activities={selectedActivities} />
         </TabsContent>
 
         <TabsContent value="activity-pl">
-          <ActivityProfitLoss dateRange={dateRange} />
+          <ActivityProfitLoss dateRange={dateRange} activities={selectedActivities} />
         </TabsContent>
 
         <TabsContent value="ar-aging">
@@ -132,7 +198,7 @@ const FinancialReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="daily-sales">
-          <DailySalesSummary dateRange={dateRange} />
+          <DailySalesSummary dateRange={dateRange} activities={selectedActivities} />
         </TabsContent>
 
         <TabsContent value="revenue">

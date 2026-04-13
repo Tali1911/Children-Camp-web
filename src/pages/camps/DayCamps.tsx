@@ -8,6 +8,7 @@ import DayCampsProgram from '@/components/forms/DayCampsProgram';
 import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
+import RelatedPrograms from '@/components/RelatedPrograms';
 
 const DayCamps = () => {
   const { config, isLoading, refresh } = useCampPageConfig('day-camps');
@@ -138,6 +139,8 @@ const DayCamps = () => {
           {/* Registration Form */}
           <DayCampsProgram campTitle={config.title} />
         </div>
+
+        <RelatedPrograms currentPath="/camps/day-camps" />
       </div>
       
       <Footer />

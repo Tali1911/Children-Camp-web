@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import SEOHead from '@/components/SEOHead';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Link } from 'react-router-dom';
@@ -8,6 +9,7 @@ import { useCampPageConfig } from '@/hooks/useCampPageConfig';
 import DynamicMedia from '@/components/content/DynamicMedia';
 import RegistrationPageSkeleton from '@/components/skeletons/RegistrationPageSkeleton';
 import LocationDetailsAccordion from '@/components/camp/LocationDetailsAccordion';
+import RelatedPrograms from '@/components/RelatedPrograms';
 
 const EndYearCamp = () => {
   const { config, isLoading, refresh } = useCampPageConfig('end-year');
@@ -34,6 +36,12 @@ const EndYearCamp = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEOHead
+        title="End of Year Holiday Camp for Kids | Amuse Kenya Nairobi"
+        description="December holiday camp for children aged 3-17 in Nairobi. Year-end outdoor adventures, nature activities, and celebration at Karura Forest. Book now!"
+        keywords="December holiday camp Nairobi, end of year camp kids Kenya, Karura Forest December activities, children holiday camp Nairobi"
+        canonical="https://amusekenya.co.ke/camps/end-year"
+      />
       <Navbar />
       
       <div className="container mx-auto px-4 py-8 pt-24">
@@ -101,6 +109,8 @@ const EndYearCamp = () => {
           {/* Registration Form */}
           <HolidayCampForm campType="end-year" campTitle={config.title} />
         </div>
+
+        <RelatedPrograms currentPath="/camps/end-year" />
       </div>
       
       <Footer />

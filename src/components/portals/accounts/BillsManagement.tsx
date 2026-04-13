@@ -9,11 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Pencil, Trash2, DollarSign, Search, FileText, AlertTriangle, CheckCircle, Clock, CreditCard } from 'lucide-react';
-import { vendorBillService, Bill, Vendor } from '@/services/vendorBillService';
+import { Plus, Pencil, Trash2, DollarSign, Search, FileText, AlertTriangle, CheckCircle, Clock, CreditCard, Download } from 'lucide-react';
+import { vendorBillService, Bill, Vendor, BillPayment } from '@/services/vendorBillService';
 import { toast } from '@/hooks/use-toast';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { format } from 'date-fns';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const BILL_CATEGORIES = [
   'Office Supplies',
@@ -222,6 +224,116 @@ export const BillsManagement: React.FC = () => {
     return new Intl.NumberFormat('en-KE', { style: 'currency', currency: 'KES' }).format(amount);
   };
 
+  const generateBillStatementPDF = async (bill: Bill) => {
+    const doc = new jsPDF();
+    const vendorName = bill.vendor?.name || 'Unknown Vendor';
+
+    // Header
+    doc.setFontSize(18);
+    doc.text('Bill Statement', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Bill #: ${bill.bill_number}`, 14, 30);
+    doc.text(`Vendor: ${vendorName}`, 14, 36);
+    doc.text(`Category: ${bill.category || 'N/A'}`, 14, 42);
+    doc.text(`Bill Date: ${format(new Date(bill.bill_date), 'dd MMM yyyy')}`, 14, 48);
+    doc.text(`Due Date: ${format(new Date(bill.due_date), 'dd MMM yyyy')}`, 14, 54);
+    doc.text(`Statement Date: ${format(new Date(), 'dd MMM yyyy')}`, 130, 30);
+    doc.text(`Status: ${bill.status.toUpperCase()}`, 130, 36);
+
+    // Summary
+    doc.setFontSize(11);
+    doc.text(`Amount: ${formatCurrency(bill.amount)}`, 130, 46);
+    doc.text(`Paid: ${formatCurrency(bill.amount_paid)}`, 130, 52);
+    doc.text(`Balance: ${formatCurrency(bill.amount - bill.amount_paid)}`, 130, 58);
+
+    if (bill.description) {
+      doc.setFontSize(9);
+      doc.text(`Description: ${bill.description}`, 14, 64);
+    }
+
+    // Fetch payments for this bill
+    let payments: BillPayment[] = [];
+    try {
+      payments = await vendorBillService.getBillPayments(bill.id);
+    } catch (e) {
+      console.error('Error fetching bill payments:', e);
+    }
+
+    const startY = bill.description ? 72 : 66;
+
+    if (payments.length > 0) {
+      doc.setFontSize(12);
+      doc.text('Payment History', 14, startY);
+
+      autoTable(doc, {
+        startY: startY + 4,
+        head: [['Date', 'Method', 'Reference', 'Amount']],
+        body: payments.map(p => [
+          format(new Date(p.payment_date), 'dd MMM yyyy'),
+          p.payment_method,
+          p.reference || '—',
+          formatCurrency(p.amount),
+        ]),
+        foot: [['', '', 'Total Paid', formatCurrency(bill.amount_paid)]],
+        styles: { fontSize: 9 },
+        headStyles: { fillColor: [34, 87, 60] },
+        footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+      });
+    } else {
+      doc.setFontSize(10);
+      doc.text('No payments recorded.', 14, startY);
+    }
+
+    doc.save(`Bill_Statement_${bill.bill_number}_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast({ title: 'Bill statement downloaded' });
+  };
+
+  const generateAllBillsStatementPDF = async () => {
+    if (filteredBills.length === 0) {
+      toast({ title: 'No bills to export', variant: 'destructive' });
+      return;
+    }
+
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text('Bills Statement Summary', 14, 20);
+    doc.setFontSize(10);
+    doc.text(`Generated: ${format(new Date(), 'dd MMM yyyy')}`, 14, 28);
+    doc.text(`Total Bills: ${filteredBills.length}`, 14, 34);
+
+    const totalAmount = filteredBills.reduce((sum, b) => sum + b.amount, 0);
+    const totalPaid = filteredBills.reduce((sum, b) => sum + b.amount_paid, 0);
+    const totalBalance = totalAmount - totalPaid;
+
+    doc.text(`Total Amount: ${formatCurrency(totalAmount)}`, 130, 28);
+    doc.text(`Total Paid: ${formatCurrency(totalPaid)}`, 130, 34);
+    doc.text(`Total Balance: ${formatCurrency(totalBalance)}`, 130, 40);
+
+    autoTable(doc, {
+      startY: 48,
+      head: [['Bill #', 'Vendor', 'Category', 'Bill Date', 'Due Date', 'Amount', 'Paid', 'Balance', 'Status']],
+      body: filteredBills.map(bill => [
+        bill.bill_number,
+        bill.vendor?.name || 'N/A',
+        bill.category || 'N/A',
+        format(new Date(bill.bill_date), 'dd MMM yyyy'),
+        format(new Date(bill.due_date), 'dd MMM yyyy'),
+        formatCurrency(bill.amount),
+        formatCurrency(bill.amount_paid),
+        formatCurrency(bill.amount - bill.amount_paid),
+        bill.status,
+      ]),
+      foot: [['', '', '', '', 'Totals', formatCurrency(totalAmount), formatCurrency(totalPaid), formatCurrency(totalBalance), '']],
+      styles: { fontSize: 7 },
+      headStyles: { fillColor: [34, 87, 60] },
+      footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' },
+    });
+
+    doc.save(`Bills_Statement_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
+    toast({ title: 'All bills statement downloaded' });
+  };
+
   const BillCard = ({ bill }: { bill: Bill }) => (
     <Card className="mb-3">
       <CardContent className="p-4">
@@ -256,6 +368,9 @@ export const BillsManagement: React.FC = () => {
               <CreditCard className="h-4 w-4 mr-1" /> Pay
             </Button>
           )}
+          <Button size="sm" variant="outline" onClick={() => generateBillStatementPDF(bill)}>
+            <Download className="h-4 w-4 mr-1" /> Statement
+          </Button>
           <Button size="sm" variant="outline" onClick={() => handleOpenDialog(bill)}>
             <Pencil className="h-4 w-4 mr-1" /> Edit
           </Button>
@@ -271,11 +386,15 @@ export const BillsManagement: React.FC = () => {
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-xl sm:text-2xl font-bold">Bills & Accounts Payable</h2>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={() => handleOpenDialog()}>
-              <Plus className="h-4 w-4 mr-2" /> New Bill
-            </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={generateAllBillsStatementPDF}>
+            <Download className="h-4 w-4 mr-2" /> Download All
+          </Button>
+          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            <DialogTrigger asChild>
+              <Button onClick={() => handleOpenDialog()}>
+                <Plus className="h-4 w-4 mr-2" /> New Bill
+              </Button>
           </DialogTrigger>
           <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
@@ -359,7 +478,8 @@ export const BillsManagement: React.FC = () => {
               <Button onClick={handleSubmit}>{editingBill ? 'Update' : 'Create'} Bill</Button>
             </DialogFooter>
           </DialogContent>
-        </Dialog>
+          </Dialog>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -484,6 +604,9 @@ export const BillsManagement: React.FC = () => {
                             <CreditCard className="h-4 w-4" />
                           </Button>
                         )}
+                        <Button size="sm" variant="ghost" onClick={() => generateBillStatementPDF(bill)} title="Download Statement">
+                          <Download className="h-4 w-4" />
+                        </Button>
                         <Button size="sm" variant="ghost" onClick={() => handleOpenDialog(bill)}>
                           <Pencil className="h-4 w-4" />
                         </Button>

@@ -21,20 +21,21 @@ import { format, parseISO } from 'date-fns';
 
 interface Props {
   dateRange: DateRange;
+  activities?: string[];
 }
 
-const DailySalesSummary: React.FC<Props> = ({ dateRange }) => {
+const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DailySalesData[]>([]);
 
   useEffect(() => {
     loadData();
-  }, [dateRange]);
+  }, [dateRange, activities]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const salesData = await financialReportService.generateDailySalesSummary(dateRange);
+      const salesData = await financialReportService.generateDailySalesSummary(dateRange, activities);
       setData(salesData);
     } catch (error) {
       console.error('Error loading daily sales data:', error);
