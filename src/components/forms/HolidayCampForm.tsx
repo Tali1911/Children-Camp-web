@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from 'react';
+import SignUpBenefitsDialog from '@/components/SignUpBenefitsDialog';
+import { useClientAuth } from '@/hooks/useClientAuth';
 import { useForm, Controller, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -23,7 +25,9 @@ import { DateSelector } from './DateSelector';
 import { invoiceService } from '@/services/invoiceService';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
 import { LocationSelector } from './LocationSelector';
+import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { ActivityTypeSelector } from './ActivityTypeSelector';
+import AutoFilledBadge from '@/components/ui/AutoFilledBadge';
 
 const childSchema = z.object({
   childName: z.string().min(1, 'Child name is required').max(100),
@@ -66,6 +70,18 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
   // (e.g., 'mid-term-february' only gets mid-term-feb dates, not all mid-term dates)
   const { config, isLoading } = useCampFormConfig(campType);
   const [selectedLocation, setSelectedLocation] = useState('');
+  const [showBenefitsDialog, setShowBenefitsDialog] = useState(false);
+  
+  // Client auth for auto-fill
+  const { isSignedIn, profile: clientProfile } = useClientAuth();
+
+  // Show benefits dialog for non-signed-in users after a delay
+  useEffect(() => {
+    if (!isSignedIn && !sessionStorage.getItem('benefits_dialog_dismissed')) {
+      const timer = setTimeout(() => setShowBenefitsDialog(true), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSignedIn]);
 
   const calculatePrice = (selectedDates: string[], sessionTypes: Record<string, 'half' | 'full'>, activityType: 'camp' | 'archery' = 'camp', location?: string): number => {
     if (!config) return 0;
@@ -124,6 +140,44 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
   const watchedChildren = watch('children');
 
   const isNgongSanctuary = selectedLocation === 'Ngong Sanctuary';
+
+  // Track which fields were auto-filled
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+
+  // Auto-fill from client profile (Google sign-in)
+  useEffect(() => {
+    if (isSignedIn && clientProfile) {
+      const filled = new Set<string>();
+      if (clientProfile.full_name) { setValue('parentName', clientProfile.full_name); filled.add('parentName'); }
+      if (clientProfile.email) { setValue('email', clientProfile.email); filled.add('email'); }
+      if (clientProfile.phone) { setValue('phone', clientProfile.phone); filled.add('phone'); }
+
+      // Auto-fill children from profile
+      if (Array.isArray(clientProfile.children) && clientProfile.children.length > 0) {
+        const profileChildren = clientProfile.children
+          .filter((c: any) => c.name)
+          .map((c: any) => {
+            const dob = c.dateOfBirth ? new Date(c.dateOfBirth) : undefined;
+            const ageRange = dob ? calculateAgeRange(dob) : '3-below' as const;
+            return {
+              childName: c.name || '',
+              dateOfBirth: dob,
+              ageRange,
+              specialNeeds: c.specialNeeds || '',
+              selectedDates: [] as string[],
+              sessionTypes: {} as Record<string, 'half' | 'full'>,
+              totalPrice: 0,
+              activityType: 'camp' as const,
+            };
+          });
+        if (profileChildren.length > 0) {
+          setValue('children', profileChildren);
+          filled.add('children');
+        }
+      }
+      if (filled.size > 0) setAutoFilledFields(filled);
+    }
+  }, [isSignedIn, clientProfile, setValue]);
 
   // Auto-calculate age range and price
   useEffect(() => {
@@ -276,6 +330,33 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
       
       toast.success(config.messages.registrationSuccess);
       await recordSubmission(data, 'holiday-camp');
+
+      // Save children back to client profile for future auto-fill
+      if (isSignedIn && clientProfile) {
+        try {
+          const { clientProfileService } = await import('@/services/clientProfileService');
+          const existingChildren = Array.isArray(clientProfile.children) ? clientProfile.children : [];
+          const existingNames = new Set(existingChildren.map((c: any) => c.name?.toLowerCase().trim()));
+          const newChildren = data.children
+            .filter(c => c.childName && !existingNames.has(c.childName.toLowerCase().trim()))
+            .map(c => ({
+              name: c.childName,
+              dateOfBirth: c.dateOfBirth ? c.dateOfBirth.toISOString().split('T')[0] : '',
+              specialNeeds: c.specialNeeds || '',
+            }));
+          if (newChildren.length > 0) {
+            await clientProfileService.updateProfile(clientProfile.auth_user_id, {
+              children: [...existingChildren, ...newChildren],
+            });
+            toast.success('Children saved to your profile', {
+              description: "Next time you register, their details will be auto-filled.",
+            });
+          }
+        } catch (e) {
+          console.error('Failed to save children to profile:', e);
+        }
+      }
+
       reset();
     } catch (error) {
       console.error('Registration error:', error);
@@ -303,9 +384,20 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
     <Card className="p-8 sticky top-8">
       <h3 className="text-2xl font-bold text-primary mb-6">{campTitle}</h3>
       
+      <SignUpBenefitsDialog open={showBenefitsDialog} onOpenChange={setShowBenefitsDialog} />
+      
+      {!isSignedIn && (
+        <div className="mb-6 p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            <span className="font-medium text-foreground">Sign in with Google</span> to auto-fill your details and save time
+          </p>
+          <GoogleSignInButton />
+        </div>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div>
-          <Label htmlFor="parentName" className="text-base font-medium">{config.fields.parentName.label} *</Label>
+          <Label htmlFor="parentName" className="text-base font-medium">{config.fields.parentName.label} *{autoFilledFields.has('parentName') && <AutoFilledBadge />}</Label>
           <Input id="parentName" {...register('parentName')} className="mt-2" placeholder={config.fields.parentName.placeholder} />
           {errors.parentName && <p className="text-destructive text-sm mt-1">{errors.parentName.message}</p>}
         </div>
@@ -321,7 +413,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
 
         <div>
           <div className="flex items-center justify-between mb-2">
-            <Label className="text-base font-medium">{config.fields.childName.label} *</Label>
+            <Label className="text-base font-medium">{config.fields.childName.label} *{autoFilledFields.has('children') && <AutoFilledBadge />}</Label>
             <Button
               type="button"
               variant="outline"
@@ -496,12 +588,12 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="email" className="text-base font-medium">{config.fields.email.label} *</Label>
+            <Label htmlFor="email" className="text-base font-medium">{config.fields.email.label} *{autoFilledFields.has('email') && <AutoFilledBadge />}</Label>
             <Input id="email" type="email" {...register('email')} className="mt-2" placeholder={config.fields.email.placeholder} />
             {errors.email && <p className="text-destructive text-sm mt-1">{errors.email.message}</p>}
           </div>
           <div>
-            <Label htmlFor="phone" className="text-base font-medium">{config.fields.phone.label} *</Label>
+            <Label htmlFor="phone" className="text-base font-medium">{config.fields.phone.label} *{autoFilledFields.has('phone') && <AutoFilledBadge />}</Label>
             <Input id="phone" {...register('phone')} className="mt-2" placeholder={config.fields.phone.placeholder} />
             {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>}
           </div>

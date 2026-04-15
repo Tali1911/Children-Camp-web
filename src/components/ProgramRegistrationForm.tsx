@@ -1,4 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { differenceInYears } from 'date-fns';
+import SignUpBenefitsDialog from '@/components/SignUpBenefitsDialog';
+import { useClientAuth } from '@/hooks/useClientAuth';
 import { useNavigate } from 'react-router-dom';
 import { z } from "zod";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -6,6 +9,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/components/ui/use-toast";
+import { toast as sonnerToast } from "sonner";
 import {
   Form,
   FormControl,
@@ -38,6 +42,8 @@ import { Calendar, CalendarIcon, Download, Info } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import GoogleSignInButton from '@/components/GoogleSignInButton';
+import AutoFilledBadge from '@/components/ui/AutoFilledBadge';
 
 // Define schemas for form validation
 const childSchema = z.object({
@@ -72,6 +78,17 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
   const [selectedProgram, setSelectedProgram] = useState<any>(null);
   const [totalCost, setTotalCost] = useState<number>(0);
   
+  // Client auth for auto-fill
+  const { isSignedIn, profile: clientProfile } = useClientAuth();
+  const [showBenefitsDialog, setShowBenefitsDialog] = useState(false);
+
+  // Show benefits dialog for non-signed-in users after a delay
+  useEffect(() => {
+    if (!isSignedIn && !sessionStorage.getItem('benefits_dialog_dismissed')) {
+      const timer = setTimeout(() => setShowBenefitsDialog(true), 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSignedIn]);
   useEffect(() => {
     const fetchPrograms = async () => {
       // Load available programs from calendar events
@@ -114,6 +131,42 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
     control: form.control,
     name: "children",
   });
+
+  // Track which fields were auto-filled
+  const [autoFilledFields, setAutoFilledFields] = useState<Set<string>>(new Set());
+
+  // Auto-fill from client profile (Google sign-in)
+  useEffect(() => {
+    if (isSignedIn && clientProfile) {
+      const filled = new Set<string>();
+      if (clientProfile.full_name) { form.setValue('parentName', clientProfile.full_name); filled.add('parentName'); }
+      if (clientProfile.email) { form.setValue('email', clientProfile.email); filled.add('email'); }
+      if (clientProfile.phone) { form.setValue('phone', clientProfile.phone); filled.add('phone'); }
+
+      // Auto-fill children from profile
+      if (Array.isArray(clientProfile.children) && clientProfile.children.length > 0) {
+        const profileChildren = clientProfile.children
+          .filter((c: any) => c.name)
+          .map((c: any) => {
+            const age = c.dateOfBirth
+              ? String(differenceInYears(new Date(), new Date(c.dateOfBirth)))
+              : '';
+            return {
+              childName: c.name || '',
+              childAge: age,
+              timeSlot: 'fullDay' as const,
+              programId: initialProgramId || '',
+              ageGroup: '',
+            };
+          });
+        if (profileChildren.length > 0) {
+          form.setValue('children', profileChildren);
+          filled.add('children');
+        }
+      }
+      if (filled.size > 0) setAutoFilledFields(filled);
+    }
+  }, [isSignedIn, clientProfile, form, initialProgramId]);
 
   // Calculate total amount based on selected program and time slots
   const calculateTotal = async (formData: FormValues) => {
@@ -189,6 +242,32 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
         }
       });
       
+      // Save children back to client profile for future auto-fill
+      if (isSignedIn && clientProfile) {
+        try {
+          const { clientProfileService } = await import('@/services/clientProfileService');
+          const existingChildren = Array.isArray(clientProfile.children) ? clientProfile.children : [];
+          const existingNames = new Set(existingChildren.map((c: any) => c.name?.toLowerCase().trim()));
+          const newChildren = data.children
+            .filter(c => c.childName && !existingNames.has(c.childName.toLowerCase().trim()))
+            .map(c => ({
+              name: c.childName,
+              dateOfBirth: '',
+              specialNeeds: '',
+            }));
+          if (newChildren.length > 0) {
+            await clientProfileService.updateProfile(clientProfile.auth_user_id, {
+              children: [...existingChildren, ...newChildren],
+            });
+            sonnerToast.success('Children saved to your profile', {
+              description: "Next time you register, their details will be auto-filled.",
+            });
+          }
+        } catch (e) {
+          console.error('Failed to save children to profile:', e);
+        }
+      }
+
       toast({
         title: "Registration Successful",
         description: "Your registration has been submitted successfully.",
@@ -288,7 +367,16 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
         </CardHeader>
         <CardContent>
           <Form {...form}>
+            <SignUpBenefitsDialog open={showBenefitsDialog} onOpenChange={setShowBenefitsDialog} />
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              {!isSignedIn && (
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20 flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">Sign in with Google</span> to auto-fill your details and save time
+                  </p>
+                  <GoogleSignInButton />
+                </div>
+              )}
               <div className="space-y-4">
                 <h3 className="text-lg font-medium">Parent/Guardian Information</h3>
                 
@@ -297,7 +385,7 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
                   name="parentName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Full Name</FormLabel>
+                      <FormLabel>Full Name{autoFilledFields.has('parentName') && <AutoFilledBadge />}</FormLabel>
                       <FormControl>
                         <Input placeholder="Your full name" {...field} />
                       </FormControl>
@@ -312,7 +400,7 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email Address</FormLabel>
+                        <FormLabel>Email Address{autoFilledFields.has('email') && <AutoFilledBadge />}</FormLabel>
                         <FormControl>
                           <Input placeholder="your.email@example.com" {...field} />
                         </FormControl>
@@ -326,7 +414,7 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
                     name="phone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Phone Number</FormLabel>
+                        <FormLabel>Phone Number{autoFilledFields.has('phone') && <AutoFilledBadge />}</FormLabel>
                         <FormControl>
                           <Input placeholder="Your phone number" {...field} />
                         </FormControl>
@@ -339,7 +427,7 @@ const ProgramRegistrationForm: React.FC<ProgramRegistrationFormProps> = ({ progr
 
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <h3 className="text-lg font-medium">Children Information</h3>
+                  <h3 className="text-lg font-medium">Children Information{autoFilledFields.has('children') && <AutoFilledBadge />}</h3>
                   <Button
                     type="button"
                     variant="outline"

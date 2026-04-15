@@ -8,6 +8,7 @@ import LeadsManagement from './marketing/LeadsManagement';
 import ContentManagement from './marketing/ContentManagement';
 import { CampaignsTab, LeadGenerationTab, ReportsTab } from './marketing/MarketingTabs';
 import { FAQManager } from './marketing/FAQManager';
+import ServiceLocationsManager from './marketing/ServiceLocationsManager';
 import EmailHealthDashboard from './marketing/EmailHealthDashboard';
 import EmailDeliveriesTab from './marketing/EmailDeliveriesTab';
 import EmailSegmentsTab from './marketing/EmailSegmentsTab';
@@ -38,6 +39,8 @@ const MarketingPortal: React.FC<MarketingPortalProps> = ({ activeTab }) => {
         return <MessageCenter />;
       case 'reports':
         return <ReportsTab />;
+      case 'service-locations':
+        return <ServiceLocationsManager />;
       case 'faq':
         return <FAQManager />;
       case 'email-health':
