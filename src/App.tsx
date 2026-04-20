@@ -35,6 +35,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import ClientProfile from "./pages/ClientProfile";
+import MyRegistrations from "./pages/MyRegistrations";
+import ResetPassword from "./pages/ResetPassword";
 
 import { AuthProvider } from "./hooks/useAuth";
 import { ClientAuthProvider } from "./hooks/useClientAuth";
@@ -103,6 +105,8 @@ function App() {
               
               {/* Client Profile */}
               <Route path="/my-profile" element={<ClientProfile />} />
+              <Route path="/my-registrations" element={<MyRegistrations />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
               
               {/* Blog */}
               <Route path="/blog" element={<Blog />} />

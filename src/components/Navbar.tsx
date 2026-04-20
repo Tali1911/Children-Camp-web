@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Menu, X, ChevronDown, Download, User, LogOut, Settings, Baby, Shield } from "lucide-react";
+import { Menu, X, ChevronDown, Download, User, LogOut, Settings, Baby, Shield, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import amuseLogo from "@/assets/amuse-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -300,6 +300,14 @@ const Navbar = () => {
                       Manage Children
                     </Link>
                     <Link
+                      to="/my-registrations"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <ClipboardList size={16} className="text-gray-400" />
+                      My Registrations
+                    </Link>
+                    <Link
                       to="/privacy-policy"
                       onClick={() => setProfileDropdownOpen(false)}
                       className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
@@ -446,6 +454,9 @@ const Navbar = () => {
                   </div>
                   <Link to="/my-profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-2 px-4 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
                     <User size={16} className="text-gray-400" /> My Profile
+                  </Link>
+                  <Link to="/my-registrations" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-2 px-4 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                    <ClipboardList size={16} className="text-gray-400" /> My Registrations
                   </Link>
                   <button
                     onClick={() => { clientSignOut(); setMobileMenuOpen(false); }}

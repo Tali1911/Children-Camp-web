@@ -11,6 +11,9 @@ interface ClientAuthContextType {
   isSignedIn: boolean;
   signInWithGoogle: () => Promise<void>;
   signInWithIdToken: (token: string) => Promise<void>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: Error | null }>;
+  signUpWithEmail: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
+  resetPassword: (email: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
 }
@@ -93,6 +96,30 @@ export const ClientAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const signInWithEmail = async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return { error: error as Error | null };
+  };
+
+  const signUpWithEmail = async (email: string, password: string, fullName: string) => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin + window.location.pathname,
+        data: { full_name: fullName, name: fullName },
+      },
+    });
+    return { error: error as Error | null };
+  };
+
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password',
+    });
+    return { error: error as Error | null };
+  };
+
   const signOut = async () => {
     await supabase.auth.signOut();
     setUser(null);
@@ -116,6 +143,9 @@ export const ClientAuthProvider = ({ children }: { children: ReactNode }) => {
         isSignedIn: !!user,
         signInWithGoogle,
         signInWithIdToken,
+        signInWithEmail,
+        signUpWithEmail,
+        resetPassword,
         signOut,
         refreshProfile,
       }}

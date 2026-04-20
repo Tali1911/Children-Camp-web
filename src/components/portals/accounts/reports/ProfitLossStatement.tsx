@@ -151,7 +151,7 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(data.revenue.total)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              From payments and camp registrations
+              Includes payments + paid camp registrations (matches Dashboard)
             </p>
           </CardContent>
         </Card>

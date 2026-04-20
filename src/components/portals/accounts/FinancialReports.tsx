@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,20 +10,79 @@ import { TrendingUp, PieChart, BarChart3, Calendar as CalendarIcon, FileText, Cl
 import { format, subDays, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { DateRange } from '@/services/financialReportService';
 import { ACTIVITY_CATEGORIES } from '@/lib/activityCategories';
+import { useActivityCategories } from '@/hooks/useActivityCategories';
 import ProfitLossStatement from './reports/ProfitLossStatement';
 import ARAgingReport from './reports/ARAgingReport';
 import DailySalesSummary from './reports/DailySalesSummary';
 import ActivityProfitLoss from './reports/ActivityProfitLoss';
+import RevenueReport from './reports/RevenueReport';
+import ExpenseReport from './reports/ExpenseReport';
 import { cn } from '@/lib/utils';
 
 const FinancialReports: React.FC = () => {
-  const [dateRange, setDateRange] = useState<DateRange>({
-    startDate: subDays(new Date(), 30),
-    endDate: new Date(),
+  // Subscribe to live activity-category updates so the dropdown stays in sync
+  // with the admin-managed config in `content_items`.
+  useActivityCategories();
+
+  const DATE_KEY = 'financialReports.dateRange';
+  const ACTIVITIES_KEY = 'financialReports.selectedActivities';
+
+  const [dateRange, setDateRange] = useState<DateRange>(() => {
+    if (typeof window === 'undefined') {
+      return { startDate: subDays(new Date(), 30), endDate: new Date() };
+    }
+    try {
+      const raw = localStorage.getItem(DATE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const start = new Date(parsed.startDate);
+        const end = new Date(parsed.endDate);
+        if (!isNaN(start.getTime()) && !isNaN(end.getTime())) {
+          return { startDate: start, endDate: end };
+        }
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+    return { startDate: subDays(new Date(), 30), endDate: new Date() };
   });
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [isActivityFilterOpen, setIsActivityFilterOpen] = useState(false);
-  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>(() => {
+    if (typeof window === 'undefined') return [];
+    try {
+      const raw = localStorage.getItem(ACTIVITIES_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) return parsed.filter((v): v is string => typeof v === 'string');
+      }
+    } catch {
+      // ignore
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        DATE_KEY,
+        JSON.stringify({
+          startDate: dateRange.startDate.toISOString(),
+          endDate: dateRange.endDate.toISOString(),
+        })
+      );
+    } catch {
+      // ignore
+    }
+  }, [dateRange]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(ACTIVITIES_KEY, JSON.stringify(selectedActivities));
+    } catch {
+      // ignore
+    }
+  }, [selectedActivities]);
 
   const presetRanges = [
     { label: 'Last 7 days', value: () => ({ startDate: subDays(new Date(), 7), endDate: new Date() }) },
@@ -82,7 +141,7 @@ const FinancialReports: React.FC = () => {
                   )}
                 </div>
                 <div className="space-y-2 max-h-[250px] overflow-y-auto">
-                  {ACTIVITY_CATEGORIES.map((activity) => (
+                  {[...ACTIVITY_CATEGORIES].map((activity) => (
                     <label key={activity} className="flex items-center gap-2 cursor-pointer text-sm hover:bg-muted/50 rounded p-1">
                       <Checkbox
                         checked={selectedActivities.includes(activity)}
@@ -194,7 +253,7 @@ const FinancialReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="ar-aging">
-          <ARAgingReport />
+          <ARAgingReport activities={selectedActivities} />
         </TabsContent>
 
         <TabsContent value="daily-sales">
@@ -202,19 +261,11 @@ const FinancialReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="revenue">
-          <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">
-              Revenue trends are included in the P&L Statement and Daily Sales tabs
-            </CardContent>
-          </Card>
+          <RevenueReport dateRange={dateRange} activities={selectedActivities} />
         </TabsContent>
 
         <TabsContent value="expenses">
-          <Card>
-            <CardContent className="py-10 text-center text-muted-foreground">
-              Expense breakdown is included in the P&L Statement tab
-            </CardContent>
-          </Card>
+          <ExpenseReport dateRange={dateRange} activities={selectedActivities} />
         </TabsContent>
       </Tabs>
     </div>
