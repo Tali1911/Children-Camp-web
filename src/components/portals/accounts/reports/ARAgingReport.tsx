@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,8 +15,9 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
-import { financialReportService, ARAgingSummary } from '@/services/financialReportService';
+import { financialReportService, ARAgingSummary, ARAgingItem } from '@/services/financialReportService';
 import { format, parseISO } from 'date-fns';
+import AgingBucketDialog from './AgingBucketDialog';
 
 const AGING_COLORS = {
   current: 'hsl(142, 76%, 36%)',
@@ -26,18 +27,26 @@ const AGING_COLORS = {
   '90+': 'hsl(0, 84%, 60%)',
 };
 
-const ARAgingReport: React.FC = () => {
+type BucketKey = ARAgingItem['agingBucket'];
+
+interface ARAgingReportProps {
+  activities?: string[];
+}
+
+const ARAgingReport: React.FC<ARAgingReportProps> = ({ activities = [] }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ARAgingSummary | null>(null);
+  const [openBucket, setOpenBucket] = useState<BucketKey | null>(null);
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(activities)]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const agingData = await financialReportService.generateARAgingReport();
+      const agingData = await financialReportService.generateARAgingReport(activities);
       setData(agingData);
     } catch (error) {
       console.error('Error loading AR aging data:', error);
@@ -118,6 +127,24 @@ const ARAgingReport: React.FC = () => {
     ? (((data.days1to30 + data.days31to60 + data.days61to90 + data.days90plus) / data.total) * 100).toFixed(1)
     : '0';
 
+  const itemsByBucket: Record<BucketKey, ARAgingItem[]> = {
+    current: data.items.filter(i => i.agingBucket === 'current'),
+    '1-30': data.items.filter(i => i.agingBucket === '1-30'),
+    '31-60': data.items.filter(i => i.agingBucket === '31-60'),
+    '61-90': data.items.filter(i => i.agingBucket === '61-90'),
+    '90+': data.items.filter(i => i.agingBucket === '90+'),
+  };
+
+  const bucketLabels: Record<BucketKey, string> = {
+    current: 'Current (Not Yet Due)',
+    '1-30': '1-30 Days Overdue',
+    '31-60': '31-60 Days Overdue',
+    '61-90': '61-90 Days Overdue',
+    '90+': '90+ Days Overdue',
+  };
+
+  const filterLabel = activities.length > 0 ? activities.join(', ') : 'All activities';
+
   return (
     <div className="space-y-4 sm:space-y-6">
       {/* Header with export buttons */}
@@ -125,7 +152,7 @@ const ARAgingReport: React.FC = () => {
         <div>
           <h3 className="text-base sm:text-lg font-semibold text-foreground">AR Aging Report</h3>
           <p className="text-xs sm:text-sm text-muted-foreground">
-            Outstanding invoices • {overduePercentage}% overdue
+            {filterLabel} • {overduePercentage}% overdue • Click a bucket for details
           </p>
         </div>
         <div className="flex gap-2">
@@ -140,9 +167,15 @@ const ARAgingReport: React.FC = () => {
         </div>
       </div>
 
-      {/* Aging Buckets Summary */}
+      {/* Aging Buckets Summary - clickable */}
       <div className="grid gap-2 sm:gap-4 grid-cols-2 sm:grid-cols-5">
-        <Card className="border-primary/30">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenBucket('current')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenBucket('current')}
+          className="border-primary/30 cursor-pointer transition hover:ring-2 hover:ring-primary/40 hover:shadow-md"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -151,11 +184,17 @@ const ARAgingReport: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-primary">{formatCurrency(data.current)}</div>
-            <p className="text-xs text-muted-foreground">Not yet due</p>
+            <p className="text-xs text-muted-foreground">{itemsByBucket.current.length} item{itemsByBucket.current.length === 1 ? '' : 's'}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-yellow-500/30">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenBucket('1-30')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenBucket('1-30')}
+          className="border-yellow-500/30 cursor-pointer transition hover:ring-2 hover:ring-yellow-500/40 hover:shadow-md"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <Clock className="h-3 w-3" />
@@ -164,11 +203,17 @@ const ARAgingReport: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-yellow-600">{formatCurrency(data.days1to30)}</div>
-            <p className="text-xs text-muted-foreground">Recently overdue</p>
+            <p className="text-xs text-muted-foreground">{itemsByBucket['1-30'].length} item{itemsByBucket['1-30'].length === 1 ? '' : 's'}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-orange-500/30">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenBucket('31-60')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenBucket('31-60')}
+          className="border-orange-500/30 cursor-pointer transition hover:ring-2 hover:ring-orange-500/40 hover:shadow-md"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <AlertTriangle className="h-3 w-3" />
@@ -177,11 +222,17 @@ const ARAgingReport: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-orange-600">{formatCurrency(data.days31to60)}</div>
-            <p className="text-xs text-muted-foreground">Needs attention</p>
+            <p className="text-xs text-muted-foreground">{itemsByBucket['31-60'].length} item{itemsByBucket['31-60'].length === 1 ? '' : 's'}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-red-400/30">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenBucket('61-90')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenBucket('61-90')}
+          className="border-red-400/30 cursor-pointer transition hover:ring-2 hover:ring-red-400/40 hover:shadow-md"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <AlertCircle className="h-3 w-3" />
@@ -190,11 +241,17 @@ const ARAgingReport: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-red-500">{formatCurrency(data.days61to90)}</div>
-            <p className="text-xs text-muted-foreground">Critical</p>
+            <p className="text-xs text-muted-foreground">{itemsByBucket['61-90'].length} item{itemsByBucket['61-90'].length === 1 ? '' : 's'}</p>
           </CardContent>
         </Card>
 
-        <Card className="border-destructive/50">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={() => setOpenBucket('90+')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && setOpenBucket('90+')}
+          className="border-destructive/50 cursor-pointer transition hover:ring-2 hover:ring-destructive/40 hover:shadow-md"
+        >
           <CardHeader className="pb-2">
             <CardTitle className="text-xs font-medium text-muted-foreground flex items-center gap-1">
               <XCircle className="h-3 w-3" />
@@ -203,26 +260,44 @@ const ARAgingReport: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="text-xl font-bold text-destructive">{formatCurrency(data.days90plus)}</div>
-            <p className="text-xs text-muted-foreground">Collection risk</p>
+            <p className="text-xs text-muted-foreground">{itemsByBucket['90+'].length} item{itemsByBucket['90+'].length === 1 ? '' : 's'}</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Total Outstanding */}
-      <Card className="bg-muted/30">
-        <CardContent className="py-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Total Outstanding Balance</p>
-              <p className="text-3xl font-bold text-foreground">{formatCurrency(data.total)}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-medium text-muted-foreground">Total Invoices</p>
-              <p className="text-3xl font-bold text-foreground">{data.items.length}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Total Outstanding (matches Dashboard) + invoice/collection breakdown */}
+      <div className="grid gap-3 sm:gap-4 md:grid-cols-3">
+        <Card className="bg-muted/30 border-destructive/50 md:col-span-1">
+          <CardContent className="py-4">
+            <p className="text-sm font-medium text-muted-foreground">Total Outstanding</p>
+            <p className="text-3xl font-bold text-destructive">{formatCurrency(data.total)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              All overdue items combined (matches Dashboard)
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/30">
+          <CardContent className="py-4">
+            <p className="text-sm font-medium text-muted-foreground">Invoiced AR</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(data.invoicedTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data.invoicedCount} formal invoice{data.invoicedCount === 1 ? '' : 's'}
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-muted/30">
+          <CardContent className="py-4">
+            <p className="text-sm font-medium text-muted-foreground">Attended-Unpaid Collections</p>
+            <p className="text-2xl font-bold text-foreground">{formatCurrency(data.attendedUnpaidTotal)}</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {data.attendedUnpaidCount} pending collection{data.attendedUnpaidCount === 1 ? '' : 's'}
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+      <p className="text-xs text-muted-foreground -mt-2 px-1">
+        Aging buckets above include both invoiced AR and attended-unpaid collections, aged from invoice due date or collection creation date.
+      </p>
 
       {/* Chart and Details */}
       <div className="grid gap-6 lg:grid-cols-2">
@@ -308,6 +383,13 @@ const ARAgingReport: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      <AgingBucketDialog
+        open={openBucket !== null}
+        onOpenChange={(v) => !v && setOpenBucket(null)}
+        bucketLabel={openBucket ? bucketLabels[openBucket] : ''}
+        items={openBucket ? itemsByBucket[openBucket] : []}
+      />
     </div>
   );
 };

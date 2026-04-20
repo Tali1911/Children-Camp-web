@@ -1,5 +1,6 @@
 import React from 'react';
 import ContactForm from '@/components/ContactForm';
+import ServiceLocationsMap from '@/components/ServiceLocationsMap';
 import Footer from '@/components/Footer';
 import Navbar from '@/components/Navbar';
 import SEOHead from '@/components/SEOHead';
@@ -42,6 +43,8 @@ const Contact = () => {
             </div>
             
             <ContactForm />
+            
+            <ServiceLocationsMap />
           </div>
         </div>
       </div>

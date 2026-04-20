@@ -1,11 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Menu, X, ChevronDown, Download } from "lucide-react";
+import { Menu, X, ChevronDown, Download, User, LogOut, Settings, Baby, Shield, ClipboardList } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import amuseLogo from "@/assets/amuse-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { navigationService, NavigationSetting } from "@/services/navigationService";
+import { useClientAuth } from "@/hooks/useClientAuth";
 const Navbar = () => {
   const location = useLocation();
   const isHomePage = location.pathname === "/";
@@ -16,6 +17,20 @@ const Navbar = () => {
   const [scheduleUrl, setScheduleUrl] = useState<string | null>(null);
   const [navSettings, setNavSettings] = useState<Record<string, boolean>>({});
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+  const { isSignedIn, profile: clientProfile, signOut: clientSignOut, isLoading: authLoading, signInWithGoogle } = useClientAuth();
+
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(e.target as Node)) {
+        setProfileDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -227,7 +242,97 @@ const Navbar = () => {
               </li>}
           </ul>
 
-          <div className="flex items-center">
+          {/* Profile dropdown (desktop) - only when signed in */}
+          <div className="flex items-center gap-3">
+            {!authLoading && isSignedIn && clientProfile && (
+              <div className="hidden lg:block relative" ref={profileDropdownRef}>
+                <button
+                  onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-full transition-colors border",
+                    isScrolled || !isHomePage
+                      ? "border-gray-200 hover:bg-gray-50 text-gray-700"
+                      : "border-white/30 hover:bg-white/10 text-white"
+                  )}
+                >
+                  {clientProfile.avatar_url ? (
+                    <img
+                      src={clientProfile.avatar_url}
+                      alt=""
+                      className="w-7 h-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-7 h-7 rounded-full bg-forest-600 flex items-center justify-center text-white text-xs font-semibold">
+                      {(clientProfile.full_name || clientProfile.email || 'U').charAt(0).toUpperCase()}
+                    </div>
+                  )}
+                  <span className="text-sm font-medium max-w-[120px] truncate">
+                    {clientProfile.full_name || clientProfile.email?.split('@')[0] || 'Account'}
+                  </span>
+                  <ChevronDown size={14} className={cn("transition-transform", profileDropdownOpen && "rotate-180")} />
+                </button>
+
+                {/* Dropdown */}
+                <div className={cn(
+                  "absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border overflow-hidden transition-all duration-200 z-50",
+                  profileDropdownOpen ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-1"
+                )}>
+                  <div className="px-4 py-3 bg-forest-50 border-b">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{clientProfile.full_name || 'Welcome'}</p>
+                    <p className="text-xs text-gray-500 truncate">{clientProfile.email}</p>
+                  </div>
+                  
+                  <div className="py-1">
+                    <Link
+                      to="/my-profile"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <User size={16} className="text-gray-400" />
+                      My Profile
+                    </Link>
+                    <Link
+                      to="/my-profile"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Baby size={16} className="text-gray-400" />
+                      Manage Children
+                    </Link>
+                    <Link
+                      to="/my-registrations"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <ClipboardList size={16} className="text-gray-400" />
+                      My Registrations
+                    </Link>
+                    <Link
+                      to="/privacy-policy"
+                      onClick={() => setProfileDropdownOpen(false)}
+                      className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                    >
+                      <Shield size={16} className="text-gray-400" />
+                      Privacy & Data
+                    </Link>
+                  </div>
+
+                  <div className="border-t">
+                    <button
+                      onClick={() => {
+                        setProfileDropdownOpen(false);
+                        clientSignOut();
+                      }}
+                      className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
             <button className="lg:hidden" onClick={toggleMobileMenu} aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}>
               {mobileMenuOpen ? <X className={isScrolled || !isHomePage ? "text-gray-800" : "text-white"} size={24} /> : <Menu className={isScrolled || !isHomePage ? "text-gray-800" : "text-white"} size={24} />}
             </button>
@@ -329,6 +434,39 @@ const Navbar = () => {
                   Download Schedules
                 </button>
               </li>}
+
+            {/* Mobile Profile Section - only when signed in */}
+            {!authLoading && isSignedIn && clientProfile && (
+              <li className="border-t mt-2 pt-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-3 px-4 py-2">
+                    {clientProfile.avatar_url ? (
+                      <img src={clientProfile.avatar_url} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-forest-600 flex items-center justify-center text-white text-sm font-semibold">
+                        {(clientProfile.full_name || clientProfile.email || 'U').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-gray-900 truncate">{clientProfile.full_name || 'Welcome'}</p>
+                      <p className="text-xs text-gray-500 truncate">{clientProfile.email}</p>
+                    </div>
+                  </div>
+                  <Link to="/my-profile" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-2 px-4 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                    <User size={16} className="text-gray-400" /> My Profile
+                  </Link>
+                  <Link to="/my-registrations" onClick={() => setMobileMenuOpen(false)} className="flex items-center gap-3 py-2 px-4 text-sm text-gray-700 hover:bg-gray-50 rounded-md">
+                    <ClipboardList size={16} className="text-gray-400" /> My Registrations
+                  </Link>
+                  <button
+                    onClick={() => { clientSignOut(); setMobileMenuOpen(false); }}
+                    className="flex items-center gap-3 w-full py-2 px-4 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                  >
+                    <LogOut size={16} /> Sign Out
+                  </button>
+                </div>
+              </li>
+            )}
           </ul>
         </div>
       </div>

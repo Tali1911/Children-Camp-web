@@ -34,11 +34,16 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
+import ClientProfile from "./pages/ClientProfile";
+import MyRegistrations from "./pages/MyRegistrations";
+import ResetPassword from "./pages/ResetPassword";
 
 import { AuthProvider } from "./hooks/useAuth";
+import { ClientAuthProvider } from "./hooks/useClientAuth";
 import ProgramRegistration from "./components/ProgramRegistration";
 import FloatingFAQ from "./components/FloatingFAQ";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import GoogleOneTap from "./components/GoogleOneTap";
 import { PageTracker } from "./hooks/usePageTracking";
 import { useState } from "react";
 
@@ -51,6 +56,7 @@ function App() {
         <Toaster />
         <Sonner />
         <BrowserRouter>
+          <ClientAuthProvider>
           <AuthProvider>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -97,6 +103,11 @@ function App() {
               <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
               <Route path="/privacy-policy" element={<PrivacyPolicy />} />
               
+              {/* Client Profile */}
+              <Route path="/my-profile" element={<ClientProfile />} />
+              <Route path="/my-registrations" element={<MyRegistrations />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              
               {/* Blog */}
               <Route path="/blog" element={<Blog />} />
               <Route path="/blog/:slug" element={<BlogPost />} />
@@ -120,9 +131,11 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <PageTracker />
+            <GoogleOneTap />
             <FloatingFAQ />
             <CookieConsentBanner />
           </AuthProvider>
+          </ClientAuthProvider>
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

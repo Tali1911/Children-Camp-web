@@ -13,8 +13,10 @@ import { financialService, Expense, Budget } from '@/services/financialService';
 import { toast } from "@/hooks/use-toast";
 import { supabase } from '@/integrations/supabase/client';
 import { ACTIVITY_CATEGORIES, DEPARTMENT_LIST, smartCapitalize } from '@/lib/activityCategories';
+import { useActivityCategories } from '@/hooks/useActivityCategories';
 
 const ExpenseManagement = () => {
+  useActivityCategories();
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -292,7 +294,7 @@ const ExpenseManagement = () => {
                       <SelectValue placeholder="Select" />
                     </SelectTrigger>
                     <SelectContent>
-                      {ACTIVITY_CATEGORIES.map(cat => (
+                      {[...ACTIVITY_CATEGORIES].map(cat => (
                         <SelectItem key={cat} value={cat}>{cat}</SelectItem>
                       ))}
                     </SelectContent>

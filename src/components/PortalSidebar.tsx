@@ -30,7 +30,9 @@ import {
   LineChart,
   Activity,
   UserCircle,
-  CalendarOff
+  CalendarOff,
+  MapPin,
+  Tag
 } from "lucide-react";
 import { ROLES } from '@/services/roleService';
 import { coachAccessService } from '@/services/coachAccessService';
@@ -105,6 +107,7 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'site-analytics', label: 'Site Analytics', icon: LineChart, description: 'Website traffic, page views, and visitor behaviour analytics' },
           { id: 'realtime', label: 'Real-Time', icon: Activity, description: 'Live view of current website visitors and their activity' },
           { id: 'faq', label: 'FAQ Manager', icon: MessageSquare, description: 'Create and manage frequently asked questions for the website' },
+          { id: 'service-locations', label: 'Service Areas', icon: MapPin, description: 'Manage the service area locations displayed on the contact page map' },
           { id: 'analytics', label: 'Analytics', icon: BarChart3, description: 'Detailed marketing analytics and performance reports' },
           { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
           { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
@@ -135,6 +138,7 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'reports', label: 'Reports', icon: BarChart3, description: 'Financial reports: Profit & Loss, Aging, and Daily Sales summaries' },
           { id: 'camp-analytics', label: 'Camp Analytics', icon: Tent, description: 'Registration and revenue analytics across all camp programs' },
           { id: 'data-explorer', label: 'Data Explorer', icon: Database, description: 'Query and explore financial data across tables with custom filters and joins' },
+          { id: 'activity-categories', label: 'Activity Categories', icon: Tag, description: 'Manage the activity categories and aliases used by Budget, Expense and Financial Report filters' },
           { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
           { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];

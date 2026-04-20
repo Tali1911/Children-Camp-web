@@ -13,6 +13,7 @@ import BillsManagement from './accounts/BillsManagement';
 import ProfileEditor from '../profile/ProfileEditor';
 import ClientStatements from './accounts/ClientStatements';
 import DataExplorer from './accounts/DataExplorer';
+import ActivityCategoriesManager from './accounts/ActivityCategoriesManager';
 
 interface AccountsPortalProps {
   activeTab: string;
@@ -47,6 +48,8 @@ const AccountsPortal: React.FC<AccountsPortalProps> = ({ activeTab }) => {
         return <CampReportsTab />;
       case 'data-explorer':
         return <DataExplorer />;
+      case 'activity-categories':
+        return <ActivityCategoriesManager />;
       case 'my-profile':
         return <ProfileEditor />;
       default:
