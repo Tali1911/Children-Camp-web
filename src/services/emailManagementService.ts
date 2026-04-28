@@ -363,6 +363,162 @@ class EmailManagementService {
       return [];
     }
   }
+
+  /**
+   * Resolve a saved segment into a deduplicated list of opt-in lead recipients.
+   * Excludes any address present in email_suppressions or with email_subscribed=false.
+   */
+  async resolveSegmentRecipients(segmentId: string): Promise<{ email: string; full_name: string | null; lead_id: string }[]> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data: segment, error: segError } = await supabaseClient
+        .from('email_segments')
+        .select('filters')
+        .eq('id', segmentId)
+        .single();
+      if (segError || !segment) return [];
+
+      const f = segment.filters || {};
+      let q = supabaseClient
+        .from('leads')
+        .select('id, email, full_name, email_subscribed, program_type, status')
+        .not('email', 'is', null);
+
+      if (f.program_type) q = q.eq('program_type', f.program_type);
+      if (f.status) q = q.eq('status', f.status);
+
+      const { data: leads, error: leadsError } = await q;
+      if (leadsError) throw leadsError;
+
+      const { data: suppressions } = await supabaseClient
+        .from('email_suppressions')
+        .select('email');
+      const suppressedSet = new Set((suppressions || []).map((s: any) => (s.email || '').toLowerCase()));
+
+      const seen = new Set<string>();
+      const recipients: { email: string; full_name: string | null; lead_id: string }[] = [];
+      for (const l of (leads || []) as any[]) {
+        const email = (l.email || '').trim().toLowerCase();
+        if (!email) continue;
+        if (l.email_subscribed === false) continue;
+        if (suppressedSet.has(email)) continue;
+        if (seen.has(email)) continue;
+        seen.add(email);
+        recipients.push({ email, full_name: l.full_name || null, lead_id: l.id });
+      }
+      return recipients;
+    } catch (error) {
+      console.error('Error resolving segment recipients:', error);
+      return [];
+    }
+  }
+
+  /** Distinct values for segment filter dropdowns */
+  async getSegmentFilterOptions(): Promise<{ programTypes: string[]; statuses: string[] }> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data } = await supabaseClient.from('leads').select('program_type, status');
+      const programTypes = new Set<string>();
+      const statuses = new Set<string>();
+      for (const r of (data || []) as any[]) {
+        if (r.program_type) programTypes.add(r.program_type);
+        if (r.status) statuses.add(r.status);
+      }
+      return {
+        programTypes: Array.from(programTypes).sort(),
+        statuses: Array.from(statuses).sort(),
+      };
+    } catch {
+      return { programTypes: [], statuses: [] };
+    }
+  }
+
+  // ---------- Campaign management ----------
+
+  async getCampaigns(): Promise<any[]> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data, error } = await supabaseClient
+        .from('campaigns')
+        .select('*')
+        .eq('campaign_type', 'email')
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    } catch (e) {
+      console.error('Error fetching campaigns:', e);
+      return [];
+    }
+  }
+
+  async createCampaign(payload: {
+    name: string;
+    subject: string;
+    body_html: string;
+    from_name?: string;
+    segment_id: string;
+    recipient_count: number;
+  }): Promise<any | null> {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      const supabaseClient = supabase as any;
+      const { data, error } = await supabaseClient
+        .from('campaigns')
+        .insert({
+          name: payload.name,
+          subject: payload.subject,
+          body_html: payload.body_html,
+          from_name: payload.from_name || 'Amuse Bush Camp',
+          segment_id: payload.segment_id,
+          recipient_count: payload.recipient_count,
+          campaign_type: 'email',
+          status: 'planning',
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+      return data;
+    } catch (e) {
+      console.error('Error creating campaign:', e);
+      return null;
+    }
+  }
+
+  async sendCampaign(campaignId: string, testEmail?: string): Promise<{ success: boolean; sent?: number; failed?: number; error?: string }> {
+    try {
+      const { data, error } = await supabase.functions.invoke('send-marketing-campaign', {
+        body: { campaignId, testEmail: testEmail || null },
+      });
+      if (error) throw error;
+      return data || { success: true };
+    } catch (e: any) {
+      console.error('Error sending campaign:', e);
+      return { success: false, error: e?.message || 'Send failed' };
+    }
+  }
+
+  async getCampaignStats(campaignId: string): Promise<{ sent: number; delivered: number; opened: number; clicked: number; bounced: number }> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data } = await supabaseClient
+        .from('email_deliveries')
+        .select('status')
+        .eq('campaign_id', campaignId);
+      const rows = (data || []) as any[];
+      const deliveredStatuses = ['delivered', 'opened', 'clicked'];
+      const openedStatuses = ['opened', 'clicked'];
+      return {
+        sent: rows.length,
+        delivered: rows.filter(r => deliveredStatuses.includes(r.status)).length,
+        opened: rows.filter(r => openedStatuses.includes(r.status)).length,
+        clicked: rows.filter(r => r.status === 'clicked').length,
+        bounced: rows.filter(r => r.status === 'bounced').length,
+      };
+    } catch {
+      return { sent: 0, delivered: 0, opened: 0, clicked: 0, bounced: 0 };
+    }
+  }
 }
 
 export const emailManagementService = new EmailManagementService();
