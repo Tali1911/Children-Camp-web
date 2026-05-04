@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Mail, Send, Users, Loader2, Plus } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Mail, Send, Users, Loader2, Plus, X, Search, RotateCcw, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { emailManagementService, EmailSegment } from '@/services/emailManagementService';
+import RichTextEditor from '@/components/content/RichTextEditor';
 
 interface CampaignRow {
   id: string;
@@ -22,6 +23,14 @@ interface CampaignRow {
   sent_at: string | null;
   created_at: string;
 }
+
+interface Recipient {
+  email: string;
+  lead_id?: string;
+  source: 'segment' | 'manual';
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const EmailCampaignsTab: React.FC = () => {
   const { toast } = useToast();
@@ -36,10 +45,16 @@ const EmailCampaignsTab: React.FC = () => {
   const [bodyHtml, setBodyHtml] = useState('');
   const [fromName, setFromName] = useState('Amuse Bush Camp');
   const [segmentId, setSegmentId] = useState<string>('');
-  const [recipientCount, setRecipientCount] = useState<number | null>(null);
   const [resolving, setResolving] = useState(false);
+  const [recipients, setRecipients] = useState<Recipient[]>([]);
+  const [recipientFilter, setRecipientFilter] = useState('');
+  const [newEmail, setNewEmail] = useState('');
   const [testEmail, setTestEmail] = useState('');
   const [sending, setSending] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [composeTab, setComposeTab] = useState<'edit' | 'preview'>('edit');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   const loadAll = async () => {
     setLoading(true);
@@ -56,68 +71,106 @@ const EmailCampaignsTab: React.FC = () => {
 
   // Resolve recipients whenever segment changes
   useEffect(() => {
-    if (!segmentId) { setRecipientCount(null); return; }
+    if (!segmentId) { setRecipients([]); return; }
     setResolving(true);
     emailManagementService.resolveSegmentRecipients(segmentId)
-      .then(r => setRecipientCount(r.length))
+      .then(list => {
+        const mapped: Recipient[] = list.map(r => ({
+          email: r.email, lead_id: r.lead_id, source: 'segment',
+        }));
+        setRecipients(mapped);
+      })
       .finally(() => setResolving(false));
   }, [segmentId]);
 
   const resetCompose = () => {
     setName(''); setSubject(''); setBodyHtml(''); setFromName('Amuse Bush Camp');
-    setSegmentId(''); setRecipientCount(null); setTestEmail('');
+    setSegmentId(''); setRecipients([]); setRecipientFilter(''); setNewEmail('');
+    setTestEmail(''); setComposeTab('edit');
   };
 
-  const validate = (): string | null => {
-    if (!name.trim()) return 'Campaign name is required';
+  const filteredRecipients = useMemo(() => {
+    const q = recipientFilter.trim().toLowerCase();
+    if (!q) return recipients;
+    return recipients.filter(r => r.email.includes(q));
+  }, [recipients, recipientFilter]);
+
+  const removeRecipient = (email: string) => {
+    setRecipients(prev => prev.filter(r => r.email !== email));
+  };
+
+  const addManualRecipient = () => {
+    const e = newEmail.trim().toLowerCase();
+    if (!e) return;
+    if (!EMAIL_REGEX.test(e)) {
+      toast({ title: 'Invalid email', description: e, variant: 'destructive' });
+      return;
+    }
+    if (recipients.some(r => r.email === e)) {
+      toast({ title: 'Already in list', description: e });
+      setNewEmail('');
+      return;
+    }
+    setRecipients(prev => [...prev, { email: e, source: 'manual' }]);
+    setNewEmail('');
+  };
+
+  const restoreFromSegment = async () => {
+    if (!segmentId) return;
+    setResolving(true);
+    const list = await emailManagementService.resolveSegmentRecipients(segmentId);
+    setRecipients(list.map(r => ({ email: r.email, lead_id: r.lead_id, source: 'segment' })));
+    setResolving(false);
+  };
+
+  const validate = (forTest = false): string | null => {
     if (!subject.trim()) return 'Subject is required';
-    if (!bodyHtml.trim()) return 'Email body is required';
-    if (!segmentId) return 'Pick an audience segment';
+    if (!bodyHtml.trim() || bodyHtml === '<p><br></p>') return 'Email body is required';
+    if (forTest) return null;
+    if (!name.trim()) return 'Campaign name is required';
+    if (recipients.length === 0) return 'Add at least one recipient';
     return null;
   };
 
   const handleSendTest = async () => {
-    const err = validate();
+    const err = validate(true);
     if (err) { toast({ title: 'Missing info', description: err, variant: 'destructive' }); return; }
-    if (!testEmail.trim()) {
-      toast({ title: 'Test email required', description: 'Enter an email address for the test send', variant: 'destructive' });
+    const e = testEmail.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(e)) {
+      toast({ title: 'Test email required', description: 'Enter a valid email address', variant: 'destructive' });
       return;
     }
-    setSending(true);
+    setTesting(true);
     try {
-      const created = await emailManagementService.createCampaign({
-        name: `${name} (test)`, subject, body_html: bodyHtml, from_name: fromName,
-        segment_id: segmentId, recipient_count: 1,
+      const result = await emailManagementService.sendTestCampaign({
+        subject, body_html: bodyHtml, from_name: fromName, testEmail: e,
       });
-      if (!created) throw new Error('Could not create campaign');
-      const result = await emailManagementService.sendCampaign(created.id, testEmail.trim());
       if (!result.success) throw new Error(result.error || 'Send failed');
-      toast({ title: 'Test sent', description: `Test email sent to ${testEmail}` });
+      toast({ title: 'Test sent', description: `Test email sent to ${e}` });
     } catch (e: any) {
       toast({ title: 'Test failed', description: e?.message || 'Could not send test', variant: 'destructive' });
     } finally {
-      setSending(false);
+      setTesting(false);
     }
   };
 
   const handleSendBlast = async () => {
     const err = validate();
     if (err) { toast({ title: 'Missing info', description: err, variant: 'destructive' }); return; }
-    if (!recipientCount || recipientCount === 0) {
-      toast({ title: 'No recipients', description: 'This segment has no eligible recipients', variant: 'destructive' });
-      return;
-    }
-    if (!confirm(`Send "${subject}" to ${recipientCount} recipients?`)) return;
+    if (!confirm(`Send "${subject}" to ${recipients.length} recipients?`)) return;
     setSending(true);
     try {
       const created = await emailManagementService.createCampaign({
         name, subject, body_html: bodyHtml, from_name: fromName,
-        segment_id: segmentId, recipient_count: recipientCount,
+        segment_id: segmentId, recipient_count: recipients.length,
       });
       if (!created) throw new Error('Could not create campaign');
-      const result = await emailManagementService.sendCampaign(created.id);
+      const result = await emailManagementService.sendCampaign(created.id, {
+        recipients: recipients.map(r => r.email),
+      });
       if (!result.success) throw new Error(result.error || 'Send failed');
-      toast({ title: 'Blast sent', description: `Sent ${result.sent} / failed ${result.failed}` });
+      const warning = result.warning ? ` (${result.warning})` : '';
+      toast({ title: 'Blast sent', description: `Sent ${result.sent} • Failed ${result.failed}${warning}` });
       setComposeOpen(false);
       resetCompose();
       loadAll();
@@ -135,6 +188,61 @@ const EmailCampaignsTab: React.FC = () => {
     return <Badge variant={map[s] || 'outline'}>{s}</Badge>;
   };
 
+  const handleDeleteCampaign = async (c: CampaignRow) => {
+    if (c.status === 'active') {
+      toast({ title: 'Cannot delete', description: 'Campaign is currently sending. Wait until it finishes.', variant: 'destructive' });
+      return;
+    }
+    if (!confirm(`Delete campaign "${c.name}"? Delivery history will be kept.`)) return;
+    setDeletingId(c.id);
+    // optimistic remove
+    const prev = campaigns;
+    setCampaigns(cs => cs.filter(x => x.id !== c.id));
+    const result = await emailManagementService.deleteCampaign(c.id);
+    setDeletingId(null);
+    if (!result.success) {
+      setCampaigns(prev);
+      toast({ title: 'Delete failed', description: result.error || 'Could not delete campaign', variant: 'destructive' });
+    } else {
+      toast({ title: 'Campaign deleted', description: c.name });
+    }
+  };
+
+  const handleResendFailed = async (c: CampaignRow) => {
+    setResendingId(c.id);
+    try {
+      const failedEmails = await emailManagementService.getFailedRecipients(c.id);
+      if (failedEmails.length === 0) {
+        toast({ title: 'Nothing to retry', description: 'No failed recipients found for this campaign.' });
+        return;
+      }
+      if (!confirm(`Resend "${c.subject || c.name}" to ${failedEmails.length} failed recipient(s)?`)) return;
+      const result = await emailManagementService.sendCampaign(c.id, {
+        recipients: failedEmails,
+        retry: true,
+      });
+      if (!result.success) throw new Error(result.error || 'Resend failed');
+      const warning = result.warning ? ` (${result.warning})` : '';
+      toast({ title: 'Retry complete', description: `Sent ${result.sent} • Failed ${result.failed}${warning}` });
+      loadAll();
+    } catch (e: any) {
+      toast({ title: 'Retry failed', description: e?.message || 'Could not resend', variant: 'destructive' });
+    } finally {
+      setResendingId(null);
+    }
+  };
+
+  const previewHtml = useMemo(() => {
+    return `<div style="font-family:Arial,sans-serif;line-height:1.5;color:#333;max-width:600px;margin:0 auto;padding:20px;background:#fff;">
+      ${bodyHtml || '<p style="color:#aaa">Your email body will appear here…</p>'}
+      <hr style="margin-top:32px;border:none;border-top:1px solid #eee" />
+      <p style="font-size:12px;color:#888;text-align:center;">
+        You received this because you registered with Amuse Bush Camp.<br/>
+        <a href="#" style="color:#888;">Unsubscribe</a>
+      </p>
+    </div>`;
+  }, [bodyHtml]);
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -146,7 +254,7 @@ const EmailCampaignsTab: React.FC = () => {
           <DialogTrigger asChild>
             <Button><Plus className="h-4 w-4 mr-2" />New Campaign</Button>
           </DialogTrigger>
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-4xl max-h-[92vh] overflow-y-auto">
             <DialogHeader><DialogTitle>Compose Email Blast</DialogTitle></DialogHeader>
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -163,10 +271,11 @@ const EmailCampaignsTab: React.FC = () => {
                 <Label htmlFor="subj">Subject *</Label>
                 <Input id="subj" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Easter Camp registration is open!" />
               </div>
+
               <div>
-                <Label htmlFor="seg">Audience Segment *</Label>
+                <Label htmlFor="seg">Audience Segment</Label>
                 <Select value={segmentId} onValueChange={setSegmentId}>
-                  <SelectTrigger><SelectValue placeholder="Select a segment" /></SelectTrigger>
+                  <SelectTrigger><SelectValue placeholder="Select a segment to load recipients" /></SelectTrigger>
                   <SelectContent>
                     {segments.length === 0 && <div className="px-2 py-3 text-sm text-muted-foreground">No segments yet — create one in the Email Segments tab</div>}
                     {segments.map(s => (
@@ -174,35 +283,116 @@ const EmailCampaignsTab: React.FC = () => {
                     ))}
                   </SelectContent>
                 </Select>
-                {segmentId && (
-                  <p className="text-sm mt-2 flex items-center gap-2 text-muted-foreground">
-                    <Users className="h-4 w-4" />
-                    {resolving ? 'Resolving recipients…' : (
-                      <span><strong className="text-foreground">{recipientCount ?? 0}</strong> eligible recipients (excluding suppressed/unsubscribed)</span>
+              </div>
+
+              {/* Recipient curation */}
+              <div className="border rounded-lg p-3 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-muted-foreground" />
+                    <span><strong>{recipients.length}</strong> recipients</span>
+                    {resolving && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  </div>
+                  <div className="flex gap-2">
+                    {segmentId && (
+                      <Button type="button" size="sm" variant="outline" onClick={restoreFromSegment} disabled={resolving}>
+                        <RotateCcw className="h-3 w-3 mr-1" />Restore from segment
+                      </Button>
                     )}
-                  </p>
+                    {recipients.length > 0 && (
+                      <Button type="button" size="sm" variant="outline" onClick={() => setRecipients([])}>
+                        <Trash2 className="h-3 w-3 mr-1" />Clear all
+                      </Button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                  <div className="relative">
+                    <Search className="h-3 w-3 absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                    <Input
+                      className="pl-7 h-9"
+                      placeholder="Search recipients…"
+                      value={recipientFilter}
+                      onChange={(e) => setRecipientFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex gap-1">
+                    <Input
+                      className="h-9"
+                      placeholder="Add another email"
+                      value={newEmail}
+                      onChange={(e) => setNewEmail(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addManualRecipient(); } }}
+                    />
+                    <Button type="button" size="sm" variant="secondary" onClick={addManualRecipient}>
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+
+                {recipients.length === 0 ? (
+                  <p className="text-xs text-muted-foreground py-2">No recipients yet. Pick a segment or add emails manually.</p>
+                ) : (
+                  <div className="max-h-40 overflow-y-auto flex flex-wrap gap-1">
+                    {filteredRecipients.map(r => (
+                      <Badge key={r.email} variant={r.source === 'manual' ? 'default' : 'secondary'} className="gap-1 font-normal">
+                        {r.email}
+                        <button
+                          type="button"
+                          onClick={() => removeRecipient(r.email)}
+                          className="hover:bg-background/20 rounded-full p-0.5"
+                          aria-label={`Remove ${r.email}`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                    {filteredRecipients.length === 0 && (
+                      <p className="text-xs text-muted-foreground">No matches for "{recipientFilter}"</p>
+                    )}
+                  </div>
                 )}
+                <p className="text-xs text-muted-foreground">Suppressed/unsubscribed emails are filtered automatically before sending.</p>
               </div>
+
+              {/* Editor + Preview */}
               <div>
-                <Label htmlFor="body">Email Body (HTML) *</Label>
-                <Textarea id="body" value={bodyHtml} onChange={(e) => setBodyHtml(e.target.value)} rows={10}
-                  placeholder="<h1>Hello!</h1><p>Your message here…</p>" className="font-mono text-sm" />
-                <p className="text-xs text-muted-foreground mt-1">An unsubscribe footer is appended automatically.</p>
+                <Label>Email Body *</Label>
+                <Tabs value={composeTab} onValueChange={(v) => setComposeTab(v as 'edit' | 'preview')} className="mt-1">
+                  <TabsList>
+                    <TabsTrigger value="edit">Edit</TabsTrigger>
+                    <TabsTrigger value="preview">Preview</TabsTrigger>
+                  </TabsList>
+                  <TabsContent value="edit" className="mt-2">
+                    <RichTextEditor value={bodyHtml} onChange={setBodyHtml} height={260} placeholder="Write your message here…" />
+                    <p className="text-xs text-muted-foreground mt-1">Formatting (bold, headings, lists, links, images) is supported. An unsubscribe footer is added automatically.</p>
+                  </TabsContent>
+                  <TabsContent value="preview" className="mt-2">
+                    <div className="border rounded-lg bg-muted/30 p-4 max-h-[400px] overflow-y-auto">
+                      <div dangerouslySetInnerHTML={{ __html: previewHtml }} />
+                    </div>
+                  </TabsContent>
+                </Tabs>
               </div>
+
+              {/* Test send */}
               <div className="border rounded-lg p-3 bg-muted/30 space-y-2">
                 <Label className="text-sm">Send a test first</Label>
+                <p className="text-xs text-muted-foreground">A test send goes only to the address below. It does not affect the campaign or its counters.</p>
                 <div className="flex gap-2">
                   <Input value={testEmail} onChange={(e) => setTestEmail(e.target.value)} placeholder="your@email.com" />
-                  <Button variant="outline" onClick={handleSendTest} disabled={sending}>
-                    {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Test'}
+                  <Button variant="outline" onClick={handleSendTest} disabled={testing}>
+                    {testing ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Send Test'}
                   </Button>
                 </div>
               </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={() => setComposeOpen(false)}>Cancel</Button>
-                <Button onClick={handleSendBlast} disabled={sending || !recipientCount}>
+                <Button onClick={handleSendBlast} disabled={sending || recipients.length === 0}>
                   {sending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                  Send to {recipientCount ?? 0}
+                  Send to {recipients.length}
                 </Button>
               </div>
             </div>
@@ -227,7 +417,22 @@ const EmailCampaignsTab: React.FC = () => {
               <CardHeader>
                 <div className="flex justify-between items-start gap-2">
                   <CardTitle className="text-lg">{c.name}</CardTitle>
-                  {statusBadge(c.status)}
+                  <div className="flex items-center gap-2 shrink-0">
+                    {statusBadge(c.status)}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                      onClick={() => handleDeleteCampaign(c)}
+                      disabled={deletingId === c.id || c.status === 'active'}
+                      aria-label={`Delete campaign ${c.name}`}
+                      title={c.status === 'active' ? 'Cannot delete while sending' : 'Delete campaign'}
+                    >
+                      {deletingId === c.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <Trash2 className="h-3.5 w-3.5" />}
+                    </Button>
+                  </div>
                 </div>
                 {c.subject && <p className="text-sm text-muted-foreground">{c.subject}</p>}
               </CardHeader>
@@ -249,6 +454,19 @@ const EmailCampaignsTab: React.FC = () => {
                 <p className="text-xs text-muted-foreground mt-3">
                   {c.sent_at ? `Sent ${new Date(c.sent_at).toLocaleString()}` : `Created ${new Date(c.created_at).toLocaleString()}`}
                 </p>
+                {(c.failed_count ?? 0) > 0 && c.status !== 'active' && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full mt-3"
+                    onClick={() => handleResendFailed(c)}
+                    disabled={resendingId === c.id}
+                  >
+                    {resendingId === c.id
+                      ? <><Loader2 className="h-3 w-3 mr-2 animate-spin" />Resending…</>
+                      : <><RotateCcw className="h-3 w-3 mr-2" />Resend {c.failed_count} failed</>}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

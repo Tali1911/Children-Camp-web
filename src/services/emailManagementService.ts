@@ -485,15 +485,145 @@ class EmailManagementService {
     }
   }
 
-  async sendCampaign(campaignId: string, testEmail?: string): Promise<{ success: boolean; sent?: number; failed?: number; error?: string }> {
+  async deleteCampaign(id: string): Promise<{ success: boolean; error?: string }> {
     try {
-      const { data, error } = await supabase.functions.invoke('send-marketing-campaign', {
-        body: { campaignId, testEmail: testEmail || null },
-      });
+      const supabaseClient = supabase as any;
+      const { error } = await supabaseClient
+        .from('campaigns')
+        .delete()
+        .eq('id', id);
       if (error) throw error;
-      return data || { success: true };
+      return { success: true };
+    } catch (e: any) {
+      console.error('Error deleting campaign:', e);
+      return { success: false, error: e?.message || 'Delete failed' };
+    }
+  }
+
+  /** Extract a useful error message out of Edge Function errors. */
+  private async parseFunctionError(error: any): Promise<string> {
+    try {
+      // FunctionsHttpError exposes the raw Response on .context
+      const ctx = error?.context;
+      if (ctx && typeof ctx.json === 'function') {
+        const body = await ctx.json();
+        if (body?.error) return body.error;
+      } else if (ctx && typeof ctx.text === 'function') {
+        const text = await ctx.text();
+        if (text) return text;
+      }
+    } catch (_) { /* ignore */ }
+    return error?.message || 'Send failed';
+  }
+
+  /**
+   * Call Edge Functions with fetch instead of supabase.functions.invoke.
+   * invoke can overwrite the Authorization header with the anon key in some
+   * sessions, so we explicitly forward the current access token.
+   */
+  private async callMarketingFunction<T>(payload: Record<string, any>): Promise<T> {
+    const token = await this.getAccessToken();
+    const supabaseClient = supabase as any;
+    const functionsBaseUrl = (supabaseClient.functionsUrl?.href || `${supabaseClient.supabaseUrl}/functions/v1`).replace(/\/$/, '');
+    const response = await fetch(`${functionsBaseUrl}/send-marketing-campaign`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        apikey: supabaseClient.supabaseKey,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const text = await response.text();
+    let body: any = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch (_) {
+      body = { error: text };
+    }
+
+    if (!response.ok || body?.success === false) {
+      throw new Error(body?.error || body?.message || `Function failed with status ${response.status}`);
+    }
+
+    return (body || { success: true }) as T;
+  }
+
+  /** Get the current user's access token, or throw if not signed in. */
+  private async getAccessToken(): Promise<string> {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) {
+      throw new Error('You are not signed in. Please log in again and retry.');
+    }
+    return token;
+  }
+
+  async sendCampaign(
+    campaignId: string,
+    options?: { recipients?: string[]; retry?: boolean }
+  ): Promise<{ success: boolean; sent?: number; failed?: number; error?: string; warning?: string }> {
+    try {
+      return await this.callMarketingFunction({
+        campaignId,
+        recipients: options?.recipients,
+        retry: options?.retry,
+      });
     } catch (e: any) {
       console.error('Error sending campaign:', e);
+      return { success: false, error: e?.message || 'Send failed' };
+    }
+  }
+
+  /** Return the deduplicated list of email addresses that bounced/failed for a campaign. */
+  async getFailedRecipients(campaignId: string): Promise<string[]> {
+    try {
+      const supabaseClient = supabase as any;
+      const { data, error } = await supabaseClient
+        .from('email_deliveries')
+        .select('email, status')
+        .eq('campaign_id', campaignId)
+        .in('status', ['bounced', 'spam']);
+      if (error) throw error;
+      // Exclude any address that ALSO has a successful send for this campaign
+      // (e.g. retried later) to avoid resending to people who eventually got it.
+      const { data: sentRows } = await supabaseClient
+        .from('email_deliveries')
+        .select('email')
+        .eq('campaign_id', campaignId)
+        .in('status', ['sent', 'delivered', 'opened', 'clicked']);
+      const sentSet = new Set(((sentRows || []) as any[]).map(r => (r.email || '').toLowerCase()));
+      const seen = new Set<string>();
+      const result: string[] = [];
+      for (const r of (data || []) as any[]) {
+        const e = (r.email || '').trim().toLowerCase();
+        if (!e || sentSet.has(e) || seen.has(e)) continue;
+        seen.add(e);
+        result.push(e);
+      }
+      return result;
+    } catch (e) {
+      console.error('Error fetching failed recipients:', e);
+      return [];
+    }
+  }
+  async sendTestCampaign(payload: {
+    subject: string;
+    body_html: string;
+    from_name?: string;
+    testEmail: string;
+  }): Promise<{ success: boolean; error?: string }> {
+    try {
+      return await this.callMarketingFunction({
+        test: true,
+        testEmail: payload.testEmail,
+        subject: payload.subject,
+        body_html: payload.body_html,
+        from_name: payload.from_name,
+      });
+    } catch (e: any) {
+      console.error('Error sending test campaign:', e);
       return { success: false, error: e?.message || 'Send failed' };
     }
   }
