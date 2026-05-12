@@ -25,7 +25,7 @@ import { leadsService } from '@/services/leadsService';
 import { DateSelector } from './DateSelector';
 import { invoiceService } from '@/services/invoiceService';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
-import { discountService } from '@/services/discountService';
+import { discountService, DiscountApplication } from '@/services/discountService';
 import { LocationSelector } from './LocationSelector';
 import GoogleSignInButton from '@/components/GoogleSignInButton';
 import { ActivityTypeSelector } from './ActivityTypeSelector';
@@ -219,6 +219,37 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [registrationType, setRegistrationType] = useState<'online_only' | 'online_paid'>('online_only');
   const [submitType, setSubmitType] = useState<'register' | 'pay'>('register');
+  const [previewDiscount, setPreviewDiscount] = useState<DiscountApplication | null>(null);
+
+  const watchedEmail = watch('email');
+  const watchedPhone = watch('phone');
+  const subtotal = watchedChildren.reduce((sum, child) => sum + (child.totalPrice || 0), 0);
+  const numChildren = watchedChildren.length;
+
+  // Live preview of any pre-issued discount for this client
+  useEffect(() => {
+    const email = (watchedEmail || '').trim();
+    const phone = (watchedPhone || '').trim();
+    if ((!email && !phone) || subtotal <= 0) {
+      setPreviewDiscount(null);
+      return;
+    }
+    const handle = setTimeout(async () => {
+      try {
+        const result = await discountService.findApplicable({
+          email,
+          phone,
+          campType: campType as string,
+          totalBeforeDiscount: subtotal,
+          numChildren,
+        });
+        setPreviewDiscount(result);
+      } catch {
+        setPreviewDiscount(null);
+      }
+    }, 500);
+    return () => clearTimeout(handle);
+  }, [watchedEmail, watchedPhone, campType, subtotal, numChildren]);
 
   const onSubmit = async (data: HolidayCampFormData) => {
     const buttonType = submitType;
@@ -243,6 +274,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
           campType: campType as string,
           totalBeforeDiscount: subtotalAmount,
           numChildren: data.children.length,
+          audit: true,
         });
         if (appliedDiscount) {
           totalAmount = appliedDiscount.finalTotal;
@@ -709,13 +741,42 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
 
         <RefundPolicyDialog />
 
-        <div className="bg-primary/10 rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <span className="text-base font-semibold">Total Amount:</span>
-            <span className="text-2xl font-bold text-primary">
-              {config.pricing.currency} {watchedChildren.reduce((sum, child) => sum + (child.totalPrice || 0), 0).toLocaleString()}
-            </span>
-          </div>
+        <div className="bg-primary/10 rounded-lg p-4 space-y-2">
+          {previewDiscount ? (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Subtotal:</span>
+                <span className="font-medium">
+                  {config.pricing.currency} {previewDiscount.originalTotal.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-emerald-700 font-medium">
+                  Discount applied ({previewDiscount.description})
+                  {previewDiscount.discount.reason ? ` — ${previewDiscount.discount.reason}` : ''}:
+                </span>
+                <span className="font-medium text-emerald-700">
+                  − {config.pricing.currency} {previewDiscount.discountAmount.toLocaleString()}
+                </span>
+              </div>
+              <div className="flex items-center justify-between border-t pt-2">
+                <span className="text-base font-semibold">Total Amount:</span>
+                <span className="text-2xl font-bold text-primary">
+                  {config.pricing.currency} {previewDiscount.finalTotal.toLocaleString()}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                A discount issued to this client has been automatically applied.
+              </p>
+            </>
+          ) : (
+            <div className="flex items-center justify-between">
+              <span className="text-base font-semibold">Total Amount:</span>
+              <span className="text-2xl font-bold text-primary">
+                {config.pricing.currency} {subtotal.toLocaleString()}
+              </span>
+            </div>
+          )}
         </div>
 
         <PaymentGatewayPlaceholder />
