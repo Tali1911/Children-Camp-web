@@ -18,7 +18,7 @@ const programSEO: Record<string, { title: string; description: string; keywords:
     keywords: 'homeschooling Kenya, outdoor education, nature learning, physical education homeschool',
   },
   'little-forest': {
-    title: 'Little Forest Program (Ages 3-5) | Amuse Kenya',
+    title: 'The Little Forest Explorers (Ages 3 & below) | Amuse Kenya',
     description: 'Gentle nature introduction for toddlers aged 3-5. Sensory play, nature crafts, mini hikes, and forest exploration at Karura Forest, Nairobi.',
     keywords: 'toddler outdoor activities Nairobi, little forest, nature play kids, early childhood outdoor Kenya',
   },

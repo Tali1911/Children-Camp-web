@@ -120,7 +120,7 @@ export const formatDateForSelection = (dateString: string): string => {
 
 /**
  * Maps day names (Monday, Friday) to actual calendar dates
- * Used for Little Forest program
+ * Used for The Little Forest Explorers (Ages 3 & below)
  */
 export const mapDayNamesToCalendarDates = (
   sessionSchedule?: Record<string, string>
