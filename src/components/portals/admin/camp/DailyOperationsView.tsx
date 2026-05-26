@@ -6,6 +6,16 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Search, CheckCircle, XCircle, Clock, QrCode, UserPlus, DollarSign, RefreshCw } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { attendanceService } from '@/services/attendanceService';
@@ -38,6 +48,8 @@ export const DailyOperationsView: React.FC = () => {
   const [attendanceStatus, setAttendanceStatus] = useState<Record<string, any>>({});
   const [scannerOpen, setScannerOpen] = useState(false);
   const [groundRegOpen, setGroundRegOpen] = useState(false);
+  const [confirmCheckoutOpen, setConfirmCheckoutOpen] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState<{ attendanceId: string; childName: string; registrationId: string } | null>(null);
 
   const loadTodaysRegistrations = async () => {
     try {
@@ -145,10 +157,12 @@ export const DailyOperationsView: React.FC = () => {
     }
   };
 
-  const handleCheckOut = async (attendanceId: string, childName: string, registrationId: string) => {
+  const handleCheckOut = async () => {
+    if (!pendingCheckout) return;
+    const { attendanceId, childName, registrationId } = pendingCheckout;
     try {
       const key = `${registrationId}-${childName}`;
-      
+
       setAttendanceStatus(prev => ({
         ...prev,
         [key]: { ...prev[key], check_out_time: new Date().toISOString() }
@@ -156,14 +170,22 @@ export const DailyOperationsView: React.FC = () => {
 
       await attendanceService.checkOut(attendanceId);
       toast.success(`${childName} checked out`);
-      
+
       const attendance = await attendanceService.hasCheckedInToday(registrationId, childName);
       setAttendanceStatus(prev => ({ ...prev, [key]: attendance }));
     } catch (error) {
       console.error('Error checking out:', error);
       toast.error('Check-out failed');
       loadTodaysRegistrations();
+    } finally {
+      setPendingCheckout(null);
+      setConfirmCheckoutOpen(false);
     }
+  };
+
+  const promptCheckOut = (attendanceId: string, childName: string, registrationId: string) => {
+    setPendingCheckout({ attendanceId, childName, registrationId });
+    setConfirmCheckoutOpen(true);
   };
 
   const handleQuickPaymentUpdate = async (regId: string, newStatus: 'paid' | 'partial' | 'unpaid') => {
@@ -468,7 +490,7 @@ export const DailyOperationsView: React.FC = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleCheckOut(attendance.id, child.childName, reg.id!)}
+                              onClick={() => promptCheckOut(attendance.id, child.childName, reg.id!)}
                             >
                               Check Out
                             </Button>
@@ -491,6 +513,21 @@ export const DailyOperationsView: React.FC = () => {
         onClose={() => setScannerOpen(false)}
         onScanSuccess={handleQRScan}
       />
+
+      <AlertDialog open={confirmCheckoutOpen} onOpenChange={setConfirmCheckoutOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Check-Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to check out <strong>{pendingCheckout?.childName}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCheckOut}>Check Out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

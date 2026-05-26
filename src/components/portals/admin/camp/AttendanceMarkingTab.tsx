@@ -7,6 +7,16 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { Search, CheckCircle, XCircle, Clock, QrCode, Calendar, Users, CalendarDays, Mail, Download, FileText } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { attendanceService } from '@/services/attendanceService';
@@ -36,28 +46,37 @@ export const AttendanceMarkingTab: React.FC = () => {
   const [scannerOpen, setScannerOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
+  const [confirmCheckoutOpen, setConfirmCheckoutOpen] = useState(false);
+  const [pendingCheckout, setPendingCheckout] = useState<{ attendanceId: string; childName: string; registrationId: string } | null>(null);
 
-  // Batch load attendance for all registrations on a date - eliminates N+1 queries
+  // Batch load attendance for all registrations on a date - eliminates N+1 queries.
+  // Chunk the .in(...) lookup so that very large registration lists don't blow
+  // URL/query limits or fail intermittently under concurrent staff usage.
   const loadAttendanceBatch = useCallback(async (regs: CampRegistration[], date: string) => {
     if (regs.length === 0) return {};
 
     const regIds = regs.map(r => r.id).filter(Boolean) as string[];
-    
-    const { data, error } = await supabase
-      .from('camp_attendance')
-      .select('*')
-      .in('registration_id', regIds)
-      .eq('attendance_date', date);
-
-    if (error) {
-      console.error('Error batch loading attendance:', error);
-      return {};
-    }
-
+    const CHUNK = 200;
     const statusMap: Record<string, any> = {};
-    for (const record of (data || [])) {
-      const key = `${record.registration_id}-${record.child_name}-${date}`;
-      statusMap[key] = record;
+
+    for (let i = 0; i < regIds.length; i += CHUNK) {
+      const slice = regIds.slice(i, i + CHUNK);
+      const { data, error } = await supabase
+        .from('camp_attendance')
+        .select('*')
+        .in('registration_id', slice)
+        .eq('attendance_date', date);
+
+      if (error) {
+        console.error('Error batch loading attendance (chunk', i, '):', error);
+        // Don't abort the whole batch — keep partial data
+        continue;
+      }
+
+      for (const record of (data || [])) {
+        const key = `${record.registration_id}-${record.child_name}-${date}`;
+        statusMap[key] = record;
+      }
     }
     return statusMap;
   }, []);
@@ -68,16 +87,34 @@ export const AttendanceMarkingTab: React.FC = () => {
       const filters: any = {};
       if (campTypeFilter !== 'all') filters.campType = campTypeFilter;
 
-      const allRegs = await campRegistrationService.getAllRegistrations(filters);
+      // Retry once on transient failure (network/concurrent load spikes)
+      let allRegs: CampRegistration[] = [];
+      let lastErr: any = null;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          allRegs = await campRegistrationService.getAllRegistrations(filters);
+          lastErr = null;
+          break;
+        } catch (e) {
+          lastErr = e;
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
+      if (lastErr) throw lastErr;
+
       const activeRegs = allRegs.filter(r => r.status === 'active');
       setRegistrations(activeRegs);
 
       // Batch load attendance instead of N+1 queries
       const statusMap = await loadAttendanceBatch(activeRegs, selectedDate);
       setAttendanceStatus(statusMap);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error loading registrations:', error);
-      toast.error('Failed to load registrations');
+      toast.error(
+        error?.message
+          ? `Failed to load registrations: ${error.message}`
+          : 'Failed to load registrations. Please refresh the page.'
+      );
     } finally {
       setLoading(false);
       setInitialLoaded(true);
@@ -184,7 +221,9 @@ export const AttendanceMarkingTab: React.FC = () => {
     }
   };
 
-  const handleCheckOut = async (attendanceId: string, childName: string, registrationId: string) => {
+  const handleCheckOut = async () => {
+    if (!pendingCheckout) return;
+    const { attendanceId, childName, registrationId } = pendingCheckout;
     try {
       const key = `${registrationId}-${childName}-${selectedDate}`;
       setAttendanceStatus(prev => ({
@@ -203,7 +242,15 @@ export const AttendanceMarkingTab: React.FC = () => {
       console.error('Error checking out:', error);
       toast.error('Failed to check out');
       loadRegistrations();
+    } finally {
+      setPendingCheckout(null);
+      setConfirmCheckoutOpen(false);
     }
+  };
+
+  const promptCheckOut = (attendanceId: string, childName: string, registrationId: string) => {
+    setPendingCheckout({ attendanceId, childName, registrationId });
+    setConfirmCheckoutOpen(true);
   };
 
   const handleQRScan = async (qrCodeData: string) => {
@@ -414,7 +461,28 @@ export const AttendanceMarkingTab: React.FC = () => {
                           <div className="text-xs text-muted-foreground">{item.registration.phone ? item.registration.phone.slice(0, 4) + '****' + item.registration.phone.slice(-2) : '-'}</div>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{item.child.childName}</TableCell>
+                      <TableCell className="font-medium">
+                        <div>{item.child.childName}</div>
+                        {(() => {
+                          const siblings = (item.registration.children || []).filter(
+                            c => c.childName !== item.child.childName
+                          );
+                          const otherToday = siblings.filter(c => (c.selectedDates || []).includes(selectedDate));
+                          const otherOtherDays = siblings.filter(c => !(c.selectedDates || []).includes(selectedDate));
+                          if (siblings.length === 0) return null;
+                          const parts: string[] = [];
+                          if (otherToday.length) parts.push(`${otherToday.length} sibling${otherToday.length > 1 ? 's' : ''} today`);
+                          if (otherOtherDays.length) {
+                            const names = otherOtherDays.map(c => c.childName).join(', ');
+                            parts.push(`${otherOtherDays.length} on other date(s): ${names}`);
+                          }
+                          return (
+                            <div className="text-[10px] text-muted-foreground mt-0.5" title={siblings.map(s => `${s.childName}: ${(s.selectedDates || []).join(', ')}`).join('\n')}>
+                              {parts.join(' · ')}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
                       <TableCell>{item.child.ageRange}</TableCell>
                       <TableCell>
                         <Badge variant={item.session === 'full' ? 'default' : 'outline'}>
@@ -476,7 +544,7 @@ export const AttendanceMarkingTab: React.FC = () => {
                             Check In
                           </Button>
                         ) : !checkedOut ? (
-                          <Button size="sm" variant="outline" onClick={() => handleCheckOut(attendance.id, item.child.childName, item.registration.id!)}>
+                          <Button size="sm" variant="outline" onClick={() => promptCheckOut(attendance.id, item.child.childName, item.registration.id!)}>
                             Check Out
                           </Button>
                         ) : (
@@ -602,6 +670,21 @@ export const AttendanceMarkingTab: React.FC = () => {
       </Card>
 
       <QRScannerDialog open={scannerOpen} onClose={() => setScannerOpen(false)} onScanSuccess={handleQRScan} />
+
+      <AlertDialog open={confirmCheckoutOpen} onOpenChange={setConfirmCheckoutOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Check-Out</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to check out <strong>{pendingCheckout?.childName}</strong>? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleCheckOut}>Check Out</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {loading ? (
         <div className="text-center py-8 text-muted-foreground">Loading attendance data...</div>

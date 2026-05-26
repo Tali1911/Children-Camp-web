@@ -219,6 +219,9 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [registrationType, setRegistrationType] = useState<'online_only' | 'online_paid'>('online_only');
   const [submitType, setSubmitType] = useState<'register' | 'pay'>('register');
+  // Ref mirrors the latest submit action so onSubmit reads it synchronously,
+  // even if React batches the setSubmitType update.
+  const submitActionRef = React.useRef<'register' | 'pay'>('register');
   const [previewDiscount, setPreviewDiscount] = useState<DiscountApplication | null>(null);
 
   const watchedEmail = watch('email');
@@ -252,7 +255,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
   }, [watchedEmail, watchedPhone, campType, subtotal, numChildren]);
 
   const onSubmit = async (data: HolidayCampFormData) => {
-    const buttonType = submitType;
+    // Read from ref first; falls back to state if ref is unset.
+    const buttonType = submitActionRef.current || submitType;
     if (!config) return;
     
     const securityCheck = await performSecurityChecks(data, 'holiday-camp');
@@ -789,6 +793,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
             size="lg"
             disabled={isSubmitting}
             onClick={() => {
+              submitActionRef.current = 'register';
               setSubmitType('register');
               handleSubmit(onSubmit)();
             }}
@@ -801,6 +806,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
             size="lg"
             disabled={isSubmitting}
             onClick={() => {
+              submitActionRef.current = 'pay';
               setSubmitType('pay');
               handleSubmit(onSubmit)();
             }}

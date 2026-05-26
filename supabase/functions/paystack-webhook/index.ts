@@ -134,12 +134,12 @@ Deno.serve(async (req) => {
     const paymentMethod =
       channel === 'mobile_money' ? 'mpesa' : channel === 'card' ? 'card' : 'card'
 
-    // Idempotency: only insert if no completed payment with this reference exists
+    // Idempotency: only insert if no payment with this reference + registration exists
     const { data: existing } = await supabase
       .from('payments')
-      .select('id')
+      .select('id, status')
       .eq('payment_reference', reference)
-      .eq('status', 'completed')
+      .eq('registration_id', registrationId)
       .maybeSingle()
 
     if (!existing) {
@@ -152,12 +152,23 @@ Deno.serve(async (req) => {
         amount: thisAmountKES,
         payment_method: paymentMethod,
         payment_reference: reference,
+        payment_date: new Date().toISOString().slice(0, 10),
         status: 'completed',
         notes: `Paystack ${channel || 'online'} payment (webhook)`,
       })
       if (insErr) {
         console.error('Webhook: payments insert failed', insErr)
       }
+    } else if (existing.status !== 'completed') {
+      await supabase
+        .from('payments')
+        .update({
+          status: 'completed',
+          amount: thisAmountKES,
+          payment_method: paymentMethod,
+          notes: `Paystack ${channel || 'online'} payment (webhook, promoted)`,
+        })
+        .eq('id', existing.id)
     } else {
       console.log('Webhook: payment already recorded for', reference)
     }

@@ -20,6 +20,7 @@ import { RegistrationDetailsDialog } from './RegistrationDetailsDialog';
 import { exportService } from '@/services/exportService';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { registrationInDateWindow } from '@/utils/registrationDate';
 
 type DocType = 'quotation' | 'invoice' | 'paid';
 const deriveDocType = (reg: CampRegistration): DocType => {
@@ -58,16 +59,20 @@ export const AllRegistrationsTab: React.FC = () => {
       const filters: any = {};
       if (campTypeFilter !== 'all') filters.campType = campTypeFilter;
       if (paymentFilter !== 'all') filters.paymentStatus = paymentFilter;
-      if (dateFrom) filters.startDate = format(dateFrom, 'yyyy-MM-dd');
-      if (dateTo) filters.endDate = format(dateTo, 'yyyy-MM-dd');
+
+      // IMPORTANT: We always do the date filter client-side using
+      // `registrationInDateWindow` because the "event date" depends on doc type:
+      //   - quotations bucket by `children[*].selectedDates` (expected attendance day)
+      //   - invoices/paid bucket by `converted_to_invoice_at`
+      // This is what makes "today" on the All page match the Attendance page.
 
       let data = await campRegistrationService.getAllRegistrations(filters);
-      
+
       // Apply client-side filters
       if (registrationTypeFilter !== 'all') {
         data = data.filter(reg => reg.registration_type === registrationTypeFilter);
       }
-      
+
       if (locationFilter !== 'all') {
         data = data.filter(reg => (reg.location || 'Kurura Gate F') === locationFilter);
       }
@@ -75,11 +80,15 @@ export const AllRegistrationsTab: React.FC = () => {
       if (docTypeFilter !== 'all') {
         data = data.filter(reg => deriveDocType(reg) === docTypeFilter);
       }
-      
+
+      if (dateFrom || dateTo) {
+        data = data.filter(reg => registrationInDateWindow(reg, dateFrom, dateTo));
+      }
+
       if (minAmount) {
         data = data.filter(reg => reg.total_amount >= parseFloat(minAmount));
       }
-      
+
       if (maxAmount) {
         data = data.filter(reg => reg.total_amount <= parseFloat(maxAmount));
       }
@@ -341,9 +350,9 @@ export const AllRegistrationsTab: React.FC = () => {
                   <SelectItem value="easter">Easter</SelectItem>
                   <SelectItem value="summer">Summer</SelectItem>
                   <SelectItem value="end-year">End Year</SelectItem>
-                  <SelectItem value="mid-term-1">Mid Term 1</SelectItem>
-                  <SelectItem value="mid-term-2">Mid Term 2</SelectItem>
-                  <SelectItem value="mid-term-3">Mid Term 3</SelectItem>
+                  <SelectItem value="mid-term-feb-march">Mid-Term Camp (Feb/March)</SelectItem>
+                  <SelectItem value="mid-term-may-june">Mid-Term Camp (May/June)</SelectItem>
+                  <SelectItem value="mid-term-october">Mid-Term Camp (October)</SelectItem>
                   <SelectItem value="day-camps">Day Camps</SelectItem>
                   <SelectItem value="little-forest">Little Forest</SelectItem>
                 </SelectContent>

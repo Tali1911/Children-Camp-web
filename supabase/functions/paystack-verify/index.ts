@@ -139,17 +139,19 @@ Deno.serve(async (req) => {
 
     const totalAmount = Number(reg.total_amount) || 0
 
-    // Insert this successful payment (idempotent on payment_reference)
+    // Insert this successful payment (idempotent on payment_reference).
+    // Note: we deliberately do NOT key on (registration_id, source) any more
+    // because that blocked legitimate partial top-up payments.
     try {
       const { data: existing } = await supabase
         .from('payments')
-        .select('id')
+        .select('id, status')
         .eq('payment_reference', reference)
-        .eq('status', 'completed')
+        .eq('registration_id', registrationId)
         .maybeSingle()
 
       if (!existing) {
-        await supabase.from('payments').insert({
+        const { error: insErr } = await supabase.from('payments').insert({
           registration_id: registrationId,
           registration_type: 'camp',
           source: 'camp_registration',
@@ -158,12 +160,27 @@ Deno.serve(async (req) => {
           amount: thisAmountKES,
           payment_method: paymentMethod,
           payment_reference: reference,
+          payment_date: new Date().toISOString().slice(0, 10),
           status: 'completed',
           notes: `Paystack ${channel || 'online'} payment`,
         })
+        if (insErr) {
+          console.error('Payments insert failed:', insErr)
+        }
+      } else if (existing.status !== 'completed') {
+        // Was previously logged as a failed/cancelled attempt — promote it.
+        await supabase
+          .from('payments')
+          .update({
+            status: 'completed',
+            amount: thisAmountKES,
+            payment_method: paymentMethod,
+            notes: `Paystack ${channel || 'online'} payment (promoted from attempt)`,
+          })
+          .eq('id', existing.id)
       }
     } catch (e) {
-      console.error('Payments insert failed:', e)
+      console.error('Payments insert/upsert failed:', e)
     }
 
     // Sum all completed payments for this registration to determine status

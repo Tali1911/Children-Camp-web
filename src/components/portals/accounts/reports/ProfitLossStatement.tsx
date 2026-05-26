@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, DollarSign, Wallet, Clock } from 'lucide-react';
 import {
   BarChart,
   Bar,
@@ -109,12 +109,17 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
   }));
 
   const comparisonData = [
-    { name: 'Revenue', amount: data.revenue.total, fill: 'hsl(var(--primary))' },
+    { name: 'Collected', amount: data.revenue.collected, fill: 'hsl(var(--primary))' },
+    { name: 'Pending', amount: data.revenue.pendingCollection, fill: 'hsl(var(--accent))' },
     { name: 'Expenses', amount: data.expenses.total, fill: 'hsl(var(--destructive))' },
   ];
 
-  const profitMargin = data.revenue.total > 0 
-    ? ((data.netProfit / data.revenue.total) * 100).toFixed(1) 
+  const profitMargin = data.revenue.collected > 0
+    ? ((data.netProfit / data.revenue.collected) * 100).toFixed(1)
+    : '0';
+
+  const collectionRate = data.revenue.total > 0
+    ? ((data.revenue.collected / data.revenue.total) * 100).toFixed(1)
     : '0';
 
   return (
@@ -140,7 +145,7 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -151,7 +156,7 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
           <CardContent>
             <div className="text-2xl font-bold text-primary">{formatCurrency(data.revenue.total)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Includes payments + paid camp registrations (matches Dashboard)
+              Total billed in period (Collected + Pending)
             </p>
           </CardContent>
         </Card>
@@ -159,14 +164,29 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingDown className="h-4 w-4 text-destructive" />
-              Total Expenses
+              <Wallet className="h-4 w-4 text-primary" />
+              Collected
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-destructive">{formatCurrency(data.expenses.total)}</div>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(data.revenue.collected)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              {Object.keys(data.expenses.byCategory).length} expense categories
+              Received in period · {collectionRate}% of billed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-accent" />
+              Pending Collection
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-accent-foreground">{formatCurrency(data.revenue.pendingCollection)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Still owed on invoices billed in period
             </p>
           </CardContent>
         </Card>
@@ -183,7 +203,7 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
               {formatCurrency(data.netProfit)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {profitMargin}% profit margin
+              Collected − Expenses ({profitMargin}% margin)
             </p>
           </CardContent>
         </Card>

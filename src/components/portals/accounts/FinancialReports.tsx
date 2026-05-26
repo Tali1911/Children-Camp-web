@@ -253,7 +253,7 @@ const FinancialReports: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="ar-aging">
-          <ARAgingReport activities={selectedActivities} />
+          <ARAgingReport activities={selectedActivities} dateRange={dateRange} />
         </TabsContent>
 
         <TabsContent value="daily-sales">

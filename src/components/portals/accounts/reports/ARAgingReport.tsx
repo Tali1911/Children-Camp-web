@@ -31,9 +31,10 @@ type BucketKey = ARAgingItem['agingBucket'];
 
 interface ARAgingReportProps {
   activities?: string[];
+  dateRange?: { startDate: Date; endDate: Date };
 }
 
-const ARAgingReport: React.FC<ARAgingReportProps> = ({ activities = [] }) => {
+const ARAgingReport: React.FC<ARAgingReportProps> = ({ activities = [], dateRange }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ARAgingSummary | null>(null);
   const [openBucket, setOpenBucket] = useState<BucketKey | null>(null);
@@ -41,12 +42,17 @@ const ARAgingReport: React.FC<ARAgingReportProps> = ({ activities = [] }) => {
   useEffect(() => {
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(activities)]);
+  }, [JSON.stringify(activities), dateRange?.startDate?.toISOString(), dateRange?.endDate?.toISOString()]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const agingData = await financialReportService.generateARAgingReport(activities);
+      // AR Aging is "as of today, what's outstanding for this activity".
+      // Honor the activity filter, but don't restrict by the narrow date window
+      // (P&L/Sales own the window — AR is a point-in-time view).
+      const agingData = await financialReportService.generateARAgingReport(
+        activities,
+      );
       setData(agingData);
     } catch (error) {
       console.error('Error loading AR aging data:', error);

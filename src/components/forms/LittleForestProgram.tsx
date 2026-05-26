@@ -62,6 +62,8 @@ const LittleForestProgram = () => {
   const { config, pageConfig, isLoading: configLoading } = useLittleForestConfig();
   
   const [submitType, setSubmitType] = useState<'register' | 'pay'>('register');
+  const submitActionRef = React.useRef<'register' | 'pay'>('register');
+  const [registrationType, setRegistrationType] = useState<'online_only' | 'online_paid'>('online_only');
   const [showQRModal, setShowQRModal] = useState(false);
   const [registrationResult, setRegistrationResult] = useState<CampRegistration | null>(null);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
@@ -268,19 +270,62 @@ const LittleForestProgram = () => {
 
       setRegistrationResult(result);
       setQrCodeDataUrl(qrCodeUrl);
-      setShowQRModal(true);
 
       toast.success(config.messages.registrationSuccess);
-      
+
       // Record successful submission for duplicate prevention
       await recordSubmission(data, 'little-forest');
-      
+
       reset();
-      
-      if (submitType === 'pay') {
-        setTimeout(() => {
-          toast.info('Payment integration coming soon! You will receive an invoice with payment instructions via email.');
-        }, 500);
+
+      const buttonType = submitActionRef.current || submitType;
+      if (buttonType === 'pay') {
+        try {
+          const { supabase } = await import('@/integrations/supabase/client');
+          const { openPaystackCheckout, generatePaystackReference } = await import('@/lib/paystack');
+          const reference = generatePaystackReference('AMU');
+          await openPaystackCheckout({
+            email: data.email,
+            amountKES: totalAmount,
+            reference,
+            metadata: {
+              registrationId: result.id,
+              registrationNumber: result.registration_number,
+              parentName: data.parentName,
+              programName: 'Little Forest Explorers',
+            },
+            onSuccess: async (ref) => {
+              try {
+                const { data: verifyData, error: verifyErr } = await supabase.functions.invoke(
+                  'paystack-verify',
+                  { body: { reference: ref, registrationId: result.id } }
+                );
+                if (verifyErr) throw verifyErr;
+                if (!verifyData?.success) throw new Error(verifyData?.error || 'Verification failed');
+                toast.success('Payment received. Thank you!');
+                setRegistrationType('online_paid');
+              } catch (e) {
+                console.error('Verify error:', e);
+                toast.error(`Payment processed but verification failed. Reference: ${ref}`);
+              } finally {
+                setShowQRModal(true);
+              }
+            },
+            onClose: () => {
+              toast.info('Payment cancelled. You can complete it later from My Registrations.');
+              setRegistrationType('online_only');
+              setShowQRModal(true);
+            },
+          });
+        } catch (e) {
+          console.error('Paystack init error:', e);
+          toast.error('Could not start online payment. Please try again from My Registrations.');
+          setRegistrationType('online_only');
+          setShowQRModal(true);
+        }
+      } else {
+        setRegistrationType('online_only');
+        setShowQRModal(true);
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -591,17 +636,23 @@ const LittleForestProgram = () => {
                     type="submit"
                     variant="outline"
                     size="lg"
-                    onClick={() => setSubmitType('register')}
+                    onClick={() => {
+                      submitActionRef.current = 'register';
+                      setSubmitType('register');
+                    }}
                     disabled={isSubmitting}
                     className="w-full"
                   >
                     {config.buttons.registerOnly}
                   </Button>
-                  
+
                   <Button
                     type="submit"
                     size="lg"
-                    onClick={() => setSubmitType('pay')}
+                    onClick={() => {
+                      submitActionRef.current = 'pay';
+                      setSubmitType('pay');
+                    }}
                     disabled={isSubmitting}
                     className="w-full"
                   >
@@ -619,7 +670,7 @@ const LittleForestProgram = () => {
             onOpenChange={setShowQRModal}
             registration={registrationResult}
             qrCodeDataUrl={qrCodeDataUrl}
-            registrationType={submitType === 'register' ? 'online_only' : 'online_paid'}
+            registrationType={registrationType}
           />
         )}
       </div>

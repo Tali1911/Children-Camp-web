@@ -63,7 +63,8 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
   // Calculate totals
   const totals = data.reduce(
     (acc, day) => ({
-      totalRevenue: acc.totalRevenue + day.totalRevenue,
+      billedAmount: acc.billedAmount + day.billedAmount,
+      collectedAmount: acc.collectedAmount + day.collectedAmount,
       paymentsAmount: acc.paymentsAmount + day.paymentsAmount,
       paymentsReceived: acc.paymentsReceived + day.paymentsReceived,
       campRevenue: acc.campRevenue + day.campRevenue,
@@ -71,18 +72,18 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
       invoicesAmount: acc.invoicesAmount + day.invoicesAmount,
       invoicesCreated: acc.invoicesCreated + day.invoicesCreated,
     }),
-    { totalRevenue: 0, paymentsAmount: 0, paymentsReceived: 0, campRevenue: 0, campRegistrations: 0, invoicesAmount: 0, invoicesCreated: 0 }
+    { billedAmount: 0, collectedAmount: 0, paymentsAmount: 0, paymentsReceived: 0, campRevenue: 0, campRegistrations: 0, invoicesAmount: 0, invoicesCreated: 0 }
   );
 
-  // Calculate daily average
-  const daysWithData = data.filter(d => d.totalRevenue > 0).length;
-  const avgDailyRevenue = daysWithData > 0 ? totals.totalRevenue / daysWithData : 0;
+  // Calculate daily average over BILLED amount (matches the Total Billed card)
+  const daysWithData = data.filter(d => d.billedAmount > 0).length;
+  const avgDailyBilled = daysWithData > 0 ? totals.billedAmount / daysWithData : 0;
 
-  // Find trend (compare first half to second half)
+  // Trend over billed amount (first half vs second half)
   const halfIndex = Math.floor(data.length / 2);
-  const firstHalfRevenue = data.slice(0, halfIndex).reduce((sum, d) => sum + d.totalRevenue, 0);
-  const secondHalfRevenue = data.slice(halfIndex).reduce((sum, d) => sum + d.totalRevenue, 0);
-  const trend = firstHalfRevenue > 0 ? ((secondHalfRevenue - firstHalfRevenue) / firstHalfRevenue) * 100 : 0;
+  const firstHalfBilled = data.slice(0, halfIndex).reduce((sum, d) => sum + d.billedAmount, 0);
+  const secondHalfBilled = data.slice(halfIndex).reduce((sum, d) => sum + d.billedAmount, 0);
+  const trend = firstHalfBilled > 0 ? ((secondHalfBilled - firstHalfBilled) / firstHalfBilled) * 100 : 0;
 
   // Format chart data for better display
   const chartData = data.map(d => ({
@@ -131,11 +132,14 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <DollarSign className="h-4 w-4 text-primary" />
-              Total Revenue
+              Total Billed
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-primary">{formatCurrency(totals.totalRevenue)}</div>
+            <div className="text-2xl font-bold text-primary">{formatCurrency(totals.billedAmount)}</div>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {totals.invoicesCreated} invoice{totals.invoicesCreated === 1 ? '' : 's'} raised in period
+            </p>
             <div className="flex items-center gap-1 mt-1">
               {trend > 0 ? (
                 <TrendingUp className="h-4 w-4 text-primary" />
@@ -155,12 +159,14 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Receipt className="h-4 w-4 text-accent" />
-              Payments Collected
+              Collected
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-accent">{formatCurrency(totals.paymentsAmount)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{totals.paymentsReceived} payments</p>
+            <div className="text-2xl font-bold text-accent">{formatCurrency(totals.collectedAmount)}</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {totals.paymentsReceived} payment{totals.paymentsReceived === 1 ? '' : 's'} received
+            </p>
           </CardContent>
         </Card>
 
@@ -168,12 +174,12 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Users className="h-4 w-4 text-secondary-foreground" />
-              Camp Revenue
+              New Registrations
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-secondary-foreground">{formatCurrency(totals.campRevenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{totals.campRegistrations} registrations</p>
+            <div className="text-2xl font-bold text-secondary-foreground">{totals.campRegistrations}</div>
+            <p className="text-xs text-muted-foreground mt-1">{formatCurrency(totals.campRevenue)} camp collected</p>
           </CardContent>
         </Card>
 
@@ -181,21 +187,21 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Daily Average
+              Daily Average Billed
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-foreground">{formatCurrency(avgDailyRevenue)}</div>
-            <p className="text-xs text-muted-foreground mt-1">{daysWithData} days with activity</p>
+            <div className="text-2xl font-bold text-foreground">{formatCurrency(avgDailyBilled)}</div>
+            <p className="text-xs text-muted-foreground mt-1">{daysWithData} days with billing</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Revenue Trend Chart */}
+      {/* Billed vs Collected Trend */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Revenue Trend</CardTitle>
-          <CardDescription>Daily revenue breakdown over selected period</CardDescription>
+          <CardTitle className="text-base">Billed vs Collected Trend</CardTitle>
+          <CardDescription>Daily billed (invoices raised) compared with cash collected</CardDescription>
         </CardHeader>
         <CardContent>
           {chartData.length > 0 ? (
@@ -203,39 +209,51 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <linearGradient id="colorBilled" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3}/>
                       <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0}/>
                     </linearGradient>
+                    <linearGradient id="colorCollected" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="hsl(var(--accent))" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="hsl(var(--accent))" stopOpacity={0}/>
+                    </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
-                  <XAxis 
-                    dataKey="displayDate" 
+                  <XAxis
+                    dataKey="displayDate"
                     tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
                     tickLine={{ stroke: 'hsl(var(--border))' }}
                     interval={Math.floor(chartData.length / 10)}
                   />
-                  <YAxis 
+                  <YAxis
                     tickFormatter={(v) => `${(v / 1000).toFixed(0)}K`}
                     tick={{ fill: 'hsl(var(--muted-foreground))' }}
                     tickLine={{ stroke: 'hsl(var(--border))' }}
                   />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number, name: string) => [formatCurrency(value), name]}
                     labelFormatter={(label) => `Date: ${label}`}
-                    contentStyle={{ 
-                      backgroundColor: 'hsl(var(--background))', 
-                      border: '1px solid hsl(var(--border))' 
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--background))',
+                      border: '1px solid hsl(var(--border))'
                     }}
                   />
                   <Legend />
                   <Area
                     type="monotone"
-                    dataKey="totalRevenue"
-                    name="Total Revenue"
+                    dataKey="billedAmount"
+                    name="Billed"
                     stroke="hsl(var(--primary))"
                     fillOpacity={1}
-                    fill="url(#colorRevenue)"
+                    fill="url(#colorBilled)"
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="collectedAmount"
+                    name="Collected"
+                    stroke="hsl(var(--accent))"
+                    fillOpacity={1}
+                    fill="url(#colorCollected)"
                   />
                 </AreaChart>
               </ResponsiveContainer>
@@ -317,10 +335,11 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
                 <thead className="bg-muted/50 sticky top-0">
                   <tr>
                     <th className="text-left p-3 text-xs font-medium text-muted-foreground">Date</th>
-                    <th className="text-right p-3 text-xs font-medium text-muted-foreground">Invoices</th>
+                    <th className="text-right p-3 text-xs font-medium text-muted-foreground" title="Invoices raised that day (system + manual)">Invoices Raised</th>
                     <th className="text-right p-3 text-xs font-medium text-muted-foreground">Payments</th>
-                    <th className="text-right p-3 text-xs font-medium text-muted-foreground">Camp Regs</th>
-                    <th className="text-right p-3 text-xs font-medium text-muted-foreground">Total Revenue</th>
+                    <th className="text-right p-3 text-xs font-medium text-muted-foreground" title="Registrations created that day">New Regs</th>
+                    <th className="text-right p-3 text-xs font-medium text-muted-foreground">Billed</th>
+                    <th className="text-right p-3 text-xs font-medium text-muted-foreground">Collected</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -345,7 +364,10 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
                         )}
                       </td>
                       <td className="p-3 text-sm text-right font-medium text-foreground">
-                        {day.totalRevenue > 0 ? formatCurrency(day.totalRevenue) : '-'}
+                        {day.billedAmount > 0 ? formatCurrency(day.billedAmount) : '-'}
+                      </td>
+                      <td className="p-3 text-sm text-right font-medium text-accent">
+                        {day.collectedAmount > 0 ? formatCurrency(day.collectedAmount) : '-'}
                       </td>
                     </tr>
                   ))}
