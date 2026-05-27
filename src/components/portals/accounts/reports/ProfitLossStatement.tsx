@@ -38,6 +38,7 @@ interface Props {
 const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ProfitLossData | null>(null);
+  const [openAR, setOpenAR] = useState<number | null>(null);
 
   useEffect(() => {
     loadData();
@@ -46,8 +47,12 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const plData = await financialReportService.generateProfitLoss(dateRange, activities);
+      const [plData, arData] = await Promise.all([
+        financialReportService.generateProfitLoss(dateRange, activities),
+        financialReportService.generateARAgingReport(activities).catch(() => null),
+      ]);
       setData(plData);
+      setOpenAR(arData ? arData.total : null);
     } catch (error) {
       console.error('Error loading P&L data:', error);
     } finally {
@@ -145,7 +150,7 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
@@ -180,13 +185,30 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
               <Clock className="h-4 w-4 text-accent" />
-              Pending Collection
+              Billed − Collected (period)
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-accent-foreground">{formatCurrency(data.revenue.pendingCollection)}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Still owed on invoices billed in period
+              Timing gap: billed in window minus collected in window. Not the same as AR.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="border-accent/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+              <Clock className="h-4 w-4 text-destructive" />
+              Open AR (as of today)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-destructive">
+              {openAR === null ? '—' : formatCurrency(openAR)}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Matches AR Aging tab · what customers actually still owe today
             </p>
           </CardContent>
         </Card>
@@ -208,6 +230,12 @@ const ProfitLossStatement: React.FC<Props> = ({ dateRange, activities }) => {
           </CardContent>
         </Card>
       </div>
+
+      <p className="text-xs text-muted-foreground -mt-2 px-1">
+        "Billed − Collected" is a period timing figure (some bills are paid before/after the window).
+        "Open AR" is what customers actually still owe today and matches the AR Aging tab.
+      </p>
+
 
       {/* Charts */}
       <div className="grid gap-6 md:grid-cols-2">

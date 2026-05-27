@@ -58,6 +58,21 @@ export interface ARAgingItem {
   source: 'invoice' | 'collection';
 }
 
+export interface AROrphanItem {
+  id: string;
+  registrationId: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  childName: string;
+  activityName: string;
+  balanceDue: number;
+  createdAt: string;
+  daysOld: number;
+  reason: 'registration-missing' | 'registration-cancelled' | 'quote-stage' | 'no-registration-link';
+  reasonLabel: string;
+}
+
 export interface ARAgingSummary {
   current: number;
   days1to30: number;
@@ -72,6 +87,13 @@ export interface ARAgingSummary {
   // Invoice-only subtotal (formal AR)
   invoicedTotal: number;
   invoicedCount: number;
+  // Orphaned receivables — pending action items pointing at missing/cancelled
+  // registrations or quote-stage bookings. Excluded from aging buckets, but
+  // surfaced as an exemption section so totals reconcile with the Dashboard.
+  orphanedItems: AROrphanItem[];
+  orphanedTotal: number;
+  // total + orphanedTotal — reconciles to Dashboard "Total Outstanding"
+  grandTotal: number;
 }
 
 export interface RevenueReportData {
@@ -159,6 +181,39 @@ const paidForReg = (reg: any, paymentsByReg: Record<string, number>): number => 
   return Math.min(total, Math.max(fromPayments, fromStatus));
 };
 
+/**
+ * Normalize a date range so both ends span full local days. Without this, a
+ * single-day pick lands at 00:00…00:00 and `isWithinInterval` excludes every
+ * record created later in the day.
+ */
+const normalizeDateRange = (range: DateRange): DateRange => ({
+  startDate: startOfDay(range.startDate),
+  endDate: endOfDay(range.endDate),
+});
+
+/**
+ * Drop payments whose parent record has been deleted or cancelled, so reports
+ * never count orphaned amounts. A payment is kept when:
+ *   - it links to a still-active invoice, OR
+ *   - it links to a still-active camp registration, OR
+ *   - it has no parent link at all (truly manual / standalone payment).
+ * Camp-tagged payments (`source === 'camp_registration'`) with no matching
+ * registration are dropped — that registration was deleted.
+ */
+const dropOrphanedPayments = (
+  payments: Payment[],
+  activeInvoiceIds: Set<string>,
+  activeRegIds: Set<string>,
+): Payment[] => {
+  return payments.filter(p => {
+    if (p.invoice_id) return activeInvoiceIds.has(p.invoice_id);
+    if (p.registration_id) return activeRegIds.has(p.registration_id);
+    // Camp-tagged payment with no surviving registration → orphaned
+    if (p.source === 'camp_registration') return false;
+    return true;
+  });
+};
+
 export const financialReportService = {
   // Fetch all financial data for a date range with optional activity filter
   async fetchFinancialData(dateRange: DateRange, activities?: string[]) {
@@ -179,8 +234,24 @@ export const financialReportService = {
       ? campRegistrations.filter(r => matchesActivity((r as any).camp_type, activities!))
       : campRegistrations;
 
+    // Build "active" ID sets so we can drop payments / action items whose
+    // parent invoice or registration was deleted or cancelled.
+    const activeInvoiceIds = new Set(
+      invoices.filter(i => i.status !== 'cancelled').map(i => i.id),
+    );
+    const activeRegIds = new Set(
+      filteredCampRegistrations
+        .filter(r => (r as any).status !== 'cancelled')
+        .map(r => r.id!)
+        .filter(Boolean),
+    );
+
+    // First drop orphaned payments (deleted/cancelled parent), then apply
+    // the optional activity filter.
+    const nonOrphanPayments = dropOrphanedPayments(payments, activeInvoiceIds, activeRegIds);
+
     const filteredPayments = hasActivityFilter
-      ? payments.filter(p => {
+      ? nonOrphanPayments.filter(p => {
           // Include payments linked to filtered registrations, or matching program_name
           if (p.registration_id) {
             return filteredCampRegistrations.some(r => r.id === p.registration_id);
@@ -191,13 +262,21 @@ export const financialReportService = {
           // Include unlinked payments only when no activity filter
           return false;
         })
-      : payments;
+      : nonOrphanPayments;
 
     const filteredExpenses = hasActivityFilter
       ? expenses.filter(e => matchesActivity(e.category, activities!))
       : expenses;
 
-    return { invoices, payments: filteredPayments, expenses: filteredExpenses, budgets, campRegistrations: filteredCampRegistrations };
+    return {
+      invoices,
+      payments: filteredPayments,
+      expenses: filteredExpenses,
+      budgets,
+      campRegistrations: filteredCampRegistrations,
+      activeInvoiceIds,
+      activeRegIds,
+    };
   },
 
   // Generate Profit & Loss Statement
@@ -205,6 +284,7 @@ export const financialReportService = {
   // (getRegistrationEventDates) fall in the window. Collected & Pending are derived
   // from those regs, so the figures tie out exactly with Sales and AR Aging.
   async generateProfitLoss(dateRange: DateRange, activities?: string[]): Promise<ProfitLossData> {
+    dateRange = normalizeDateRange(dateRange);
     const { invoices, payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     // Manual (non-camp) invoices — bucket by created_at as before
@@ -310,6 +390,7 @@ export const financialReportService = {
   // Generate AR Aging Report — combines invoice-based AR + attended-but-unpaid collections,
   // each aged into proper buckets so 90+ days reflects real overdue items
   async generateARAgingReport(activities?: string[], dateRange?: DateRange): Promise<ARAgingSummary> {
+    if (dateRange) dateRange = normalizeDateRange(dateRange);
     const bucketize = (daysOverdue: number): ARAgingItem['agingBucket'] => {
       if (daysOverdue <= 0) return 'current';
       if (daysOverdue <= 30) return '1-30';
@@ -376,6 +457,7 @@ export const financialReportService = {
     //        Aging is anchored to getRegistrationEventDates() so it matches
     //        Sales / P&L windows exactly.
     const collectionItems: ARAgingItem[] = [];
+    const orphanedItems: AROrphanItem[] = [];
     const seenRegIds = new Set<string>();
     let attendedUnpaidTotal = 0;
     let attendedUnpaidCount = 0;
@@ -425,6 +507,20 @@ export const financialReportService = {
         seenRegIds.add(r.id);
       });
 
+      // Build active reg-id set so legacy action items whose source registration
+      // was deleted/cancelled feed the ORPHAN list instead of inflating aging.
+      const activeRegIdSet = new Set(((sysInvoices || []) as any[]).map(r => r.id));
+
+      // Also load cancelled registrations so we can label orphans precisely.
+      const { data: cancelledRegs } = await (supabase as any)
+        .from('camp_registrations')
+        .select('id, billing_doc_type, status')
+        .or('status.eq.cancelled,billing_doc_type.neq.invoice');
+      const cancelledRegMap = new Map<string, { status: string; billing_doc_type: string }>();
+      ((cancelledRegs || []) as any[]).forEach((r: any) => {
+        cancelledRegMap.set(r.id, { status: r.status, billing_doc_type: r.billing_doc_type });
+      });
+
       // Legacy / manual action items not already covered above
       const { data: collections } = await (supabase as any)
         .from('accounts_action_items')
@@ -435,8 +531,44 @@ export const financialReportService = {
         const balance = Number(c.amount_due || 0) - Number(c.amount_paid || 0);
         if (balance <= 0) return;
         const created = c.created_at ? parseISO(c.created_at) : today;
-        const daysOverdue = differenceInDays(today, created);
-        const bucket = bucketize(daysOverdue);
+        const daysOld = differenceInDays(today, created);
+
+        // Orphan check: missing reg link, deleted reg, cancelled reg, or quote-stage
+        const linkedActive = c.registration_id && activeRegIdSet.has(c.registration_id);
+        if (!linkedActive) {
+          let reason: AROrphanItem['reason'] = 'no-registration-link';
+          let reasonLabel = 'No registration link';
+          if (c.registration_id) {
+            const meta = cancelledRegMap.get(c.registration_id);
+            if (!meta) {
+              reason = 'registration-missing';
+              reasonLabel = 'Registration deleted';
+            } else if (meta.status === 'cancelled') {
+              reason = 'registration-cancelled';
+              reasonLabel = 'Registration cancelled';
+            } else if (meta.billing_doc_type !== 'invoice') {
+              reason = 'quote-stage';
+              reasonLabel = 'Quote — not invoiced';
+            }
+          }
+          orphanedItems.push({
+            id: c.id,
+            registrationId: c.registration_id || null,
+            customerName: c.parent_name || c.child_name || 'Unknown',
+            customerEmail: c.email || '',
+            customerPhone: c.phone || '',
+            childName: c.child_name || '',
+            activityName: c.camp_type || '',
+            balanceDue: balance,
+            createdAt: c.created_at || today.toISOString(),
+            daysOld: Math.max(0, daysOld),
+            reason,
+            reasonLabel,
+          });
+          return;
+        }
+
+        const bucket = bucketize(daysOld);
         collectionItems.push({
           invoiceId: c.id,
           invoiceNumber: `COLL-${String(c.id).slice(0, 8)}`,
@@ -450,7 +582,7 @@ export const financialReportService = {
           paidAmount: Number(c.amount_paid || 0),
           balanceDue: balance,
           dueDate: c.created_at || today.toISOString(),
-          daysOverdue: Math.max(0, daysOverdue),
+          daysOverdue: Math.max(0, daysOld),
           agingBucket: bucket,
           source: 'collection' as const,
         });
@@ -500,6 +632,12 @@ export const financialReportService = {
     const filteredInvoiceItems = items.filter(i => i.source === 'invoice');
     const invoicedTotal = filteredInvoiceItems.reduce((s, i) => s + i.balanceDue, 0);
 
+    // Apply activity filter to orphans too, so totals make sense per-activity
+    const filteredOrphans = hasActivityFilter
+      ? orphanedItems.filter(o => itemMatchesActivity(o.activityName))
+      : orphanedItems;
+    const orphanedTotal = filteredOrphans.reduce((s, o) => s + o.balanceDue, 0);
+
     const summary: ARAgingSummary = {
       current: 0,
       days1to30: 0,
@@ -512,6 +650,9 @@ export const financialReportService = {
       attendedUnpaidCount,
       invoicedTotal,
       invoicedCount: filteredInvoiceItems.length,
+      orphanedItems: filteredOrphans,
+      orphanedTotal,
+      grandTotal: 0,
     };
 
     items.forEach(item => {
@@ -524,6 +665,7 @@ export const financialReportService = {
         case '90+': summary.days90plus += item.balanceDue; break;
       }
     });
+    summary.grandTotal = summary.total + summary.orphanedTotal;
 
     return summary;
   },
@@ -583,6 +725,7 @@ export const financialReportService = {
 
   // Generate Daily Sales Summary
   async generateDailySalesSummary(dateRange: DateRange, activities?: string[]): Promise<DailySalesData[]> {
+    dateRange = normalizeDateRange(dateRange);
     const { invoices, payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     // Create a map for each day in range
@@ -683,6 +826,72 @@ export const financialReportService = {
 
     return Object.values(dailyData).sort((a, b) => a.date.localeCompare(b.date));
   },
+
+  /**
+   * Camp-only KPI totals for the period — mirrors the admin Camp Analytics tab so
+   * the Sales tab can show camp-scoped Total / Paid / Outstanding side by side
+   * with the whole-business figures.
+   *
+   *  - registrations / revenue / paid: bucketed by registration billing event
+   *    (`registrationInDateWindow` — same as P&L and AR Aging).
+   *  - childrenExpected: counts every child whose `selectedDates` falls in the
+   *    window, regardless of when the registration was billed — matches
+   *    AttendanceMarkingTab's "Expected" count.
+   */
+  async getCampPeriodTotals(dateRange: DateRange, activities?: string[]) {
+    dateRange = normalizeDateRange(dateRange);
+    const { payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
+
+    // Same rule as P&L / AR Aging.
+    const regsInRange = campRegistrations.filter(r =>
+      (r as any).status !== 'cancelled' &&
+      registrationInDateWindow(r, dateRange.startDate, dateRange.endDate)
+    );
+
+    const paymentsByReg = buildPaymentsByReg(payments as any[]);
+
+    let totalRevenue = 0;
+    let paidRevenue = 0;
+    regsInRange.forEach(reg => {
+      const total = Number((reg as any).total_amount || 0);
+      totalRevenue += total;
+      paidRevenue += paidForReg(reg, paymentsByReg);
+    });
+    const outstandingRevenue = Math.max(0, totalRevenue - paidRevenue);
+
+    // Children expected — across ALL active registrations regardless of bill date.
+    const fromMs = startOfDay(dateRange.startDate).getTime();
+    const toMs = endOfDay(dateRange.endDate).getTime();
+    let childrenExpected = 0;
+    campRegistrations.forEach(reg => {
+      if ((reg as any).status === 'cancelled') return;
+      const kids = Array.isArray((reg as any).children) ? (reg as any).children : [];
+      for (const c of kids) {
+        const selected: string[] = Array.isArray(c?.selectedDates) ? c.selectedDates : [];
+        if (selected.length === 0) continue;
+        const hit = selected.some(d => {
+          if (typeof d !== 'string') return false;
+          // Parse YYYY-MM-DD as local date to avoid EAT tz drift.
+          const [y, m, day] = d.split('-').map(Number);
+          if (!y || !m || !day) return false;
+          const t = new Date(y, m - 1, day).getTime();
+          return t >= fromMs && t <= toMs;
+        });
+        if (hit) childrenExpected += 1;
+      }
+    });
+
+    return {
+      totalRevenue,
+      paidRevenue,
+      outstandingRevenue,
+      registrations: regsInRange.length,
+      childrenExpected,
+      period: dateRange,
+    };
+  },
+
+
 
   // Export functions
   exportProfitLossToCSV(data: ProfitLossData, filename?: string) {
@@ -893,16 +1102,22 @@ export const financialReportService = {
     netProfit: number;        // actual - expenses
     potentialNetProfit: number; // potential - expenses
   }>> {
-    const { payments, expenses, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
+    dateRange = normalizeDateRange(dateRange);
+    const { payments, expenses, campRegistrations, activeRegIds } = await this.fetchFinancialData(dateRange, activities);
 
-    // Pull pending collections (attended-but-unpaid) for outstanding by activity
-    let pendingCollections: Array<{ camp_type: string | null; amount_due: number; amount_paid: number }> = [];
+    // Pull pending collections (attended-but-unpaid) for outstanding by activity.
+    // Exclude rows whose registration_id no longer exists in active camp_registrations
+    // (i.e. the source registration was deleted/cancelled) — those amounts must not
+    // contribute to report totals.
+    let pendingCollections: Array<{ camp_type: string | null; amount_due: number; amount_paid: number; registration_id?: string | null }> = [];
     if (isSupabaseAvailable() && supabase) {
       const { data } = await supabase
         .from('accounts_action_items' as any)
-        .select('camp_type, amount_due, amount_paid')
+        .select('camp_type, amount_due, amount_paid, registration_id')
         .eq('status', 'pending');
-      pendingCollections = (data || []) as any[];
+      pendingCollections = ((data || []) as any[]).filter(
+        c => !c.registration_id || activeRegIds.has(c.registration_id),
+      );
     }
 
     // Resolve a raw activity value (e.g. "mid-term-feb-march") to the friendly
@@ -1009,7 +1224,8 @@ export const financialReportService = {
   // Generate Potential vs Actual revenue analysis
   // Outstanding now uses accounts_action_items (matches Dashboard "Total Outstanding")
   async generatePotentialVsActual(dateRange: DateRange, activities?: string[]): Promise<{ potentialRevenue: number; actualRevenue: number; outstanding: number; collectionRate: number }> {
-    const { payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
+    dateRange = normalizeDateRange(dateRange);
+    const { payments, campRegistrations, activeRegIds } = await this.fetchFinancialData(dateRange, activities);
 
     // Potential = total_amount of ALL registrations in period
     const potentialRevenue = campRegistrations.reduce((sum, r) => sum + r.total_amount, 0);
@@ -1049,17 +1265,20 @@ export const financialReportService = {
       } else {
         let query: any = supabase
           .from('accounts_action_items' as any)
-          .select('amount_due, amount_paid')
+          .select('amount_due, amount_paid, registration_id')
           .eq('status', 'pending');
         if (hasFilter) {
           query = query.in('registration_id', filteredRegIds);
         }
         const { data: collections } = await query;
-        outstanding = ((collections || []) as any[]).reduce(
-          (sum: number, c: any) =>
-            sum + Math.max(0, Number(c.amount_due || 0) - Number(c.amount_paid || 0)),
-          0
-        );
+        // Exclude rows whose source registration was deleted/cancelled.
+        outstanding = ((collections || []) as any[])
+          .filter((c: any) => !c.registration_id || activeRegIds.has(c.registration_id))
+          .reduce(
+            (sum: number, c: any) =>
+              sum + Math.max(0, Number(c.amount_due || 0) - Number(c.amount_paid || 0)),
+            0
+          );
       }
     }
 
@@ -1070,6 +1289,7 @@ export const financialReportService = {
 
   // Generate Revenue Report — detailed breakdown of all revenue sources
   async generateRevenueReport(dateRange: DateRange, activities?: string[]): Promise<RevenueReportData> {
+    dateRange = normalizeDateRange(dateRange);
     const { payments, campRegistrations } = await this.fetchFinancialData(dateRange, activities);
 
     const inRange = (d: Date) => isWithinInterval(d, { start: dateRange.startDate, end: dateRange.endDate });
@@ -1187,6 +1407,7 @@ export const financialReportService = {
 
   // Generate Expense Report — detailed breakdown of all expenses
   async generateExpenseReport(dateRange: DateRange, activities?: string[]): Promise<ExpenseReportData> {
+    dateRange = normalizeDateRange(dateRange);
     const { expenses } = await this.fetchFinancialData(dateRange, activities);
     const inRange = (d: Date) => isWithinInterval(d, { start: dateRange.startDate, end: dateRange.endDate });
 

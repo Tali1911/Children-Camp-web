@@ -187,6 +187,10 @@ export const AttendanceMarkingTab: React.FC = () => {
     const attendance = attendanceStatus[key];
     return attendance && !attendance.check_out_time;
   }).length;
+  const totalAbsent = allExpected.filter(item => {
+    const key = `${item.registration.id}-${item.child.childName}-${selectedDate}`;
+    return !attendanceStatus[key];
+  }).length;
   const paidExpectedCount = allExpected.filter(e => e.registration.payment_status === 'paid').length;
   const unpaidExpectedCount = allExpected.filter(e => e.registration.payment_status !== 'paid').length;
 
@@ -356,7 +360,7 @@ export const AttendanceMarkingTab: React.FC = () => {
       doc.setFontSize(16);
       doc.text(`Attendance - ${format(parseISO(selectedDate), 'EEEE, MMMM d, yyyy')}`, 14, 20);
       doc.setFontSize(10);
-      doc.text(`Expected: ${totalExpected} | Present: ${totalPresent} | Paid: ${paidExpectedCount} | Unpaid: ${unpaidExpectedCount}`, 14, 28);
+      doc.text(`Expected: ${totalExpected} | Present: ${totalPresent} | Absent: ${totalAbsent} | Paid: ${paidExpectedCount} | Unpaid: ${unpaidExpectedCount}`, 14, 28);
 
       const tableData = items.map(item => {
         const key = `${item.registration.id}-${item.child.childName}-${selectedDate}`;
@@ -390,7 +394,7 @@ export const AttendanceMarkingTab: React.FC = () => {
       console.error('PDF export error:', error);
       toast.error('Failed to generate PDF');
     }
-  }, [filteredExpectedChildren, attendanceStatus, selectedDate, totalExpected, totalPresent, paidExpectedCount, unpaidExpectedCount]);
+  }, [filteredExpectedChildren, attendanceStatus, selectedDate, totalExpected, totalPresent, totalAbsent, paidExpectedCount, unpaidExpectedCount]);
 
   const formatChildDates = (child: CampChild): string => {
     const dates = child.selectedDates || [];
@@ -565,7 +569,7 @@ export const AttendanceMarkingTab: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header with stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="pt-6">
             <div className="text-3xl font-bold text-primary">{totalExpected}</div>
@@ -576,6 +580,12 @@ export const AttendanceMarkingTab: React.FC = () => {
           <CardContent className="pt-6">
             <div className="text-3xl font-bold text-green-600">{totalPresent}</div>
             <div className="text-sm text-muted-foreground">Present Now</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-3xl font-bold text-orange-600">{totalAbsent}</div>
+            <div className="text-sm text-muted-foreground">Absent Today</div>
           </CardContent>
         </Card>
         <Card>

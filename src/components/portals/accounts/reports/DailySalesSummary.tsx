@@ -27,6 +27,13 @@ interface Props {
 const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DailySalesData[]>([]);
+  const [campTotals, setCampTotals] = useState<{
+    totalRevenue: number;
+    paidRevenue: number;
+    outstandingRevenue: number;
+    registrations: number;
+    childrenExpected: number;
+  } | null>(null);
 
   useEffect(() => {
     loadData();
@@ -35,8 +42,12 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const salesData = await financialReportService.generateDailySalesSummary(dateRange, activities);
+      const [salesData, camp] = await Promise.all([
+        financialReportService.generateDailySalesSummary(dateRange, activities),
+        financialReportService.getCampPeriodTotals(dateRange, activities),
+      ]);
       setData(salesData);
+      setCampTotals(camp);
     } catch (error) {
       console.error('Error loading daily sales data:', error);
     } finally {
@@ -196,6 +207,81 @@ const DailySalesSummary: React.FC<Props> = ({ dateRange, activities }) => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Camp Activity strip — mirrors the admin Camp Analytics tab so the same
+          words (Total Revenue / Paid Revenue / Outstanding) line up exactly. */}
+      {campTotals && (
+        <div className="space-y-2">
+          <div className="flex flex-col gap-0.5">
+            <h4 className="text-sm font-semibold text-foreground">Camp Activity (this period)</h4>
+            <p className="text-xs text-muted-foreground">
+              Figures above cover the whole business (manual invoices, vendor bills, non‑camp payments).
+              The strip below is camp registrations only — matches the Camp Analytics tab and Attendance.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:gap-4 grid-cols-2 sm:grid-cols-4">
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-primary" />
+                  Camp Total Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">{formatCurrency(campTotals.totalRevenue)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {campTotals.registrations} registration{campTotals.registrations === 1 ? '' : 's'} in period
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  Camp Paid Revenue
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-primary">{formatCurrency(campTotals.paidRevenue)}</div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {campTotals.totalRevenue > 0
+                    ? `${Math.round((campTotals.paidRevenue / campTotals.totalRevenue) * 100)}% of camp total`
+                    : '0% of camp total'}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Receipt className="h-4 w-4 text-destructive" />
+                  Camp Outstanding
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-destructive">{formatCurrency(campTotals.outstandingRevenue)}</div>
+                <p className="text-xs text-muted-foreground mt-1">Unpaid + Partial</p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                  <Users className="h-4 w-4 text-secondary-foreground" />
+                  Children Expected
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">{campTotals.childrenExpected}</div>
+                <p className="text-xs text-muted-foreground mt-1">Matches Attendance page</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      )}
+
+
 
       {/* Billed vs Collected Trend */}
       <Card>
