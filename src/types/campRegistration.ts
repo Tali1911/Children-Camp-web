@@ -37,6 +37,8 @@ export interface CampRegistration {
   invoice_number?: string;
   converted_to_invoice_at?: string;
   admin_notes?: string;
+  discount_amount?: number;
+  discount_id?: string;
 }
 
 export interface CampAttendance {

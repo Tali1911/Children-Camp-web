@@ -577,7 +577,14 @@ export const AllRegistrationsTab: React.FC = () => {
                       <TableCell className="capitalize text-xs sm:text-sm hidden md:table-cell">{reg.camp_type.replace('-', ' ')}</TableCell>
                       <TableCell className="text-xs sm:text-sm hidden lg:table-cell">{reg.location || 'Kurura Gate F'}</TableCell>
                       <TableCell className="text-xs sm:text-sm">{reg.children.length}</TableCell>
-                      <TableCell className="text-xs sm:text-sm">KES {reg.total_amount.toFixed(0)}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">
+                        KES {Math.max(0, (reg.total_amount || 0) - (Number((reg as any).discount_amount) || 0)).toFixed(0)}
+                        {Number((reg as any).discount_amount) > 0 && (
+                          <span className="ml-1 text-[10px] text-muted-foreground line-through">
+                            {reg.total_amount.toFixed(0)}
+                          </span>
+                        )}
+                      </TableCell>
                       <TableCell>{getPaymentBadge(reg.payment_status)}</TableCell>
                       <TableCell>{getDocTypeBadge(reg)}</TableCell>
                       <TableCell className="capitalize text-xs hidden lg:table-cell">{reg.registration_type.replace('_', ' ')}</TableCell>

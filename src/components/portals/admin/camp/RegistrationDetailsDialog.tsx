@@ -48,7 +48,52 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
   const [saving, setSaving] = useState(false);
   const [loadingPayment, setLoadingPayment] = useState(false);
 
-  const totalAmount = registration.total_amount || 0;
+  // Editable copies of children + discount
+  const [editedChildren, setEditedChildren] = useState(registration.children);
+  const [discountAmount, setDiscountAmount] = useState<number>(
+    Number((registration as any).discount_amount) || 0
+  );
+  const [discountReason, setDiscountReason] = useState('');
+
+  // Flat-rate camps: do not auto-recalculate from half/full toggles
+  const isFlatRateCamp =
+    registration.camp_type === 'little-forest' ||
+    registration.children?.some((c) => c.activityType === 'archery');
+
+  const HALF_PRICE = 1500;
+  const FULL_PRICE = 2500;
+
+  const recomputeChildPrice = (child: typeof editedChildren[number]): number => {
+    if (isFlatRateCamp || child.activityType === 'archery') return Number(child.price) || 0;
+    const sessions = child.selectedSessions;
+    if (Array.isArray(sessions)) {
+      // Legacy uniform: derive from each entry
+      return sessions.reduce((sum, s) => sum + (s === 'full' ? FULL_PRICE : HALF_PRICE), 0);
+    }
+    if (sessions && typeof sessions === 'object') {
+      return Object.values(sessions as Record<string, 'half' | 'full'>).reduce(
+        (sum, s) => sum + (s === 'full' ? FULL_PRICE : HALF_PRICE),
+        0
+      );
+    }
+    return Number(child.price) || 0;
+  };
+
+  const editedTotal = useMemo(
+    () => editedChildren.reduce((s, c) => s + (Number(c.price) || 0), 0),
+    [editedChildren]
+  );
+  const totalAmount = editing ? editedTotal : registration.total_amount || 0;
+  const netTotal = Math.max(0, totalAmount - (Number(discountAmount) || 0));
+
+  // Reset edits when dialog reopens
+  useEffect(() => {
+    if (open) {
+      setEditedChildren(registration.children);
+      setDiscountAmount(Number((registration as any).discount_amount) || 0);
+      setDiscountReason('');
+    }
+  }, [open, registration]);
 
   // Load existing payment amount when dialog opens or editing starts
   useEffect(() => {
@@ -59,7 +104,6 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
         const amount = await campRegistrationService.getAmountPaidForRegistration(registration.id!);
         setAmountPaid(amount);
       } catch {
-        // Fallback: derive from status
         if (registration.payment_status === 'paid') setAmountPaid(totalAmount);
         else if (registration.payment_status === 'partial') setAmountPaid(0);
         else setAmountPaid(0);
@@ -68,39 +112,89 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
       }
     };
     loadExistingPayment();
-  }, [open, registration.id, registration.payment_status, totalAmount]);
+  }, [open, registration.id, registration.payment_status]);
 
-  const derivedStatus = useMemo(() => derivePaymentStatus(amountPaid, totalAmount), [amountPaid, totalAmount]);
-  const balanceDue = Math.max(0, totalAmount - amountPaid);
+  const derivedStatus = useMemo(() => derivePaymentStatus(amountPaid, netTotal), [amountPaid, netTotal]);
+  const balanceDue = Math.max(0, netTotal - amountPaid);
 
   const statusBadgeVariant = derivedStatus === 'paid' ? 'default' : derivedStatus === 'partial' ? 'secondary' : 'destructive';
 
+  const handleSessionChange = (childIdx: number, dateKey: string, newSession: 'half' | 'full') => {
+    setEditedChildren((prev) => {
+      const next = [...prev];
+      const child = { ...next[childIdx] };
+      const sessions = child.selectedSessions;
+      let updatedSessions: Record<string, 'half' | 'full'>;
+      if (Array.isArray(sessions)) {
+        // Convert legacy array to keyed map using selectedDates
+        const map: Record<string, 'half' | 'full'> = {};
+        (child.selectedDates || []).forEach((d, i) => {
+          map[d] = (sessions[i] as 'half' | 'full') || 'half';
+        });
+        updatedSessions = { ...map, [dateKey]: newSession };
+      } else {
+        updatedSessions = { ...(sessions as Record<string, 'half' | 'full'>), [dateKey]: newSession };
+      }
+      child.selectedSessions = updatedSessions;
+      child.price = recomputeChildPrice(child);
+      next[childIdx] = child;
+      return next;
+    });
+  };
+
   const handleSavePayment = async () => {
-    // Block paid/partial without a real payment method
     if ((derivedStatus === 'paid' || derivedStatus === 'partial') && (!paymentMethod || paymentMethod === 'pending')) {
       toast.error('Select a payment method (Card, M-Pesa, Cash, or Bank Transfer) before saving.');
       return;
     }
     try {
       setSaving(true);
+
+      // 1. Save children + total if anything was edited
+      const childrenChanged =
+        JSON.stringify(editedChildren) !== JSON.stringify(registration.children) ||
+        editedTotal !== (registration.total_amount || 0);
+      if (childrenChanged) {
+        await campRegistrationService.updateChildrenAndTotal(
+          registration.id!,
+          editedChildren,
+          editedTotal
+        );
+      }
+
+      // 2. Save payment + discount
       await campRegistrationService.updatePaymentWithAmount(
         registration.id!,
         amountPaid,
-        totalAmount,
+        editedTotal || totalAmount,
         paymentMethod || undefined,
         paymentReference || undefined,
         {
           parentName: registration.parent_name,
           campType: registration.camp_type,
-          children: registration.children,
+          children: editedChildren,
+          discountAmount: Number(discountAmount) || 0,
         }
       );
-      toast.success('Payment info updated');
+
+      // 3. Audit discount in admin notes
+      const previousDiscount = Number((registration as any).discount_amount) || 0;
+      if ((Number(discountAmount) || 0) !== previousDiscount) {
+        const reason = discountReason.trim()
+          ? ` – ${discountReason.trim()}`
+          : '';
+        await campRegistrationService.addAdminNote(
+          registration.id!,
+          `Discount set to KES ${Number(discountAmount) || 0}${reason}`
+        );
+      }
+
+      toast.success('Registration updated');
       onUpdate();
       setEditing(false);
     } catch (error) {
-      console.error('Error updating payment:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to update payment');
+      console.error('Error updating registration:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to update registration');
     } finally {
       setSaving(false);
     }
@@ -170,47 +264,114 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
 
           {/* Children Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-3">Children Registered</h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold">Children Registered</h3>
+              {!editing && (
+                <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+                  Edit Registration
+                </Button>
+              )}
+            </div>
             <div className="space-y-4">
-              {registration.children.map((child, index) => (
-                <div key={index} className="border rounded-lg p-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <h4 className="font-medium">{child.childName}</h4>
-                    <Badge>{child.ageRange}</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Days: </span>
-                      {child.selectedDays.map((day, idx) => {
-                        const dateStr = child.selectedDates?.[idx];
-                        return dateStr 
-                          ? `${day} (${formatShortDate(dateStr)})`
-                          : day;
-                      }).join(', ')}
+              {(editing ? editedChildren : registration.children).map((child, index) => {
+                const dates = child.selectedDates || [];
+                const sessionsMap: Record<string, 'half' | 'full'> = Array.isArray(child.selectedSessions)
+                  ? dates.reduce((acc, d, i) => {
+                      acc[d] = ((child.selectedSessions as any)[i] as 'half' | 'full') || 'half';
+                      return acc;
+                    }, {} as Record<string, 'half' | 'full'>)
+                  : (child.selectedSessions as Record<string, 'half' | 'full'>);
+
+                return (
+                  <div key={index} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium">{child.childName}</h4>
+                      <Badge>{child.ageRange}</Badge>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground">Sessions: </span>
-                      {Array.isArray(child.selectedSessions) 
-                        ? child.selectedSessions.join(', ')
-                        : Object.entries(child.selectedSessions as Record<string, 'half' | 'full'>)
-                            .map(([date, session]) => `${date}: ${session}`)
-                            .join(', ')
-                      }
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Price: </span>
-                      KES {child.price.toFixed(2)}
-                    </div>
-                    {child.specialNeeds && (
-                      <div className="col-span-2">
-                        <span className="text-muted-foreground">Special Needs: </span>
-                        {child.specialNeeds}
+
+                    {editing && !isFlatRateCamp && child.activityType !== 'archery' && dates.length > 0 ? (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">
+                          Sessions per day (toggle Half / Full to adjust price)
+                        </Label>
+                        <div className="space-y-1.5">
+                          {dates.map((dateStr, i) => {
+                            const current = sessionsMap?.[dateStr] || 'half';
+                            const dayLabel = child.selectedDays?.[i] || formatShortDate(dateStr);
+                            return (
+                              <div key={dateStr} className="flex items-center justify-between gap-2 text-sm">
+                                <span className="min-w-[140px]">
+                                  {dayLabel} <span className="text-muted-foreground">({formatShortDate(dateStr)})</span>
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={current === 'half' ? 'default' : 'outline'}
+                                    onClick={() => handleSessionChange(index, dateStr, 'half')}
+                                  >
+                                    Half (1,500)
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant={current === 'full' ? 'default' : 'outline'}
+                                    onClick={() => handleSessionChange(index, dateStr, 'full')}
+                                  >
+                                    Full (2,500)
+                                  </Button>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <div className="flex justify-between text-sm pt-1 border-t">
+                          <span className="text-muted-foreground">Child subtotal</span>
+                          <span className="font-semibold">KES {Number(child.price).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="text-muted-foreground">Days: </span>
+                          {child.selectedDays.map((day, idx) => {
+                            const dateStr = child.selectedDates?.[idx];
+                            return dateStr
+                              ? `${day} (${formatShortDate(dateStr)})`
+                              : day;
+                          }).join(', ')}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Sessions: </span>
+                          {Array.isArray(child.selectedSessions)
+                            ? child.selectedSessions.join(', ')
+                            : Object.entries(child.selectedSessions as Record<string, 'half' | 'full'>)
+                                .map(([date, session]) => `${formatShortDate(date)}: ${session}`)
+                                .join(', ')
+                          }
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground">Price: </span>
+                          KES {Number(child.price).toFixed(2)}
+                        </div>
+                        {child.specialNeeds && (
+                          <div className="col-span-2">
+                            <span className="text-muted-foreground">Special Needs: </span>
+                            {child.specialNeeds}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
+            {editing && (
+              <div className="flex justify-end mt-3 text-sm">
+                <span className="text-muted-foreground mr-2">Registration total:</span>
+                <span className="font-semibold">KES {editedTotal.toFixed(2)}</span>
+              </div>
+            )}
           </div>
 
           <Separator />
@@ -225,18 +386,61 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label>Amount Paid (KES)</Label>
+                    <Label>Discount (KES)</Label>
                     <Input
                       type="number"
                       min={0}
                       max={totalAmount}
+                      step={1}
+                      value={discountAmount}
+                      onChange={(e) => setDiscountAmount(Math.max(0, Number(e.target.value)))}
+                      placeholder="0"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Net total: KES {netTotal.toFixed(2)}
+                    </p>
+                  </div>
+                  <div>
+                    <Label>Discount reason (optional)</Label>
+                    <Input
+                      value={discountReason}
+                      onChange={(e) => setDiscountReason(e.target.value)}
+                      placeholder="e.g. sibling discount, loyalty"
+                    />
+                  </div>
+                </div>
+
+                <div className="rounded-md bg-muted p-3 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Gross total</span>
+                    <span>KES {totalAmount.toFixed(2)}</span>
+                  </div>
+                  {Number(discountAmount) > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Discount</span>
+                      <span>− KES {Number(discountAmount).toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between font-semibold border-t pt-1">
+                    <span>Net total</span>
+                    <span>KES {netTotal.toFixed(2)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label>Amount Paid (KES)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      max={netTotal}
                       step={1}
                       value={amountPaid}
                       onChange={(e) => setAmountPaid(Math.max(0, Number(e.target.value)))}
                       placeholder="0"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Total: KES {totalAmount.toFixed(2)}
+                      Balance: KES {balanceDue.toFixed(2)}
                     </p>
                   </div>
                   <div>
@@ -290,9 +494,23 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
             ) : (
               <div className="space-y-2">
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Total Amount:</span>
+                  <span className="text-muted-foreground">Gross Total:</span>
                   <span className="font-bold text-lg">KES {totalAmount.toFixed(2)}</span>
                 </div>
+                {Number((registration as any).discount_amount) > 0 && (
+                  <>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Discount:</span>
+                      <span className="font-semibold">
+                        − KES {Number((registration as any).discount_amount).toFixed(2)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Net Total:</span>
+                      <span className="font-bold">KES {netTotal.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Amount Paid:</span>
                   <span className="font-bold">
@@ -322,7 +540,7 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
                   </div>
                 )}
                 <Button variant="outline" onClick={() => setEditing(true)} className="mt-2">
-                  Edit Payment Info
+                  Edit Registration
                 </Button>
               </div>
             )}

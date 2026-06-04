@@ -254,27 +254,36 @@ export const campRegistrationService = {
       parentName?: string;
       campType?: string;
       children?: { childName: string; price: number }[];
+      discountAmount?: number;
     }
   ) {
-    // Derive status
+    const discount = Math.max(0, Number(context?.discountAmount) || 0);
+    const effectiveTotal = Math.max(0, totalAmount - discount);
+
+    // Derive status against the discounted (net) total
     let status: 'unpaid' | 'paid' | 'partial' = 'unpaid';
-    if (amountPaid >= totalAmount) status = 'paid';
+    if (amountPaid >= effectiveTotal && effectiveTotal > 0) status = 'paid';
+    else if (amountPaid >= effectiveTotal && effectiveTotal === 0 && discount > 0) status = 'paid';
     else if (amountPaid > 0) status = 'partial';
 
-    // Guard: paid/partial registrations must record a real payment method.
+    // Guard: paid/partial registrations must record a real payment method
+    // (skip when amountPaid is 0 but discount makes it paid — still require method for paid).
     if ((status === 'paid' || status === 'partial') && (!method || method === 'pending')) {
       throw new Error('Payment method is required for paid/partial registrations. Choose mpesa, card, cash_ground, or bank_transfer.');
     }
 
-    // 1. Update registration record
-    const updates: Partial<CampRegistration> = { payment_status: status };
+    // 1. Update registration record (include discount_amount and possibly billing_doc_type)
+    const updates: Partial<CampRegistration> & Record<string, any> = { payment_status: status };
     if (method) updates.payment_method = method;
     if (reference) updates.payment_reference = reference;
-    await this.updateRegistration(id, updates);
+    if (context?.discountAmount !== undefined) updates.discount_amount = discount;
+    if (status === 'paid') {
+      updates.billing_doc_type = 'paid';
+    }
+    await this.updateRegistration(id, updates as Partial<CampRegistration>);
 
     // 2. Upsert payment record (delete old + insert new to avoid duplicate constraint)
     try {
-      // Remove existing payments for this registration
       await (supabase as any).from('payments').delete().eq('registration_id', id).eq('source', 'camp_registration');
 
       if (amountPaid > 0) {
@@ -287,23 +296,27 @@ export const campRegistrationService = {
           amount: amountPaid,
           paymentMethod: (method === 'pending' ? 'other' : method) || 'mpesa',
           paymentReference: reference,
-          notes: `Admin payment update – KES ${amountPaid} of ${totalAmount}`,
+          notes: `Admin payment update – KES ${amountPaid} of ${effectiveTotal} (gross ${totalAmount}, discount ${discount})`,
         });
       }
     } catch (err) {
       console.error('Error upserting payment record:', err);
     }
 
-    // 3. Update accounts_action_items for each child
+    // 3. Update accounts_action_items for each child (pro-rate discount)
     try {
-      const childCount = context?.children?.length || 1;
+      const children = context?.children || [];
+      const childCount = children.length || 1;
       const perChildPaid = Math.round((amountPaid / childCount) * 100) / 100;
+      const perChildDiscount = Math.round((discount / childCount) * 100) / 100;
       const newItemStatus = status === 'paid' ? 'completed' : 'pending';
 
-      for (const child of context?.children || []) {
+      for (const child of children) {
+        const childDue = Math.max(0, (Number(child.price) || 0) - perChildDiscount);
         await (supabase as any)
           .from('accounts_action_items')
           .update({
+            amount_due: childDue,
             amount_paid: perChildPaid,
             status: newItemStatus,
           })
@@ -314,7 +327,18 @@ export const campRegistrationService = {
       console.error('Error updating action items:', err);
     }
 
-    return { status, amountPaid };
+    return { status, amountPaid, effectiveTotal, discount };
+  },
+
+  /**
+   * Update children array + recomputed total_amount for a registration.
+   * Used when an operator adjusts a child's session (half/full) after registration.
+   */
+  async updateChildrenAndTotal(id: string, children: CampChild[], newTotal: number) {
+    return this.updateRegistration(id, {
+      children,
+      total_amount: newTotal,
+    } as Partial<CampRegistration>);
   },
 
   async searchRegistrations(searchTerm: string) {
