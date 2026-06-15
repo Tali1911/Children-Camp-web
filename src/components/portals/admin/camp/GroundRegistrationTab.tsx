@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -152,16 +152,16 @@ export const GroundRegistrationTab: React.FC = () => {
       return total;
     }
 
-    // Single date: use selected sessions as before
-    const datesCount = 1;
-    const sessionPrices = child.selectedSessions?.map(s =>
-      sessions.find(session => session.value === s)?.price || 0
-    ) || [];
-    const avgSessionPrice = sessionPrices.length > 0
-      ? sessionPrices.reduce((a, b) => a + b, 0) / sessionPrices.length
-      : 0;
+    // Single date: price = first VALID selected session (matches what onSubmit persists at [0]).
+    // Filter out stale values that don't belong to the current sessions catalog
+    // (prevents 0-priced ghosts like 'half' on Little Explorers from being averaged in).
+    const validSelections = (child.selectedSessions || []).filter(s =>
+      sessions.some(session => session.value === s)
+    );
+    const firstValid = validSelections[0] ?? sessions[0]?.value;
+    const sessionPrice = sessions.find(session => session.value === firstValid)?.price || 0;
 
-    return datesCount * avgSessionPrice;
+    return sessionPrice;
   };
 
   const calculateTotalAmount = () => {
@@ -182,10 +182,10 @@ export const GroundRegistrationTab: React.FC = () => {
   };
 
   const toggleSession = (childIndex: number, session: string) => {
+    // Single-select: clicking a session replaces the selection. onSubmit only persists
+    // selectedSessions[0], so keeping a single value here prevents stale/ambiguous state.
     const currentSessions = children[childIndex].selectedSessions || [];
-    const newSessions = currentSessions.includes(session)
-      ? currentSessions.filter(s => s !== session)
-      : [...currentSessions, session];
+    const newSessions = currentSessions[0] === session ? [] : [session];
     setValue(`children.${childIndex}.selectedSessions`, newSessions);
     updateChildPrice(childIndex);
   };
@@ -194,6 +194,20 @@ export const GroundRegistrationTab: React.FC = () => {
     const price = calculateChildPrice(childIndex);
     setValue(`children.${childIndex}.price`, price);
   };
+
+  // When camp type or location changes, drop any session selections that no longer
+  // belong to the active catalog (e.g. 'half' lingering after switching to Little Explorers).
+  useEffect(() => {
+    const validValues = getSessionsForLocation().map(s => s.value);
+    (children || []).forEach((child, idx) => {
+      const filtered = (child?.selectedSessions || []).filter(s => validValues.includes(s));
+      if (filtered.length !== (child?.selectedSessions || []).length) {
+        setValue(`children.${idx}.selectedSessions`, filtered);
+      }
+      updateChildPrice(idx);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campType, selectedLocation]);
 
   // Client lookup
   const handleClientLookup = async () => {

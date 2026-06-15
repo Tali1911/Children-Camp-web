@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
     }
 
     // ---------- VERIFICATION FLOW ----------
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY')
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY') || Deno.env.get('PAYSTACK_SECRET_API')
     if (!PAYSTACK_SECRET_KEY) {
       return new Response(
         JSON.stringify({ success: false, error: 'PAYSTACK_SECRET_KEY not configured' }),

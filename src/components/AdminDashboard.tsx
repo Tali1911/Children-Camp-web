@@ -16,6 +16,8 @@ import SecurityPanel from './admin/SecurityPanel';
 import CompanyConfigPanel from './admin/CompanyConfigPanel';
 import ProfileEditor from './profile/ProfileEditor';
 import CoachAvailabilityView from './admin/CoachAvailabilityView';
+import BudgetManagement from './portals/accounts/BudgetManagement';
+import ExpenseManagement from './portals/accounts/ExpenseManagement';
 
 interface AdminDashboardProps {
   activeTab: string;
@@ -50,6 +52,10 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({ activeTab }) => {
         return <AuditLogsViewer />;
       case 'coach-availability':
         return <CoachAvailabilityView />;
+      case 'budget':
+        return <BudgetManagement />;
+      case 'expenses':
+        return <ExpenseManagement />;
       case 'my-profile':
         return <ProfileEditor />;
       default:

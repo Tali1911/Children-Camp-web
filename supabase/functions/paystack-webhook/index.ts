@@ -26,7 +26,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY')
+    const PAYSTACK_SECRET_KEY = Deno.env.get('PAYSTACK_SECRET_KEY') || Deno.env.get('PAYSTACK_SECRET_API')
     if (!PAYSTACK_SECRET_KEY) {
       console.error('PAYSTACK_SECRET_KEY not configured')
       return new Response(JSON.stringify({ error: 'Server misconfigured' }), {

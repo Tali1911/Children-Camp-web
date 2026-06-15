@@ -16,8 +16,10 @@ import { Separator } from '@/components/ui/separator';
 import { CampRegistration } from '@/types/campRegistration';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { toast } from 'sonner';
-import { Save, User, Mail, Phone, Calendar, DollarSign, FileText, ShieldCheck, ShieldX } from 'lucide-react';
+import { Save, User, Mail, Phone, Calendar, DollarSign, FileText, ShieldCheck, ShieldX, Printer } from 'lucide-react';
 import { formatShortDate } from '@/utils/dateMapper';
+import { printCampReceipt } from '@/utils/printReceipt';
+import { resolveCampAmountPaid } from '@/utils/campPayment';
 
 interface RegistrationDetailsDialogProps {
   open: boolean;
@@ -100,19 +102,20 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
     if (!open) return;
     const loadExistingPayment = async () => {
       setLoadingPayment(true);
+      const gross = registration.total_amount || 0;
+      const disc = Number((registration as any).discount_amount) || 0;
+      const net = Math.max(0, gross - disc);
       try {
         const amount = await campRegistrationService.getAmountPaidForRegistration(registration.id!);
-        setAmountPaid(amount);
+        setAmountPaid(resolveCampAmountPaid(registration, amount, net));
       } catch {
-        if (registration.payment_status === 'paid') setAmountPaid(totalAmount);
-        else if (registration.payment_status === 'partial') setAmountPaid(0);
-        else setAmountPaid(0);
+        setAmountPaid(resolveCampAmountPaid(registration, 0, net));
       } finally {
         setLoadingPayment(false);
       }
     };
     loadExistingPayment();
-  }, [open, registration.id, registration.payment_status]);
+  }, [open, registration.id, registration.payment_status, registration.billing_doc_type, registration.admin_notes, registration.total_amount]);
 
   const derivedStatus = useMemo(() => derivePaymentStatus(amountPaid, netTotal), [amountPaid, netTotal]);
   const balanceDue = Math.max(0, netTotal - amountPaid);
@@ -378,10 +381,30 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
 
           {/* Payment Information */}
           <div>
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              <DollarSign className="h-5 w-5" />
-              Payment Information
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <DollarSign className="h-5 w-5" />
+                Payment Information
+              </h3>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() =>
+                  printCampReceipt({
+                    registration,
+                    amountPaid,
+                    totalAmount,
+                    discountAmount: Number((registration as any).discount_amount) || 0,
+                    paymentMethod: registration.payment_method,
+                    paymentReference: registration.payment_reference || undefined,
+                  })
+                }
+                disabled={loadingPayment}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Receipt
+              </Button>
+            </div>
             {editing ? (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
@@ -539,9 +562,11 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
                     <span className="font-mono text-sm">{registration.payment_reference}</span>
                   </div>
                 )}
-                <Button variant="outline" onClick={() => setEditing(true)} className="mt-2">
-                  Edit Registration
-                </Button>
+                <div className="flex gap-2 mt-2">
+                  <Button variant="outline" onClick={() => setEditing(true)}>
+                    Edit Registration
+                  </Button>
+                </div>
               </div>
             )}
           </div>

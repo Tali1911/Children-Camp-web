@@ -186,6 +186,8 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'company', label: 'Company Config', icon: Building, description: 'Set up company details, branding, and organisational structure' },
           { id: 'security', label: 'Security', icon: Shield, description: 'Manage authentication policies, permissions, and security rules' },
           { id: 'coach-availability', label: 'Coach Availability', icon: CalendarOff, description: 'View and manage coach availability schedules across programmes' },
+          { id: 'budget', label: 'Budget', icon: DollarSign, description: 'Set and monitor budgets by category to control spending' },
+          { id: 'expenses', label: 'Expenses', icon: Receipt, description: 'Record and categorize business expenses, attach receipts, and match uploads' },
           { id: 'my-profile', label: 'My Profile', icon: UserCircle, description: 'View and edit your personal profile information' },
           { id: 'communication', label: 'Messages', icon: MessageSquare, description: 'Send and receive internal messages with your team' }
         ];
