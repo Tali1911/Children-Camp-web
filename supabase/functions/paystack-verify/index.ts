@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
     // Fetch registration (needed for both flows)
     const { data: reg, error: regErr } = await supabase
       .from('camp_registrations')
-      .select('id, parent_name, email, camp_type, total_amount, payment_status')
+      .select('id, parent_name, email, camp_type, total_amount, discount_amount, payment_status')
       .eq('id', registrationId)
       .maybeSingle()
 
@@ -137,7 +137,7 @@ Deno.serve(async (req) => {
     const paymentMethod =
       channel === 'mobile_money' ? 'mpesa' : channel === 'card' ? 'card' : 'card'
 
-    const totalAmount = Number(reg.total_amount) || 0
+    const totalAmount = Math.max(0, (Number(reg.total_amount) || 0) - (Number(reg.discount_amount) || 0))
 
     // Insert this successful payment (idempotent on payment_reference).
     // Note: we deliberately do NOT key on (registration_id, source) any more
@@ -200,13 +200,16 @@ Deno.serve(async (req) => {
     const newStatus =
       totalPaid >= totalAmount ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid'
 
+    const registrationUpdates: Record<string, string> = {
+      payment_status: newStatus,
+      payment_method: paymentMethod,
+      payment_reference: reference,
+    }
+    if (newStatus === 'paid') registrationUpdates.billing_doc_type = 'paid'
+
     const { error: updErr } = await supabase
       .from('camp_registrations')
-      .update({
-        payment_status: newStatus,
-        payment_method: paymentMethod,
-        payment_reference: reference,
-      })
+      .update(registrationUpdates)
       .eq('id', registrationId)
 
     if (updErr) {

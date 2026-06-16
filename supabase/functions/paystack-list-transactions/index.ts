@@ -16,6 +16,50 @@ const jsonResponse = (body: Record<string, unknown>, status = 200) =>
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   })
 
+const reconcileCampRegistrationPayment = async (
+  admin: any,
+  registrationId: string | null,
+  paymentMethod?: string | null,
+  reference?: string | null,
+) => {
+  if (!registrationId) return
+
+  const { data: reg, error: regErr } = await admin
+    .from('camp_registrations')
+    .select('id, total_amount, discount_amount')
+    .eq('id', registrationId)
+    .maybeSingle()
+
+  if (regErr || !reg) return
+
+  const { data: allPaid } = await admin
+    .from('payments')
+    .select('amount, status, source')
+    .eq('registration_id', registrationId)
+
+  const totalPaid = (allPaid || [])
+    .filter((p: any) => {
+      const s = String(p.status || '').toLowerCase()
+      const src = String(p.source || '')
+      return src !== 'camp_registration_attempt' && (s === 'completed' || s === 'paid' || s === '')
+    })
+    .reduce((sum: number, p: any) => sum + (Number(p.amount) || 0), 0)
+
+  const netTotal = Math.max(0, (Number(reg.total_amount) || 0) - (Number(reg.discount_amount) || 0))
+  const newStatus = totalPaid >= netTotal ? 'paid' : totalPaid > 0 ? 'partial' : 'unpaid'
+  const updates: Record<string, string> = { payment_status: newStatus }
+  if (newStatus === 'paid') updates.billing_doc_type = 'paid'
+  if (paymentMethod) updates.payment_method = paymentMethod
+  if (reference) updates.payment_reference = reference
+
+  const { error: updErr } = await admin
+    .from('camp_registrations')
+    .update(updates)
+    .eq('id', registrationId)
+
+  if (updErr) console.error('Registration reconciliation failed:', registrationId, updErr.message)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders })
@@ -122,11 +166,17 @@ Deno.serve(async (req) => {
 
       const { data: existing } = await admin
         .from('payments')
-        .select('id')
+        .select('id, registration_id, payment_method')
         .eq('payment_reference', reference)
         .maybeSingle()
 
       if (existing) {
+        await reconcileCampRegistrationPayment(
+          admin,
+          existing.registration_id,
+          existing.payment_method,
+          reference,
+        )
         skipped++
         continue
       }
@@ -178,6 +228,7 @@ Deno.serve(async (req) => {
         console.error('Insert failed for', reference, insErr.message)
         skipped++
       } else {
+        await reconcileCampRegistrationPayment(admin, regRow?.id || null, paymentMethod, reference)
         inserted++
       }
     }

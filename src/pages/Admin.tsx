@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useSessionTimeout } from "@/hooks/useSessionTimeout";
+import { useSystemSetting } from "@/hooks/useSystemSettings";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -26,8 +27,10 @@ const Admin = () => {
   const handleBackToHome = () => {
     navigate("/");
   };
+  const sessionTimeoutSetting = useSystemSetting("session_timeout_minutes", "60");
+  const sessionTimeoutMinutes = Math.max(1, parseInt(sessionTimeoutSetting, 10) || 60);
   useSessionTimeout({
-    timeoutDuration: 3 * 60 * 1000,
+    timeoutDuration: sessionTimeoutMinutes * 60 * 1000,
     warningDuration: 30 * 1000,
     redirectPath: "/",
     onTimeout: () => {

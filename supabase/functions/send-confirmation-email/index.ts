@@ -515,8 +515,36 @@ const handler = async (req: Request): Promise<Response> => {
       console.error("⚠️ Error tracking email delivery:", trackingError);
     }
 
-    // Send parallel admin notification email to amusekenya@gmail.com
-    const adminEmail = "amusekenya@gmail.com";
+    // Resolve admin notification recipient & toggle from system_settings (with fallback)
+    let adminEmail = "amusekenya@gmail.com";
+    let notifyOnRegistration = true;
+    try {
+      const { data: settingsRows } = await supabase
+        .from("system_settings")
+        .select("key, value")
+        .in("key", ["admin_notification_email", "notify_on_registration"]);
+      const settingsMap: Record<string, string> = {};
+      (settingsRows as { key: string; value: string }[] | null)?.forEach(r => {
+        settingsMap[r.key] = r.value;
+      });
+      if (settingsMap.admin_notification_email && settingsMap.admin_notification_email.includes("@")) {
+        adminEmail = settingsMap.admin_notification_email.trim();
+      }
+      if (settingsMap.notify_on_registration === "false") {
+        notifyOnRegistration = false;
+      }
+    } catch (settingsError) {
+      console.warn("⚠️ Could not load system_settings, using defaults:", settingsError);
+    }
+
+    if (!notifyOnRegistration) {
+      console.log("🔕 Admin registration notifications disabled in system_settings; skipping admin email.");
+      return new Response(
+        JSON.stringify({ success: true, data: emailResponse }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
     console.log("📤 Sending admin notification email to:", adminEmail);
 
     // Build admin notification email with registration details
