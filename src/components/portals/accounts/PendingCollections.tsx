@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { Search, FileText, CheckCircle, RefreshCw, Send, DollarSign, Mail, Receipt } from 'lucide-react';
+import { Search, FileText, CheckCircle, RefreshCw, Send, DollarSign, Mail, Receipt, Download, FileDown } from 'lucide-react';
 import { accountsActionService, AccountsActionItem } from '@/services/accountsActionService';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { financialService } from '@/services/financialService';
@@ -17,6 +17,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { formatDistanceToNow } from 'date-fns';
+import { downloadPendingInvoicePDF, downloadFamilyInvoicePDF, exportPendingCollectionsCSV } from '@/utils/pendingCollectionsExport';
 
 // Helper to get a stable parent key from an action item
 const getParentKey = (item: AccountsActionItem) =>
@@ -374,7 +375,23 @@ export const PendingCollections: React.FC = () => {
               <FileText className="h-5 w-5" />
               Pending Collections
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  if (filteredItems.length === 0) {
+                    toast.info('No rows to export');
+                    return;
+                  }
+                  const stamp = new Date().toISOString().slice(0, 10);
+                  exportPendingCollectionsCSV(filteredItems, `pending-collections-${stamp}.csv`);
+                  toast.success(`Exported ${filteredItems.length} rows to CSV`);
+                }}
+              >
+                <FileDown className="h-4 w-4 mr-1" />
+                Export CSV
+              </Button>
               <Button variant="outline" size="sm" onClick={handleSendTestDigest} disabled={sendingDigest}>
                 <Mail className="h-4 w-4 mr-1" />
                 {sendingDigest ? 'Sending...' : 'Send Digest'}
@@ -563,44 +580,74 @@ export const PendingCollections: React.FC = () => {
                           {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                         </TableCell>
                         <TableCell className="text-right">
-                          {item.status === 'pending' && (
-                            <div className="flex gap-1 justify-end">
-                              {/* Family Invoice button — only on first row per parent, only if no invoice sent yet */}
-                              {isFirst && !parentHasInvoiceSent(parentKey) && (
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => openFamilyAction(item, 'invoice')}
-                                >
-                                  <Send className="h-3 w-3 mr-1" />
-                                  <span className="hidden sm:inline">
-                                    {familyChildCount > 1 ? 'Family Invoice' : 'Invoice'}
-                                  </span>
-                                </Button>
-                              )}
-                              {/* Family Payment button — only on first row per parent */}
-                              {isFirst && (
-                                <Button
-                                  size="sm"
-                                  onClick={() => openFamilyAction(item, 'payment')}
-                                >
-                                  <DollarSign className="h-3 w-3 mr-1" />
-                                  <span className="hidden sm:inline">
-                                    {familyPaid > 0 ? `Partial — KES ${familyPaid.toLocaleString()}` : 'Record Payment'}
-                                  </span>
-                                </Button>
-                              )}
-                            </div>
-                          )}
-                          {item.status === 'in_progress' && (
-                            <Button size="sm" variant="outline" onClick={() => handleMarkComplete(item)}>
-                              <CheckCircle className="h-3 w-3 mr-1" />
-                              Complete
+                          <div className="flex gap-1 justify-end flex-wrap">
+                            {/* Per-row personal invoice PDF */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              title="Download personal invoice PDF for this child"
+                              onClick={() => {
+                                downloadPendingInvoicePDF(item);
+                                toast.success('Personal invoice PDF downloaded');
+                              }}
+                            >
+                              <Download className="h-3 w-3 sm:mr-1" />
+                              <span className="hidden sm:inline">PDF</span>
                             </Button>
-                          )}
-                          {item.status === 'completed' && (
-                            <span className="text-xs text-muted-foreground">Done</span>
-                          )}
+                            {/* Family invoice PDF — only on first row per parent when 2+ children */}
+                            {isFirst && familyChildCount > 1 && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                title={`Download consolidated family invoice (${familyChildCount} children)`}
+                                onClick={async () => {
+                                  await downloadFamilyInvoicePDF(agg?.items || [item]);
+                                  toast.success('Family invoice PDF downloaded');
+                                }}
+                              >
+                                <Download className="h-3 w-3 sm:mr-1" />
+                                <span className="hidden sm:inline">Family PDF</span>
+                              </Button>
+                            )}
+                            {item.status === 'pending' && (
+                              <>
+                                {/* Family Invoice button — only on first row per parent, only if no invoice sent yet */}
+                                {isFirst && !parentHasInvoiceSent(parentKey) && (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openFamilyAction(item, 'invoice')}
+                                  >
+                                    <Send className="h-3 w-3 mr-1" />
+                                    <span className="hidden sm:inline">
+                                      {familyChildCount > 1 ? 'Family Invoice' : 'Invoice'}
+                                    </span>
+                                  </Button>
+                                )}
+                                {/* Family Payment button — only on first row per parent */}
+                                {isFirst && (
+                                  <Button
+                                    size="sm"
+                                    onClick={() => openFamilyAction(item, 'payment')}
+                                  >
+                                    <DollarSign className="h-3 w-3 mr-1" />
+                                    <span className="hidden sm:inline">
+                                      {familyPaid > 0 ? `Partial — KES ${familyPaid.toLocaleString()}` : 'Record Payment'}
+                                    </span>
+                                  </Button>
+                                )}
+                              </>
+                            )}
+                            {item.status === 'in_progress' && (
+                              <Button size="sm" variant="outline" onClick={() => handleMarkComplete(item)}>
+                                <CheckCircle className="h-3 w-3 mr-1" />
+                                Complete
+                              </Button>
+                            )}
+                            {item.status === 'completed' && (
+                              <span className="text-xs text-muted-foreground self-center">Done</span>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     );

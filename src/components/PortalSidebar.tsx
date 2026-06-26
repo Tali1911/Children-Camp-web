@@ -181,6 +181,7 @@ const PortalSidebar: React.FC<PortalSidebarProps> = ({
           { id: 'customer-management', label: 'Customer Management', icon: Users, description: 'View and manage customer records and contact information' },
           { id: 'camp-registrations', label: 'Camp Registrations', icon: Tent, description: 'Manage camp sign-ups, check-ins, and attendance records' },
           { id: 'program-registrations', label: 'Program Registrations', icon: Calendar, description: 'Manage enrolments and registrations for coaching programmes' },
+          { id: 'collections', label: 'Pending Collections', icon: Receipt, description: 'Help accounts follow up on unpaid attendees — same view & edit rights as the Accounts team, with PDF invoices and CSV export' },
           { id: 'camp-analytics', label: 'Camp Analytics', icon: TrendingUp, description: 'Registration and revenue analytics across all camp programs' },
           { id: 'system', label: 'System Admin', icon: Database, description: 'Database management, backups, and system maintenance tools' },
           { id: 'settings', label: 'System Settings', icon: Settings, description: 'Configure global system settings and feature toggles' },
