@@ -44,6 +44,7 @@ import { ClientAuthProvider } from "./hooks/useClientAuth";
 import ProgramRegistration from "./components/ProgramRegistration";
 import FloatingFAQ from "./components/FloatingFAQ";
 import CookieConsentBanner from "./components/CookieConsentBanner";
+import PublicBodyClass from "./components/PublicBodyClass";
 import GoogleOneTap from "./components/GoogleOneTap";
 import { PageTracker } from "./hooks/usePageTracking";
 import { useState } from "react";
@@ -133,6 +134,7 @@ function App() {
               <Route path="*" element={<NotFound />} />
             </Routes>
             <PageTracker />
+            <PublicBodyClass />
             <GoogleOneTap />
             <FloatingFAQ />
             <CookieConsentBanner />

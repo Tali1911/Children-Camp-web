@@ -88,6 +88,26 @@ html, body {
   font-family: 'Inter', sans-serif;
 }
 
+/* Public site heading style: bold dark-green serif (excludes hero carousel and admin/portals) */
+body.is-public h1:not(.hero-heading):not(.no-serif),
+body.is-public h2:not(.hero-heading):not(.no-serif),
+body.is-public h3:not(.hero-heading):not(.no-serif) {
+  font-family: 'Playfair Display', Georgia, serif;
+  color: #2b4321; /* forest-900 */
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+/* Recolor elements that previously used the primary forest green to forest-900 */
+body.is-public .text-primary,
+body.is-public .text-forest-700,
+body.is-public .text-forest-600,
+body.is-public .text-forest-500 {
+  color: #2b4321 !important;
+}
+
+
 .glass-card {
   @apply backdrop-blur-lg bg-white/70 dark:bg-black/40 border border-white/20 shadow-md;
 }
