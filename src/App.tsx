@@ -21,9 +21,7 @@ import KenyanExperiencesPage from "./pages/experiences/KenyanExperiences";
 import TeamBuilding from "./pages/group-activities/TeamBuilding";
 import Parties from "./pages/group-activities/Parties";
 import Homeschooling from "./pages/programs/Homeschooling";
-import Team from "./pages/about/Team";
-import WhoWeAre from "./pages/about/WhoWeAre";
-import WhatWeDo from "./pages/about/WhatWeDo";
+import About from "./pages/About";
 import AnnouncementsPage from "./pages/Announcements";
 import RegistrationScan from "./pages/scan/RegistrationScan";
 import EmailTestMonitor from "./pages/EmailTestMonitor";
@@ -83,9 +81,10 @@ function App() {
               {/* Group Activities Routes */}
               <Route path="/group-activities/team-building" element={<TeamBuilding />} />
               <Route path="/group-activities/parties" element={<Parties />} />
-          <Route path="/about/team" element={<Team />} />
-          <Route path="/about/who-we-are" element={<WhoWeAre />} />
-          <Route path="/about/what-we-do" element={<WhatWeDo />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/about/team" element={<Navigate to="/about#team" replace />} />
+          <Route path="/about/who-we-are" element={<Navigate to="/about#who-we-are" replace />} />
+          <Route path="/about/what-we-do" element={<Navigate to="/about#what-we-do" replace />} />
           <Route path="/announcements" element={<AnnouncementsPage />} />
               
               {/* Registration & Scanning */}
@@ -116,7 +115,7 @@ function App() {
               <Route path="/blog/:slug" element={<BlogPost />} />
               
               {/* Legacy URL Redirects for SEO */}
-              <Route path="/about-2" element={<Navigate to="/about/who-we-are" replace />} />
+              <Route path="/about-2" element={<Navigate to="/about" replace />} />
               <Route path="/amuse-camp" element={<Navigate to="/camps/day-camps" replace />} />
               <Route path="/school-holiday-camps" element={<Navigate to="/camps/day-camps" replace />} />
               <Route path="/schools" element={<Navigate to="/programs/school-experience" replace />} />

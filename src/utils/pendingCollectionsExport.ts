@@ -3,6 +3,7 @@ import autoTable from 'jspdf-autotable';
 import { saveAs } from 'file-saver';
 import { AccountsActionItem } from '@/services/accountsActionService';
 import { supabase } from '@/integrations/supabase/client';
+import { displayLocation } from '@/lib/locationDisplay';
 
 /**
  * Fetch participation dates per registration_id from camp_attendance.
@@ -46,7 +47,7 @@ const COMPANY = {
   name: 'Amuse Bush Camp Kenya',
   email: 'accounts@amusekenya.co.ke',
   phone: '+254 700 000 000',
-  address: 'Kurura Gate F, Karura Forest, Nairobi',
+  address: 'Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi',
 };
 
 /**
@@ -95,7 +96,7 @@ export function downloadPendingInvoicePDF(item: AccountsActionItem) {
     body: [[
       item.child_name || '',
       item.camp_type || '',
-      (item as any).location || '',
+      displayLocation((item as any).location || ''),
       (item.amount_due || 0).toLocaleString(),
       (item.amount_paid || 0).toLocaleString(),
       balance.toLocaleString(),
@@ -228,7 +229,7 @@ export async function downloadFamilyInvoicePDF(items: AccountsActionItem[]) {
     body: items.map(i => [
       i.child_name || '',
       i.camp_type || '',
-      (i as any).location || '',
+      displayLocation((i as any).location || ''),
       formatDateList(datesByReg[i.registration_id] || []),
       (i.amount_due || 0).toLocaleString(),
       (i.amount_paid || 0).toLocaleString(),
@@ -304,7 +305,7 @@ export function exportPendingCollectionsCSV(items: AccountsActionItem[], filenam
     i.email || '',
     i.phone || '',
     i.camp_type || '',
-    (i as any).location || '',
+    displayLocation((i as any).location || ''),
     i.amount_due ?? 0,
     i.amount_paid ?? 0,
     (i.amount_due || 0) - (i.amount_paid || 0),

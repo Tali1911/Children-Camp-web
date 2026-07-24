@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { displayLocation } from '@/lib/locationDisplay';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -406,9 +407,10 @@ export const QuickGroundRegistration: React.FC<QuickGroundRegistrationProps> = (
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               {LOCATIONS.map(loc => (
-                <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                <SelectItem key={loc} value={loc}>{displayLocation(loc)}</SelectItem>
               ))}
             </SelectContent>
+
           </Select>
         </div>
         <div>

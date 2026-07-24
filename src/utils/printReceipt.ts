@@ -84,7 +84,7 @@ export function printCampReceipt(opts: ReceiptOptions) {
 <div class="wrap">
   <div class="noprint"><button onclick="window.print()">Print Receipt</button></div>
   <div class="header">
-    <div class="brand">Amuse Bush Camp Kenya<small>Karura Forest / Ngong Road Forest Sanctuary</small></div>
+    <div class="brand">Amuse Bush Camp Kenya<small>Sigiria Karura Forest Gate F entrance (Sigiria coffee house) / Ngong Road Forest Sanctuary</small></div>
     <div class="meta">
       <strong>RECEIPT</strong>
       <div>#${escapeHtml(receiptNo)}</div>

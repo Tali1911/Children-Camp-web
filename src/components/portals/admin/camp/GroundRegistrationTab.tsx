@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { displayLocation } from '@/lib/locationDisplay';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -649,7 +650,7 @@ export const GroundRegistrationTab: React.FC = () => {
                     <SelectTrigger><SelectValue placeholder="Select location" /></SelectTrigger>
                     <SelectContent>
                       {LOCATIONS.map(loc => (
-                        <SelectItem key={loc} value={loc}>{loc}</SelectItem>
+                        <SelectItem key={loc} value={loc}>{displayLocation(loc)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>

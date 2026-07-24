@@ -285,7 +285,7 @@ const InteractiveHero = () => {
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 text-white">
-                        <h3 className={cn("font-bold mb-1", isActive ? "text-xl" : "text-lg")}>{slide.title}</h3>
+                        <h3 className={cn("no-serif font-bold mb-1", isActive ? "text-xl" : "text-lg")}>{slide.title}</h3>
                         <p className="text-sm text-white/80">{slide.description}</p>
                       </div>
                     </button>

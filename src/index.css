@@ -1,5 +1,5 @@
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Playfair+Display:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -99,12 +99,14 @@ body.is-public h3:not(.hero-heading):not(.no-serif) {
   line-height: 1.15;
 }
 
-/* Recolor elements that previously used the primary forest green to forest-900 */
+/* Recolor forest/primary text helpers to forest-900 by default.
+   Uses standard specificity (no !important) so inline styles from the CMS
+   typography controls can override on a per-element basis. */
 body.is-public .text-primary,
 body.is-public .text-forest-700,
 body.is-public .text-forest-600,
 body.is-public .text-forest-500 {
-  color: #2b4321 !important;
+  color: #2b4321;
 }
 
 

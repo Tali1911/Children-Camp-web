@@ -217,7 +217,7 @@ const handler = async (req: Request): Promise<Response> => {
             <ul style="padding-left: 20px;">
               <li><strong>Focus:</strong> Nature-based learning and outdoor education</li>
               <li><strong>Activities:</strong> Science experiments, nature exploration, hands-on learning</li>
-              <li><strong>Location:</strong> Karura Forest, Nairobi</li>
+              <li><strong>Location:</strong> Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi</li>
             </ul>
           </div>
         `;
@@ -229,7 +229,7 @@ const handler = async (req: Request): Promise<Response> => {
             <ul style="padding-left: 20px;">
               <li><strong>Type:</strong> Educational outdoor experience for schools</li>
               <li><strong>Activities:</strong> Team building, environmental education, adventure activities</li>
-              <li><strong>Location:</strong> Karura Forest, Nairobi</li>
+              <li><strong>Location:</strong> Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi</li>
             </ul>
           </div>
         `;
@@ -241,7 +241,7 @@ const handler = async (req: Request): Promise<Response> => {
             <ul style="padding-left: 20px;">
               <li><strong>Focus:</strong> Corporate team building and bonding</li>
               <li><strong>Activities:</strong> Challenge courses, problem-solving activities, outdoor adventures</li>
-              <li><strong>Location:</strong> Karura Forest, Nairobi</li>
+              <li><strong>Location:</strong> Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi</li>
             </ul>
           </div>
         `;
@@ -253,7 +253,7 @@ const handler = async (req: Request): Promise<Response> => {
             <ul style="padding-left: 20px;">
               <li><strong>Type:</strong> Birthday parties and special celebrations</li>
               <li><strong>Activities:</strong> Games, nature activities, customized experiences</li>
-              <li><strong>Location:</strong> Karura Forest, Nairobi</li>
+              <li><strong>Location:</strong> Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi</li>
             </ul>
           </div>
         `;
@@ -307,7 +307,7 @@ const handler = async (req: Request): Promise<Response> => {
             "Sunscreen",
             "Packed lunch (full day)",
           ];
-          locationDisplay = "Karura Forest, Gate F";
+          locationDisplay = "Sigiria Karura Forest Gate F entrance (Sigiria coffee house)";
         }
 
         programDetails = `
@@ -445,7 +445,7 @@ const handler = async (req: Request): Promise<Response> => {
                 <strong>📧 Email:</strong> info@amusekenya.co.ke<br>
                 <strong>📞 Phone:</strong> +254 114 705 763<br>
                 <strong>🌐 Website:</strong> <a href="https://amusekenya.co.ke" style="color: #2d5016;">amusekenya.co.ke</a><br>
-                <strong>📍 Location:</strong> ${["day-camps", "holiday-camp", "little-forest"].includes(programType) && registrationDetails?.location ? registrationDetails.location + ", Nairobi" : "Karura Forest, Gate F, Thigiri Ridge, Nairobi"}
+                <strong>📍 Location:</strong> ${["day-camps", "holiday-camp", "little-forest"].includes(programType) && registrationDetails?.location && registrationDetails.location.toLowerCase().includes("ngong") ? registrationDetails.location + ", Nairobi" : "Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi"}
               </p>
             </div>
           </div>

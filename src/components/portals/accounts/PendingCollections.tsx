@@ -18,6 +18,7 @@ import { toast } from 'sonner';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { formatDistanceToNow } from 'date-fns';
 import { downloadPendingInvoicePDF, downloadFamilyInvoicePDF, exportPendingCollectionsCSV } from '@/utils/pendingCollectionsExport';
+import { displayLocation } from '@/lib/locationDisplay';
 
 // Helper to get a stable parent key from an action item
 const getParentKey = (item: AccountsActionItem) =>
@@ -535,7 +536,7 @@ export const PendingCollections: React.FC = () => {
                           <div className="font-medium">{item.child_name}</div>
                           <div className="text-xs text-muted-foreground">{item.camp_type}</div>
                           {(item as any).location && (item as any).location !== 'Kurura Gate F' && (
-                            <div className="text-xs text-muted-foreground">{(item as any).location}</div>
+                            <div className="text-xs text-muted-foreground">{displayLocation((item as any).location)}</div>
                           )}
                         </TableCell>
                         <TableCell className="hidden sm:table-cell">{item.parent_name}</TableCell>

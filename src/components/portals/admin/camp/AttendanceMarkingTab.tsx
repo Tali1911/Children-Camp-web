@@ -27,6 +27,7 @@ import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { QRScannerDialog } from '@/components/attendance/QRScannerDialog';
 import { format, parseISO } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
+import { displayLocation } from '@/lib/locationDisplay';
 
 interface ExpectedChild {
   registration: CampRegistration;
@@ -48,6 +49,14 @@ export const AttendanceMarkingTab: React.FC = () => {
   const [sendEmailNotifications, setSendEmailNotifications] = useState(false);
   const [confirmCheckoutOpen, setConfirmCheckoutOpen] = useState(false);
   const [pendingCheckout, setPendingCheckout] = useState<{ attendanceId: string; childName: string; registrationId: string } | null>(null);
+  // Timestamp per row of last check-in — used to block accidental immediate
+  // checkout (touch/tap click-through) right after a check-in.
+  const [recentCheckIns, setRecentCheckIns] = useState<Record<string, number>>({});
+  // Guards the AlertDialog action button from receiving a stray click that
+  // "falls through" from the trigger during Radix's open animation.
+  const [confirmReady, setConfirmReady] = useState(false);
+  const CHECKIN_COOLDOWN_MS = 5000;
+  const CONFIRM_DELAY_MS = 700;
 
   // Batch load attendance for all registrations on a date - eliminates N+1 queries.
   // Chunk the .in(...) lookup so that very large registration lists don't blow
@@ -213,6 +222,8 @@ export const AttendanceMarkingTab: React.FC = () => {
 
       const attendance = await attendanceService.hasCheckedInOnDate(registrationId, childName, selectedDate);
       setAttendanceStatus(prev => ({ ...prev, [key]: attendance }));
+      // Start cooldown so an accidental follow-up tap can't trigger checkout.
+      setRecentCheckIns(prev => ({ ...prev, [key]: Date.now() }));
     } catch (error) {
       console.error('Error checking in:', error);
       toast.error('Failed to check in');
@@ -316,7 +327,7 @@ export const AttendanceMarkingTab: React.FC = () => {
       toast.error('No data to export');
       return;
     }
-    const headers = ['Reg #', 'Camp Type', 'Parent Name', 'Phone', 'Child Name', 'Age', 'Session', 'Payment', 'Status', 'Check-In Time', 'Check-Out Time'];
+    const headers = ['Reg #', 'Camp Type', 'Parent Name', 'Phone', 'Child Name', 'Age', 'Session', 'Payment', 'Status', 'Check-In Time', 'Check-Out Time', 'Special Needs/Medical Info'];
     const rows = items.map(item => {
       const key = `${item.registration.id}-${item.child.childName}-${selectedDate}`;
       const att = attendanceStatus[key];
@@ -332,7 +343,8 @@ export const AttendanceMarkingTab: React.FC = () => {
         item.registration.payment_status,
         status,
         att?.check_in_time ? new Date(att.check_in_time).toLocaleTimeString() : '',
-        att?.check_out_time ? new Date(att.check_out_time).toLocaleTimeString() : ''
+        att?.check_out_time ? new Date(att.check_out_time).toLocaleTimeString() : '',
+        item.child.specialNeeds || ''
       ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(',');
     });
 
@@ -378,12 +390,13 @@ export const AttendanceMarkingTab: React.FC = () => {
           item.registration.payment_status,
           status,
           att?.check_in_time ? new Date(att.check_in_time).toLocaleTimeString() : '',
-          att?.check_out_time ? new Date(att.check_out_time).toLocaleTimeString() : ''
+          att?.check_out_time ? new Date(att.check_out_time).toLocaleTimeString() : '',
+          item.child.specialNeeds || ''
         ];
       });
 
       autoTable(doc, {
-        head: [['Reg #', 'Camp', 'Parent', 'Phone', 'Child', 'Age', 'Session', 'Payment', 'Status', 'In', 'Out']],
+        head: [['Reg #', 'Camp', 'Parent', 'Phone', 'Child', 'Age', 'Session', 'Payment', 'Status', 'In', 'Out', 'Special Needs']],
         body: tableData,
         startY: 34,
         styles: { fontSize: 8 },
@@ -457,6 +470,9 @@ export const AttendanceMarkingTab: React.FC = () => {
                   const attendance = attendanceStatus[key];
                   const checkedIn = !!attendance;
                   const checkedOut = attendance?.check_out_time;
+                  const lastCheckInAt = recentCheckIns[key] || 0;
+                  const cooldownRemaining = Math.max(0, CHECKIN_COOLDOWN_MS - (Date.now() - lastCheckInAt));
+                  const checkoutLocked = cooldownRemaining > 0;
 
                   return (
                     <TableRow key={`${key}-${idx}`}>
@@ -496,7 +512,7 @@ export const AttendanceMarkingTab: React.FC = () => {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <span className="text-xs text-muted-foreground">{item.registration.location || 'Kurura Gate F'}</span>
+                        <span className="text-xs text-muted-foreground">{displayLocation(item.registration.location || 'Kurura Gate F')}</span>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 text-xs">
@@ -550,8 +566,14 @@ export const AttendanceMarkingTab: React.FC = () => {
                             Check In
                           </Button>
                         ) : !checkedOut ? (
-                          <Button size="sm" variant="outline" onClick={() => promptCheckOut(attendance.id, item.child.childName, item.registration.id!)}>
-                            Check Out
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={checkoutLocked}
+                            title={checkoutLocked ? `Just checked in — wait ${Math.ceil(cooldownRemaining / 1000)}s before checkout` : undefined}
+                            onClick={() => promptCheckOut(attendance.id, item.child.childName, item.registration.id!)}
+                          >
+                            {checkoutLocked ? `Wait ${Math.ceil(cooldownRemaining / 1000)}s` : 'Check Out'}
                           </Button>
                         ) : (
                           <span className="text-sm text-muted-foreground">Completed</span>
@@ -664,7 +686,7 @@ export const AttendanceMarkingTab: React.FC = () => {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Locations</SelectItem>
-                <SelectItem value="Kurura Gate F">Kurura Gate F</SelectItem>
+                <SelectItem value="Kurura Gate F">Karura Gate F</SelectItem>
                 <SelectItem value="Ngong Sanctuary">Ngong Sanctuary</SelectItem>
               </SelectContent>
             </Select>
@@ -683,7 +705,18 @@ export const AttendanceMarkingTab: React.FC = () => {
 
       <QRScannerDialog open={scannerOpen} onClose={() => setScannerOpen(false)} onScanSuccess={handleQRScan} />
 
-      <AlertDialog open={confirmCheckoutOpen} onOpenChange={setConfirmCheckoutOpen}>
+      <AlertDialog
+        open={confirmCheckoutOpen}
+        onOpenChange={(open) => {
+          setConfirmCheckoutOpen(open);
+          if (open) {
+            setConfirmReady(false);
+            setTimeout(() => setConfirmReady(true), CONFIRM_DELAY_MS);
+          } else {
+            setConfirmReady(false);
+          }
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirm Check-Out</AlertDialogTitle>
@@ -692,8 +725,13 @@ export const AttendanceMarkingTab: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleCheckOut}>Check Out</AlertDialogAction>
+            <AlertDialogCancel autoFocus onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={!confirmReady}
+              onClick={handleCheckOut}
+            >
+              {confirmReady ? 'Check Out' : 'Please wait…'}
+            </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

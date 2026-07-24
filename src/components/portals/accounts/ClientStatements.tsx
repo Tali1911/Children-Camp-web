@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import { format } from 'date-fns';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { displayLocation } from '@/lib/locationDisplay';
 
 // Helper to work with untyped table
 const fromTable = (tableName: string) => supabase.from(tableName as any);
@@ -81,7 +82,7 @@ const buildStatementLines = (client: ClientSummary): StatementLine[] => {
       // Charge line — only the first attendance per registration+child carries a charge
       lines.push({
         date: record.check_in_time,
-        description: `${record.child_name} — ${record.camp_type || 'Camp'} at ${record.location || 'N/A'}`,
+        description: `${record.child_name} — ${record.camp_type || 'Camp'} at ${displayLocation(record.location || '') || 'N/A'}`,
         charges: record.amount_due,
         payments: 0,
         balance: 0,
@@ -135,8 +136,8 @@ const ClientStatements: React.FC = () => {
     try {
       setLoading(true);
 
-      // Load all three data sources in parallel
-      const [attendanceResult, actionItemsResult, paymentsResult] = await Promise.all([
+      // Load all data sources in parallel
+      const [attendanceResult, actionItemsPendingResult, actionItemsAllResult, paymentsResult] = await Promise.all([
         supabase
           .from('camp_attendance')
           .select('id, check_in_time, child_name, registration_id')
@@ -144,14 +145,32 @@ const ClientStatements: React.FC = () => {
         fromTable('accounts_action_items')
           .select('*')
           .eq('status', 'pending'),
+        fromTable('accounts_action_items')
+          .select('id, registration_id, child_name, parent_name, email, phone, camp_type, amount_due, amount_paid, status, created_at'),
         fromTable('payments')
           .select('id, registration_id, amount, created_at')
           .order('created_at', { ascending: false }),
       ]);
 
       // Process action items (always available - source of truth for outstanding)
-      const aiData = (actionItemsResult.data || []) as unknown as ActionItemRecord[];
+      const aiData = (actionItemsPendingResult.data || []) as unknown as ActionItemRecord[];
       setActionItems(aiData);
+
+      // Build parent-info map keyed by registration_id from ALL action items (any status)
+      // Used to enrich attendance records when camp_registrations RLS blocks the join
+      const aiAllData = ((actionItemsAllResult.data || []) as unknown as ActionItemRecord[]);
+      const aiSource = aiAllData.length > 0 ? aiAllData : aiData;
+      const parentInfoByRegId = new Map<string, { parent_name: string; email: string; phone: string; camp_type: string }>();
+      aiSource.forEach(item => {
+        if (!item.registration_id) return;
+        if (parentInfoByRegId.has(item.registration_id)) return;
+        parentInfoByRegId.set(item.registration_id, {
+          parent_name: item.parent_name || '',
+          email: item.email || '',
+          phone: item.phone || '',
+          camp_type: item.camp_type || '',
+        });
+      });
 
       // Build actual payments map: registration_id -> total paid
       const paymentsData = (paymentsResult.data || []) as any[];
@@ -167,7 +186,8 @@ const ClientStatements: React.FC = () => {
 
       // Process attendance data
       const attendance = attendanceResult.data || [];
-      console.log('camp_attendance records:', attendance.length, 'action_items pending:', aiData.length, 'payments:', paymentsData.length);
+      console.log('camp_attendance records:', attendance.length, 'action_items pending:', aiData.length, 'payments:', paymentsData.length, 'parent-info map size:', parentInfoByRegId.size);
+
 
       if (attendance.length > 0) {
         // Primary path: load from camp_attendance + registrations
@@ -206,10 +226,15 @@ const ClientStatements: React.FC = () => {
             childAmount = Math.round((Number(reg.total_amount) || 0) / childrenCount);
           }
 
+          // Enrich from action-items map when the camp_registrations join is blocked/missing
+          const aiInfo = parentInfoByRegId.get(att.registration_id);
+          const parentName = reg?.parent_name || aiInfo?.parent_name || 'Unknown';
+          const parentEmail = reg?.email || aiInfo?.email || '';
+          const parentPhoneVal = reg?.phone || aiInfo?.phone || '';
+          const campTypeVal = reg?.camp_type || aiInfo?.camp_type || '';
+
           // Deduplicate: use parent_phone+child_name+camp_type to prevent duplicate charges from retry registrations
-          const parentPhone = reg?.phone || '';
-          const campType = reg?.camp_type || '';
-          const chargeKey = `${parentPhone}::${att.child_name}::${campType}`;
+          const chargeKey = `${parentPhoneVal}::${att.child_name}::${campTypeVal}`;
           const isFirstCharge = !seenChargeKeys.has(chargeKey);
           seenChargeKeys.add(chargeKey);
 
@@ -232,17 +257,18 @@ const ClientStatements: React.FC = () => {
             check_in_time: att.check_in_time,
             child_name: att.child_name,
             registration_id: att.registration_id,
-            camp_type: reg?.camp_type || '',
+            camp_type: campTypeVal,
             location: reg?.location || 'Kurura Gate F',
             amount_due: amountDue,
             amount_paid: amountPaid,
             payment_status: reg?.payment_status || 'unpaid',
-            parent_name: reg?.parent_name || 'Unknown',
-            email: reg?.email || '',
-            phone: reg?.phone || '',
+            parent_name: parentName,
+            email: parentEmail,
+            phone: parentPhoneVal,
             paid_at: reg?.payment_status === 'paid' ? reg?.updated_at : (paymentsByRegId.get(att.registration_id)?.paidAt || undefined),
           };
         });
+
 
         setAttendanceData(records);
       } else if (aiData.length > 0) {
@@ -302,18 +328,24 @@ const ClientStatements: React.FC = () => {
   }, []);
 
   // Helper: build a stable grouping key for a parent
-  const getParentKey = (phone: string, email: string, parentName: string) => {
-    // Prefer phone, then email, then parent_name — but never group all "Unknown" together
-    if (phone) return phone;
-    if (email) return email;
-    return parentName || 'unknown';
+  const getParentKey = (phone: string, email: string, parentName: string, registrationId?: string) => {
+    // Prefer phone, then email, then a real parent name.
+    // Never collapse all unknown/blank records into one group — fall back to registration_id.
+    if (phone) return `p:${phone}`;
+    if (email) return `e:${email.toLowerCase()}`;
+    if (parentName && parentName.trim() && parentName.trim().toLowerCase() !== 'unknown') {
+      return `n:${parentName.trim().toLowerCase()}`;
+    }
+    if (registrationId) return `r:${registrationId}`;
+    return `x:unknown-${Math.random().toString(36).slice(2)}`;
   };
+
 
   // Build per-parent outstanding from accounts_action_items (source of truth, matches Pending Collections)
   const parentOutstandingMap = useMemo(() => {
     const map = new Map<string, { totalDue: number; totalPaid: number; itemCount: number }>();
     actionItems.forEach(item => {
-      const key = getParentKey(item.phone || '', item.email || '', item.parent_name);
+      const key = getParentKey(item.phone || '', item.email || '', item.parent_name, item.registration_id);
       const existing = map.get(key) || { totalDue: 0, totalPaid: 0, itemCount: 0 };
       existing.totalDue += Number(item.amount_due) || 0;
       existing.totalPaid += Number(item.amount_paid) || 0;
@@ -327,7 +359,7 @@ const ClientStatements: React.FC = () => {
     const clientMap = new Map<string, ClientSummary>();
 
     attendanceData.forEach(record => {
-      const key = getParentKey(record.phone, record.email, record.parent_name);
+      const key = getParentKey(record.phone, record.email, record.parent_name, record.registration_id);
       if (!clientMap.has(key)) {
         clientMap.set(key, {
           parentName: record.parent_name,
