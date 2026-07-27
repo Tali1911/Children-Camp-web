@@ -55,8 +55,8 @@ export const AttendanceMarkingTab: React.FC = () => {
   // Guards the AlertDialog action button from receiving a stray click that
   // "falls through" from the trigger during Radix's open animation.
   const [confirmReady, setConfirmReady] = useState(false);
-  const CHECKIN_COOLDOWN_MS = 5000;
-  const CONFIRM_DELAY_MS = 700;
+  const CHECKIN_COOLDOWN_MS = 4000;
+  const CONFIRM_DELAY_MS = 100;
 
   // Batch load attendance for all registrations on a date - eliminates N+1 queries.
   // Chunk the .in(...) lookup so that very large registration lists don't blow
@@ -133,6 +133,17 @@ export const AttendanceMarkingTab: React.FC = () => {
   useEffect(() => {
     loadRegistrations();
   }, [campTypeFilter, selectedDate]);
+
+  useEffect(() => {
+    if (!confirmCheckoutOpen) {
+      setConfirmReady(false);
+      return;
+    }
+
+    setConfirmReady(false);
+    const timer = window.setTimeout(() => setConfirmReady(true), CONFIRM_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [confirmCheckoutOpen]);
 
   // Client-side filtering by child name, registration number, and location
   const filteredExpectedChildren = useMemo((): ExpectedChild[] => {
@@ -709,12 +720,7 @@ export const AttendanceMarkingTab: React.FC = () => {
         open={confirmCheckoutOpen}
         onOpenChange={(open) => {
           setConfirmCheckoutOpen(open);
-          if (open) {
-            setConfirmReady(false);
-            setTimeout(() => setConfirmReady(true), CONFIRM_DELAY_MS);
-          } else {
-            setConfirmReady(false);
-          }
+          if (!open) setPendingCheckout(null);
         }}
       >
         <AlertDialogContent>
@@ -725,7 +731,7 @@ export const AttendanceMarkingTab: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel autoFocus onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel autoFocus>Cancel</AlertDialogCancel>
             <AlertDialogAction
               disabled={!confirmReady}
               onClick={handleCheckOut}

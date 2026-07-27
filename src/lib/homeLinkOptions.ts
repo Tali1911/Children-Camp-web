@@ -17,7 +17,9 @@ export const HOME_INTERNAL_LINKS: HomeLinkOption[] = [
   { value: '/blog', label: 'Blog', group: 'Core' },
   { value: '/announcements', label: 'Announcements', group: 'Core' },
 
+  { value: '/camp', label: 'Camp Overview', group: 'Camps' },
   { value: '/camps/easter', label: 'Easter Camp', group: 'Camps' },
+
   { value: '/camps/summer', label: 'Summer Camp', group: 'Camps' },
   { value: '/camps/end-year', label: 'End of Year Camp', group: 'Camps' },
   { value: '/camps/day-camps', label: 'Day Camps', group: 'Camps' },

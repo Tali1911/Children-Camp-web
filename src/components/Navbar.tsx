@@ -164,6 +164,8 @@ const Navbar = () => {
               home: (label) => <Link to="/" className={linkClass}>{label}</Link>,
               announcements: (label) => <Link to="/announcements" className={linkClass}>{label}</Link>,
               about: (label) => <Link to="/about" className={linkClass}>{label}</Link>,
+              camp: (label) => <Link to="/camp" className={linkClass}>{label}</Link>,
+
               camps: (label) => (
                 <div className="relative group">
                   <button className={buttonClass} onMouseEnter={() => setActiveDropdown("camps")}>
@@ -346,6 +348,8 @@ const Navbar = () => {
               home: (label) => <Link to="/" className={mobileLink} onClick={closeMenu}>{label}</Link>,
               announcements: (label) => <Link to="/announcements" className={mobileLink} onClick={closeMenu}>{label}</Link>,
               about: (label) => <Link to="/about" className={mobileLink} onClick={closeMenu}>{label}</Link>,
+              camp: (label) => <Link to="/camp" className={mobileLink} onClick={closeMenu}>{label}</Link>,
+
               camps: (label) => (
                 <>
                   <button onClick={() => toggleMobileSection("camps")} className="w-full flex items-center justify-between py-2 px-4 font-medium text-gray-800 hover:bg-gray-50 rounded-md">

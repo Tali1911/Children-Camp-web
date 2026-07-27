@@ -58,8 +58,12 @@ const ContentManagement = () => {
   const [aboutSections, setAboutSections] = useState<ContentItem[]>([]);
   const [homeSections, setHomeSections] = useState<ContentItem[]>([]);
   const [newsSections, setNewsSections] = useState<ContentItem[]>([]);
+  const [campSections, setCampSections] = useState<ContentItem[]>([]);
+  const [campEditorOpen, setCampEditorOpen] = useState(false);
+  const [editingCampItem, setEditingCampItem] = useState<ContentItem | null>(null);
   const [newsEditorOpen, setNewsEditorOpen] = useState(false);
   const [editingNewsItem, setEditingNewsItem] = useState<ContentItem | null>(null);
+
   const [serviceItems, setServiceItems] = useState<ContentItem[]>([]);
   const [campPages, setCampPages] = useState<ContentItem[]>([]);
   const [campForms, setCampForms] = useState<ContentItem[]>([]);
@@ -81,16 +85,19 @@ const ContentManagement = () => {
     setAnnouncements(announcementData);
     setTestimonials(testimonialData);
     setTeamMembers(teamData);
-    // Split about_section rows: home-scoped, news-scoped, and about-scoped.
+    // Split about_section rows: home-scoped, news-scoped, camp-scoped and about-scoped.
     const homeScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'home');
     const newsScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'news');
+    const campScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'camp');
     const aboutScoped = (aboutData || []).filter((r: any) => {
       const scope = r?.metadata?.scope || 'about';
-      return scope !== 'home' && scope !== 'news';
+      return scope !== 'home' && scope !== 'news' && scope !== 'camp';
     });
     setAboutSections(aboutScoped);
     setHomeSections([...homeScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
     setNewsSections([...newsScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
+    setCampSections([...campScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
+
     setServiceItems(serviceData);
     setCampPages(campPageData);
     setCampForms(campFormData);
@@ -118,9 +125,12 @@ const ContentManagement = () => {
     // Optimistic update on the appropriate list
     if (scope === 'news') {
       setNewsSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
+    } else if (scope === 'camp') {
+      setCampSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
     } else {
       setHomeSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
     }
+
     const updated = await cmsService.updateContent(item.id, { metadata: nextMeta } as any);
     if (updated) {
       toast({ title: currentlyVisible ? 'Section hidden' : 'Section visible' });
@@ -171,6 +181,8 @@ const ContentManagement = () => {
 
   const handleReorderHomeSections = (items: ContentItem[]) => handleReorderSections(items, setHomeSections);
   const handleReorderNewsSections = (items: ContentItem[]) => handleReorderSections(items, setNewsSections);
+  const handleReorderCampSections = (items: ContentItem[]) => handleReorderSections(items, setCampSections);
+
   const handlePublish = async (id: string) => {
     const published = await cmsService.publishContent(id);
     if (published) {
@@ -201,8 +213,9 @@ const ContentManagement = () => {
   };
   const renderItemRow = (item: ContentItem, type: EditorType) => {
     const scope = item.metadata?.scope;
-    const isPageSection = scope === 'home' || scope === 'news';
-    const pageLabel = scope === 'news' ? 'news page' : 'homepage';
+    const isPageSection = scope === 'home' || scope === 'news' || scope === 'camp';
+    const pageLabel = scope === 'news' ? 'news page' : scope === 'camp' ? 'camp page' : 'homepage';
+
     return (
     <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
       <div className="flex justify-between items-start">
@@ -238,10 +251,14 @@ const ContentManagement = () => {
               if (scope === 'news') {
                 setEditingNewsItem(item);
                 setNewsEditorOpen(true);
+              } else if (scope === 'camp') {
+                setEditingCampItem(item);
+                setCampEditorOpen(true);
               } else {
                 openEditor(type, item);
               }
             };
+
             return (
               <>
                 <Button
@@ -317,6 +334,21 @@ const ContentManagement = () => {
       </div>
     );
   };
+  const renderCampSectionsList = () => {
+    if (isLoading) return <div className="text-center py-8">Loading...</div>;
+    if (campSections.length === 0) return <div className="text-center py-8 text-muted-foreground">No sections yet. Add your first one to build the Camp page!</div>;
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">Drag the handle on the left of any section to reorder how it appears on the Camp page. Order is saved automatically.</p>
+        <SortableHomeSections
+          items={campSections}
+          renderItem={(item) => renderItemRow(item, 'home-section')}
+          onReorder={handleReorderCampSections}
+        />
+      </div>
+    );
+  };
+
   return <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Website Content Management</h2>
@@ -333,6 +365,8 @@ const ContentManagement = () => {
             <SelectContent>
               <SelectItem value="home">Home Page</SelectItem>
               <SelectItem value="news">News &amp; Updates Page</SelectItem>
+              <SelectItem value="camp">Camp Page</SelectItem>
+
               <SelectItem value="hero">Hero Section</SelectItem>
               <SelectItem value="blog">Blog Posts</SelectItem>
               <SelectItem value="activity-details">Activity Details</SelectItem>
@@ -355,6 +389,8 @@ const ContentManagement = () => {
           </Select> : <TabsList className="flex flex-wrap justify-start h-auto gap-1 p-1 w-full">
             <TabsTrigger value="home" className="flex-grow-0 px-3 py-1.5 text-sm">Home</TabsTrigger>
             <TabsTrigger value="news" className="flex-grow-0 px-3 py-1.5 text-sm">News &amp; Updates</TabsTrigger>
+            <TabsTrigger value="camp" className="flex-grow-0 px-3 py-1.5 text-sm">Camp</TabsTrigger>
+
             <TabsTrigger value="hero" className="flex-grow-0 px-3 py-1.5 text-sm">Hero</TabsTrigger>
             <TabsTrigger value="blog" className="flex-grow-0 px-3 py-1.5 text-sm">Blog</TabsTrigger>
             <TabsTrigger value="activity-details" className="flex-grow-0 px-3 py-1.5 text-sm">Activities</TabsTrigger>
@@ -414,6 +450,28 @@ const ContentManagement = () => {
             <CardContent>{renderNewsSectionsList()}</CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="camp" className="space-y-4">
+          <LivePreviewPanel path="/camp" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Camp Page Sections</CardTitle>
+                <CardDescription>
+                  Build the public Camp overview page. Add custom sections or card grids that
+                  link to individual camps (Easter, Summer, End Year, Mid-Term, Day Camps),
+                  edit typography, toggle visibility, and drag to reorder.
+                </CardDescription>
+              </div>
+              <Button onClick={() => { setEditingCampItem(null); setCampEditorOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Section
+              </Button>
+            </CardHeader>
+            <CardContent>{renderCampSectionsList()}</CardContent>
+          </Card>
+        </TabsContent>
+
 
 
 
@@ -851,6 +909,17 @@ const ContentManagement = () => {
           onSave={async () => { setNewsEditorOpen(false); setEditingNewsItem(null); await loadAllContent(); window.dispatchEvent(new CustomEvent('cms-content-updated')); }}
         />
       )}
+
+      {campEditorOpen && (
+        <HomeSectionEditor
+          isOpen={true}
+          scope="camp"
+          onClose={() => { setCampEditorOpen(false); setEditingCampItem(null); }}
+          item={editingCampItem}
+          onSave={async () => { setCampEditorOpen(false); setEditingCampItem(null); await loadAllContent(); window.dispatchEvent(new CustomEvent('cms-content-updated')); }}
+        />
+      )}
+
     </div>;
 };
 export default ContentManagement;

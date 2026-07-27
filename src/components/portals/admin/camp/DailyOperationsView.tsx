@@ -52,8 +52,8 @@ export const DailyOperationsView: React.FC = () => {
   const [confirmCheckoutOpen, setConfirmCheckoutOpen] = useState(false);
   const [recentCheckIns, setRecentCheckIns] = useState<Record<string, number>>({});
   const [confirmReady, setConfirmReady] = useState(false);
-  const CHECKIN_COOLDOWN_MS = 5000;
-  const CONFIRM_DELAY_MS = 700;
+  const CHECKIN_COOLDOWN_MS = 4000;
+  const CONFIRM_DELAY_MS = 100;
   const [pendingCheckout, setPendingCheckout] = useState<{ attendanceId: string; childName: string; registrationId: string } | null>(null);
 
   const loadTodaysRegistrations = async () => {
@@ -87,6 +87,17 @@ export const DailyOperationsView: React.FC = () => {
   useEffect(() => {
     loadTodaysRegistrations();
   }, [campTypeFilter]);
+
+  useEffect(() => {
+    if (!confirmCheckoutOpen) {
+      setConfirmReady(false);
+      return;
+    }
+
+    setConfirmReady(false);
+    const timer = window.setTimeout(() => setConfirmReady(true), CONFIRM_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [confirmCheckoutOpen]);
 
   // Real-time subscription to sync payment status changes from Accounts Portal
   useEffect(() => {
@@ -536,12 +547,7 @@ export const DailyOperationsView: React.FC = () => {
         open={confirmCheckoutOpen}
         onOpenChange={(open) => {
           setConfirmCheckoutOpen(open);
-          if (open) {
-            setConfirmReady(false);
-            setTimeout(() => setConfirmReady(true), CONFIRM_DELAY_MS);
-          } else {
-            setConfirmReady(false);
-          }
+          if (!open) setPendingCheckout(null);
         }}
       >
         <AlertDialogContent>
@@ -552,7 +558,7 @@ export const DailyOperationsView: React.FC = () => {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel autoFocus onClick={() => { setPendingCheckout(null); }}>Cancel</AlertDialogCancel>
+            <AlertDialogCancel autoFocus>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={!confirmReady} onClick={handleCheckOut}>
               {confirmReady ? 'Check Out' : 'Please wait…'}
             </AlertDialogAction>
