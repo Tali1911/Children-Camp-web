@@ -47,7 +47,12 @@ interface ProgramConfirmationRequest {
   invoiceDetails?: {
     totalAmount: number;
     paymentMethod: string;
+    /** Real payment state — never derive from which button the client clicked */
+    paymentStatus?: "unpaid" | "partial" | "paid";
+    amountPaid?: number;
+    paymentReference?: string;
   };
+
 }
 
 const handler = async (req: Request): Promise<Response> => {
@@ -327,18 +332,48 @@ const handler = async (req: Request): Promise<Response> => {
         programDetails = "";
     }
 
+    // Build a truthful billing block from real payment state (never echo raw internal values)
+    const buildBillingLines = (): string => {
+      if (!invoiceDetails || !invoiceDetails.totalAmount) return "";
+      const total = Number(invoiceDetails.totalAmount) || 0;
+      const paid = Math.max(0, Number(invoiceDetails.amountPaid) || 0);
+      const balance = Math.max(0, total - paid);
+      const status =
+        invoiceDetails.paymentStatus ||
+        (paid >= total && total > 0 ? "paid" : paid > 0 ? "partial" : "unpaid");
+
+      const isCash = invoiceDetails.paymentMethod === "cash";
+      const statusLabel =
+        status === "paid"
+          ? "Paid online — thank you!"
+          : status === "partial"
+            ? "Partially paid — balance outstanding"
+            : isCash
+              ? "Payment pending — pay on arrival"
+              : "Payment pending — no payment has been received yet. You can pay online from My Registrations or on arrival.";
+
+      return `
+          <p style="font-size: 18px; margin: 10px 0;"><strong>Total Amount:</strong> KES ${total.toLocaleString()}</p>
+          ${paid > 0 ? `<p style="margin: 5px 0;"><strong>Amount Paid:</strong> KES ${paid.toLocaleString()}</p>` : ""}
+          ${balance > 0 ? `<p style="margin: 5px 0;"><strong>Balance Due:</strong> KES ${balance.toLocaleString()}</p>` : ""}
+          <p style="margin: 5px 0;"><strong>Payment Status:</strong> ${statusLabel}</p>
+          ${status !== "unpaid" && invoiceDetails.paymentReference ? `<p style="margin: 5px 0;"><strong>Payment Reference:</strong> ${invoiceDetails.paymentReference}</p>` : ""}
+      `;
+    };
+    const billingLines = buildBillingLines();
+
     // Build invoice section if provided
     let invoiceSection = "";
     if (invoiceDetails && invoiceDetails.totalAmount) {
       invoiceSection = `
         <div style="background-color: #e8f5e9; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2d5016;">
           <h3 style="margin-top: 0; color: #2d5016;">Payment Summary</h3>
-          <p style="font-size: 18px; margin: 10px 0;"><strong>Total Amount:</strong> KES ${invoiceDetails.totalAmount.toLocaleString()}</p>
-          <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${invoiceDetails.paymentMethod === "cash" ? "Cash (Pay on arrival)" : invoiceDetails.paymentMethod}</p>
+          ${billingLines}
           ${registrationDetails?.registrationId ? `<p style="margin: 5px 0;"><strong>Registration ID:</strong> ${registrationDetails.registrationId.substring(0, 8).toUpperCase()}</p>` : ""}
         </div>
       `;
     }
+
 
     // ===== QR Code: fetch registration and generate PNG attachment =====
     let qrSection = "";
@@ -688,8 +723,8 @@ const handler = async (req: Request): Promise<Response> => {
                 ? `
             <h3 style="color: #1e40af; border-bottom: 2px solid #1e40af; padding-bottom: 10px;">Payment Information</h3>
             <div style="background-color: #fef3c7; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #f59e0b;">
-              <p style="font-size: 18px; margin: 5px 0;"><strong>Total Amount:</strong> KES ${invoiceDetails.totalAmount.toLocaleString()}</p>
-              <p style="margin: 5px 0;"><strong>Payment Method:</strong> ${invoiceDetails.paymentMethod === "cash" ? "Cash (Pay on arrival)" : invoiceDetails.paymentMethod}</p>
+              ${billingLines}
+
             </div>
             `
                 : ""

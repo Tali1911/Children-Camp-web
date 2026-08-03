@@ -380,6 +380,39 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
       
       const { supabase } = await import('@/integrations/supabase/client');
 
+      // Confirmation email must reflect the REAL payment outcome, never the button clicked.
+      const sendConfirmationEmail = (payment: {
+        paymentStatus: 'unpaid' | 'partial' | 'paid';
+        amountPaid?: number;
+        paymentReference?: string;
+      }) => {
+        console.log('📧 Sending confirmation email (background)...', payment);
+        supabase.functions.invoke('send-confirmation-email', {
+          body: {
+            email: data.email,
+            programType: campType,
+            registrationDetails: {
+              parentName: data.parentName,
+              campTitle: campTitle,
+              children: data.children,
+              campType: campType,
+              registrationId: registration.id,
+              location: selectedLocation,
+              emailContent: (config as any).emailContent
+            },
+            invoiceDetails: {
+              totalAmount: totalAmount,
+              paymentMethod: payment.paymentStatus === 'unpaid' ? 'cash' : 'online',
+              paymentStatus: payment.paymentStatus,
+              amountPaid: payment.amountPaid ?? 0,
+              paymentReference: payment.paymentReference,
+            }
+          }
+        }).then(({ error }) => {
+          if (error) console.error('❌ Email sending failed (non-blocking):', error);
+        }).catch((e) => console.error('❌ Email invoke error (non-blocking):', e));
+      };
+
       // For "Pay Now" flow: open Paystack FIRST so it isn't blocked by email failures
       // or hidden behind the QR success modal.
       if (buttonType === 'pay') {
@@ -398,6 +431,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
               programName: campTitle,
             },
             onSuccess: async (ref) => {
+              let paymentStatus: 'unpaid' | 'partial' | 'paid' = 'unpaid';
+              let amountPaid = 0;
               try {
                 const { data: verifyData, error: verifyErr } = await supabase.functions.invoke(
                   'paystack-verify',
@@ -405,6 +440,8 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
                 );
                 if (verifyErr) throw verifyErr;
                 if (!verifyData?.success) throw new Error(verifyData?.error || 'Verification failed');
+                paymentStatus = (verifyData.status as 'unpaid' | 'partial' | 'paid') || 'paid';
+                amountPaid = Number(verifyData.amountPaid) || 0;
                 toast.success('Payment received. Thank you!');
               } catch (e) {
                 console.error('Verify error:', e);
@@ -413,8 +450,9 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
                 // Show success/QR modal AFTER payment attempt completes
                 setRegistrationResult(registration);
                 setQrCodeDataUrl(qrUrl);
-                setRegistrationType('online_paid');
+                setRegistrationType(paymentStatus === 'unpaid' ? 'online_only' : 'online_paid');
                 setShowQRModal(true);
+                sendConfirmationEmail({ paymentStatus, amountPaid, paymentReference: ref });
               }
             },
             onClose: () => {
@@ -424,6 +462,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
               setQrCodeDataUrl(qrUrl);
               setRegistrationType('online_only');
               setShowQRModal(true);
+              sendConfirmationEmail({ paymentStatus: 'unpaid' });
             },
           });
         } catch (e) {
@@ -434,6 +473,7 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
           setQrCodeDataUrl(qrUrl);
           setRegistrationType('online_only');
           setShowQRModal(true);
+          sendConfirmationEmail({ paymentStatus: 'unpaid' });
         }
       } else {
         // "Register only" flow: show confirmation immediately
@@ -441,31 +481,9 @@ const HolidayCampForm = ({ campType, campTitle }: HolidayCampFormProps) => {
         setQrCodeDataUrl(qrUrl);
         setRegistrationType('online_only');
         setShowQRModal(true);
+        sendConfirmationEmail({ paymentStatus: 'unpaid' });
       }
 
-      // Send confirmation email in background (non-blocking, never breaks payment)
-      console.log('📧 Sending confirmation email (background)...');
-      supabase.functions.invoke('send-confirmation-email', {
-        body: {
-          email: data.email,
-          programType: campType,
-          registrationDetails: {
-            parentName: data.parentName,
-            campTitle: campTitle,
-            children: data.children,
-            campType: campType,
-            registrationId: registration.id,
-            location: selectedLocation,
-            emailContent: (config as any).emailContent
-          },
-          invoiceDetails: {
-            totalAmount: totalAmount,
-            paymentMethod: buttonType === 'pay' ? 'online_payment' : 'cash'
-          }
-        }
-      }).then(({ error }) => {
-        if (error) console.error('❌ Email sending failed (non-blocking):', error);
-      }).catch((e) => console.error('❌ Email invoke error (non-blocking):', e));
 
       toast.success(config.messages.registrationSuccess);
       await recordSubmission(data, 'holiday-camp');
