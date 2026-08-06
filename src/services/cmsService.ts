@@ -308,7 +308,7 @@ export const cmsService = {
       // Exclude entries scoped to other pages (home, news) — those are managed separately.
       return (data || []).filter((row: any) => {
         const scope = row?.metadata?.scope || 'about';
-        return scope !== 'home' && scope !== 'news';
+        return scope !== 'home' && scope !== 'news' && scope !== 'camp' && scope !== 'programs';
       });
     } catch (err) {
       console.error('Error fetching about sections:', err);
@@ -377,6 +377,27 @@ export const cmsService = {
       return (data || []).filter((row: any) => row?.metadata?.scope === 'camp');
     } catch (err) {
       console.error('Error fetching camp sections:', err);
+      return [];
+    }
+  },
+
+  /**
+   * Programs overview page CMS sections. Reuses the `about_section` content_type
+   * with `metadata.scope = 'programs'` so no DB migration is required.
+   */
+  async getProgramsPageSections(includeUnpublished = false): Promise<ContentItem[]> {
+    try {
+      let query = supabaseAny
+        .from('content_items')
+        .select('*')
+        .eq('content_type', 'about_section')
+        .order('metadata->order', { ascending: true });
+      if (!includeUnpublished) query = query.eq('status', 'published');
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []).filter((row: any) => row?.metadata?.scope === 'programs');
+    } catch (err) {
+      console.error('Error fetching programs page sections:', err);
       return [];
     }
   },

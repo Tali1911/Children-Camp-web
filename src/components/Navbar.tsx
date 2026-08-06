@@ -165,6 +165,7 @@ const Navbar = () => {
               announcements: (label) => <Link to="/announcements" className={linkClass}>{label}</Link>,
               about: (label) => <Link to="/about" className={linkClass}>{label}</Link>,
               camp: (label) => <Link to="/camp" className={linkClass}>{label}</Link>,
+              programs: (label) => <Link to="/programs" className={linkClass}>{label}</Link>,
 
               camps: (label) => (
                 <div className="relative group">
@@ -349,6 +350,7 @@ const Navbar = () => {
               announcements: (label) => <Link to="/announcements" className={mobileLink} onClick={closeMenu}>{label}</Link>,
               about: (label) => <Link to="/about" className={mobileLink} onClick={closeMenu}>{label}</Link>,
               camp: (label) => <Link to="/camp" className={mobileLink} onClick={closeMenu}>{label}</Link>,
+              programs: (label) => <Link to="/programs" className={mobileLink} onClick={closeMenu}>{label}</Link>,
 
               camps: (label) => (
                 <>

@@ -21,7 +21,7 @@ interface Props {
   onSave: () => void;
   item?: ContentItem | null;
   /** Which public page these sections belong to. Defaults to 'home'. */
-  scope?: 'home' | 'news' | 'camp';
+  scope?: 'home' | 'news' | 'camp' | 'programs';
 }
 
 /** Built-in home sections that map to existing components on the homepage. */
@@ -39,10 +39,10 @@ export const NEWS_BUILTIN_SECTIONS = [
   { value: 'calendar',      label: 'Yearly Calendar' },
 ] as const;
 
-const buildKindOptions = (scope: 'home' | 'news' | 'camp') => {
+const buildKindOptions = (scope: 'home' | 'news' | 'camp' | 'programs') => {
   const list = scope === 'news'
     ? NEWS_BUILTIN_SECTIONS
-    : scope === 'camp'
+    : scope === 'camp' || scope === 'programs'
       ? []
       : HOME_BUILTIN_SECTIONS;
   return [
@@ -69,7 +69,7 @@ const emptyCard = (): HomeCard => ({
 
 const HomeSectionEditor: React.FC<Props> = ({ isOpen, onClose, onSave, item, scope = 'home' }) => {
   const SECTION_KIND_OPTIONS = React.useMemo(() => buildKindOptions(scope), [scope]);
-  const scopeLabel = scope === 'news' ? 'News & Updates Page' : scope === 'camp' ? 'Camp Page' : 'Home Page';
+  const scopeLabel = scope === 'news' ? 'News & Updates Page' : scope === 'camp' ? 'Camp Page' : scope === 'programs' ? 'Programs Page' : 'Home Page';
   const [formData, setFormData] = useState({
     title: '',
     content: '',
@@ -215,7 +215,7 @@ const HomeSectionEditor: React.FC<Props> = ({ isOpen, onClose, onSave, item, sco
     e.preventDefault();
     setSaving(true);
     try {
-      const slugPrefix = scope === 'news' ? 'news' : scope === 'camp' ? 'camp' : 'home';
+      const slugPrefix = scope === 'news' ? 'news' : scope === 'camp' ? 'camp' : scope === 'programs' ? 'programs-page' : 'home';
       const baseSlug = isCustomKind
         ? `${slugPrefix}-${isCards ? 'cards' : 'custom'}-${(formData.title || 'section')
             .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${item?.id ? item.id.slice(0, 6) : Date.now()}`
@@ -245,7 +245,7 @@ const HomeSectionEditor: React.FC<Props> = ({ isOpen, onClose, onSave, item, sco
         metadata.cards = cards;
       }
 
-      const builtInPrefix = scope === 'news' ? 'News' : scope === 'camp' ? 'Camp' : 'Home';
+      const builtInPrefix = scope === 'news' ? 'News' : scope === 'camp' ? 'Camp' : scope === 'programs' ? 'Programs' : 'Home';
       const contentData = {
         title: formData.title || (isCustomKind ? (isCards ? 'Cards Section' : 'Custom Section') : `${builtInPrefix}: ${formData.sectionKind}`),
         slug: item?.slug || baseSlug,

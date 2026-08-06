@@ -23,6 +23,9 @@ export const HOME_INTERNAL_LINKS: HomeLinkOption[] = [
   { value: '/camps/summer', label: 'Summer Camp', group: 'Camps' },
   { value: '/camps/end-year', label: 'End of Year Camp', group: 'Camps' },
   { value: '/camps/day-camps', label: 'Day Camps', group: 'Camps' },
+  { value: '/camps/mid-term/feb-march', label: 'Mid-Term Camp (Feb/March)', group: 'Camps' },
+  { value: '/camps/mid-term/may-june', label: 'Mid-Term Camp (May/June)', group: 'Camps' },
+  { value: '/camps/mid-term/october', label: 'Mid-Term Camp (October)', group: 'Camps' },
 
   { value: '/experiences/kenyan-experiences', label: 'Kenyan Experiences', group: 'Experiences' },
 
@@ -31,6 +34,8 @@ export const HOME_INTERNAL_LINKS: HomeLinkOption[] = [
 
   { value: '/programs/homeschooling', label: 'Homeschooling', group: 'Programs' },
   { value: '/programs/school-experience', label: 'School Adventures', group: 'Programs' },
+  { value: '/programs/little-forest', label: 'Little Forest Explorers', group: 'Programs' },
+  { value: '/register', label: 'Registration Form', group: 'Programs' },
 
   { value: '/my-profile', label: 'My Profile', group: 'Account' },
   { value: '/my-registrations', label: 'My Registrations', group: 'Account' },

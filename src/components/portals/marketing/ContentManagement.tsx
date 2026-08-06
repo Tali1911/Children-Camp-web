@@ -61,6 +61,9 @@ const ContentManagement = () => {
   const [campSections, setCampSections] = useState<ContentItem[]>([]);
   const [campEditorOpen, setCampEditorOpen] = useState(false);
   const [editingCampItem, setEditingCampItem] = useState<ContentItem | null>(null);
+  const [programsPageSections, setProgramsPageSections] = useState<ContentItem[]>([]);
+  const [programsPageEditorOpen, setProgramsPageEditorOpen] = useState(false);
+  const [editingProgramsPageItem, setEditingProgramsPageItem] = useState<ContentItem | null>(null);
   const [newsEditorOpen, setNewsEditorOpen] = useState(false);
   const [editingNewsItem, setEditingNewsItem] = useState<ContentItem | null>(null);
 
@@ -89,14 +92,16 @@ const ContentManagement = () => {
     const homeScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'home');
     const newsScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'news');
     const campScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'camp');
+    const programsScoped = (aboutData || []).filter((r: any) => r?.metadata?.scope === 'programs');
     const aboutScoped = (aboutData || []).filter((r: any) => {
       const scope = r?.metadata?.scope || 'about';
-      return scope !== 'home' && scope !== 'news' && scope !== 'camp';
+      return scope !== 'home' && scope !== 'news' && scope !== 'camp' && scope !== 'programs';
     });
     setAboutSections(aboutScoped);
     setHomeSections([...homeScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
     setNewsSections([...newsScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
     setCampSections([...campScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
+    setProgramsPageSections([...programsScoped].sort((a: any, b: any) => (a?.metadata?.order ?? 99) - (b?.metadata?.order ?? 99)));
 
     setServiceItems(serviceData);
     setCampPages(campPageData);
@@ -127,6 +132,8 @@ const ContentManagement = () => {
       setNewsSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
     } else if (scope === 'camp') {
       setCampSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
+    } else if (scope === 'programs') {
+      setProgramsPageSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
     } else {
       setHomeSections(prev => prev.map(s => s.id === item.id ? { ...s, metadata: nextMeta } : s));
     }
@@ -182,6 +189,7 @@ const ContentManagement = () => {
   const handleReorderHomeSections = (items: ContentItem[]) => handleReorderSections(items, setHomeSections);
   const handleReorderNewsSections = (items: ContentItem[]) => handleReorderSections(items, setNewsSections);
   const handleReorderCampSections = (items: ContentItem[]) => handleReorderSections(items, setCampSections);
+  const handleReorderProgramsPageSections = (items: ContentItem[]) => handleReorderSections(items, setProgramsPageSections);
 
   const handlePublish = async (id: string) => {
     const published = await cmsService.publishContent(id);
@@ -214,7 +222,7 @@ const ContentManagement = () => {
   const renderItemRow = (item: ContentItem, type: EditorType) => {
     const scope = item.metadata?.scope;
     const isPageSection = scope === 'home' || scope === 'news' || scope === 'camp';
-    const pageLabel = scope === 'news' ? 'news page' : scope === 'camp' ? 'camp page' : 'homepage';
+    const pageLabel = scope === 'news' ? 'news page' : scope === 'camp' ? 'camp page' : scope === 'programs' ? 'programs page' : 'homepage';
 
     return (
     <div className="border rounded-lg p-4 hover:bg-muted/50 transition-colors">
@@ -254,6 +262,9 @@ const ContentManagement = () => {
               } else if (scope === 'camp') {
                 setEditingCampItem(item);
                 setCampEditorOpen(true);
+              } else if (scope === 'programs') {
+                setEditingProgramsPageItem(item);
+                setProgramsPageEditorOpen(true);
               } else {
                 openEditor(type, item);
               }
@@ -349,6 +360,21 @@ const ContentManagement = () => {
     );
   };
 
+  const renderProgramsPageSectionsList = () => {
+    if (isLoading) return <div className="text-center py-8">Loading...</div>;
+    if (programsPageSections.length === 0) return <div className="text-center py-8 text-muted-foreground">No sections yet. Add your first one to build the Programs page!</div>;
+    return (
+      <div className="space-y-3">
+        <p className="text-xs text-muted-foreground">Drag the handle on the left of any section to reorder how it appears on the Programs page. Order is saved automatically.</p>
+        <SortableHomeSections
+          items={programsPageSections}
+          renderItem={(item) => renderItemRow(item, 'home-section')}
+          onReorder={handleReorderProgramsPageSections}
+        />
+      </div>
+    );
+  };
+
   return <div className="space-y-6">
       <div>
         <h2 className="text-2xl font-bold">Website Content Management</h2>
@@ -366,6 +392,7 @@ const ContentManagement = () => {
               <SelectItem value="home">Home Page</SelectItem>
               <SelectItem value="news">News &amp; Updates Page</SelectItem>
               <SelectItem value="camp">Camp Page</SelectItem>
+              <SelectItem value="programs-page">Programs Page</SelectItem>
 
               <SelectItem value="hero">Hero Section</SelectItem>
               <SelectItem value="blog">Blog Posts</SelectItem>
@@ -390,6 +417,7 @@ const ContentManagement = () => {
             <TabsTrigger value="home" className="flex-grow-0 px-3 py-1.5 text-sm">Home</TabsTrigger>
             <TabsTrigger value="news" className="flex-grow-0 px-3 py-1.5 text-sm">News &amp; Updates</TabsTrigger>
             <TabsTrigger value="camp" className="flex-grow-0 px-3 py-1.5 text-sm">Camp</TabsTrigger>
+            <TabsTrigger value="programs-page" className="flex-grow-0 px-3 py-1.5 text-sm">Programs Page</TabsTrigger>
 
             <TabsTrigger value="hero" className="flex-grow-0 px-3 py-1.5 text-sm">Hero</TabsTrigger>
             <TabsTrigger value="blog" className="flex-grow-0 px-3 py-1.5 text-sm">Blog</TabsTrigger>
@@ -448,6 +476,28 @@ const ContentManagement = () => {
               </Button>
             </CardHeader>
             <CardContent>{renderNewsSectionsList()}</CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="programs-page" className="space-y-4">
+          <LivePreviewPanel path="/programs" />
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between">
+              <div>
+                <CardTitle>Programs Page Sections</CardTitle>
+                <CardDescription>
+                  Build the public Programs overview page. Add custom sections or card grids that
+                  describe each programme and link straight to its registration form
+                  (Camps, School Adventures, Kenyan Experiences, Group Activities, Homeschooling).
+                  If no sections exist, the page falls back to the default programme cards.
+                </CardDescription>
+              </div>
+              <Button onClick={() => { setEditingProgramsPageItem(null); setProgramsPageEditorOpen(true); }}>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Section
+              </Button>
+            </CardHeader>
+            <CardContent>{renderProgramsPageSectionsList()}</CardContent>
           </Card>
         </TabsContent>
 
@@ -907,6 +957,16 @@ const ContentManagement = () => {
           onClose={() => { setNewsEditorOpen(false); setEditingNewsItem(null); }}
           item={editingNewsItem}
           onSave={async () => { setNewsEditorOpen(false); setEditingNewsItem(null); await loadAllContent(); window.dispatchEvent(new CustomEvent('cms-content-updated')); }}
+        />
+      )}
+
+      {programsPageEditorOpen && (
+        <HomeSectionEditor
+          isOpen={true}
+          scope="programs"
+          onClose={() => { setProgramsPageEditorOpen(false); setEditingProgramsPageItem(null); }}
+          item={editingProgramsPageItem}
+          onSave={async () => { setProgramsPageEditorOpen(false); setEditingProgramsPageItem(null); await loadAllContent(); window.dispatchEvent(new CustomEvent('cms-content-updated')); }}
         />
       )}
 
