@@ -40,8 +40,10 @@ const CampPage: React.FC = () => {
   return (
     <>
       <SEOHead
-        title="Camp — Amuse Kenya"
-        description="Explore all Amuse Kenya camp experiences — holiday, mid-term and day camps in Karura and Ngong."
+        title="Camps | Amuse Kenya Forest Adventures"
+        description="Explore all Amuse Kenya camp experiences — holiday, mid-term and day camps in Karura Forest and Ngong."
+        keywords="camps, holiday camps Kenya, mid-term camps Nairobi, day camps Karura Forest, children camps Kenya, Ngong camps"
+        canonical="https://amusekenya.co.ke/camp"
       />
       <div className="min-h-screen">
         <header role="banner"><Navbar /></header>

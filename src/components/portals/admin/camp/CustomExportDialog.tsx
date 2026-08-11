@@ -23,7 +23,7 @@ type ColumnKey =
   | 'total_amount' | 'discount_amount' | 'net_amount'
   | 'children_count' | 'children_names' | 'children_ages' | 'children_dobs'
   | 'children_special_needs' | 'children_dates' | 'children_sessions' | 'children_activity_types'
-  | 'admin_notes' | 'consent_given' | 'qr_code_data'
+  | 'admin_notes' | 'consent_given' | 'participation_consent' | 'qr_code_data'
   // per-child mode only
   | 'child_name' | 'child_dob' | 'child_age_range' | 'child_special_needs'
   | 'child_selected_dates' | 'child_selected_sessions' | 'child_activity_type' | 'child_price';
@@ -45,6 +45,7 @@ const COLUMNS: ColumnDef[] = [
   { key: 'camp_type', label: 'Camp Type', group: 'Registration' },
   { key: 'location', label: 'Location', group: 'Registration' },
   { key: 'consent_given', label: 'Consent Given', group: 'Registration' },
+  { key: 'participation_consent', label: 'Permission Form Accepted', group: 'Registration' },
   { key: 'admin_notes', label: 'Admin Notes', group: 'Registration' },
   { key: 'qr_code_data', label: 'QR Code Data', group: 'Registration' },
 
@@ -117,6 +118,10 @@ const val = (reg: CampRegistration, key: ColumnKey, child?: any): string => {
     case 'camp_type': return reg.camp_type || '';
     case 'location': return displayLocation(reg.location || 'Kurura Gate F');
     case 'consent_given': return reg.consent_given ? 'Yes' : 'No';
+    case 'participation_consent':
+      return (reg as any).participation_consent_given
+        ? `Yes${(reg as any).participation_consent_at ? ` (${new Date((reg as any).participation_consent_at).toLocaleDateString()})` : ''}`
+        : 'Not recorded';
     case 'admin_notes': return reg.admin_notes || '';
     case 'qr_code_data': return reg.qr_code_data || '';
     case 'parent_name': return reg.parent_name || '';

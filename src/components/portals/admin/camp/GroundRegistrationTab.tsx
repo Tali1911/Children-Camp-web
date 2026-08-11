@@ -26,6 +26,7 @@ import { QRCodeDownloadModal } from '@/components/camp/QRCodeDownloadModal';
 import { CampRegistration } from '@/types/campRegistration';
 import { useSupabaseAuth } from '@/hooks/useSupabaseAuth';
 import { performSecurityChecks, recordSubmission } from '@/services/formSecurityService';
+import { ParticipationConsentDialog } from '@/components/forms/ParticipationConsentDialog';
 
 const childSchema = z.object({
   childName: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
@@ -92,6 +93,7 @@ export const GroundRegistrationTab: React.FC = () => {
   const { user } = useSupabaseAuth();
   const [submitting, setSubmitting] = useState(false);
   const [sendEmail, setSendEmail] = useState(true);
+  const [participationConsent, setParticipationConsent] = useState(false);
   const [registrationMode, setRegistrationMode] = useState<'walkin_today' | 'book_future'>('walkin_today');
   const [bookingDates, setBookingDates] = useState<Date[]>([]);
   const [showQRModal, setShowQRModal] = useState(false);
@@ -267,6 +269,12 @@ export const GroundRegistrationTab: React.FC = () => {
       return;
     }
 
+    if (!participationConsent) {
+      toast.error('Please confirm the parent/guardian has read and accepted the permission form.');
+      return;
+    }
+
+
     // Validate sessions: for single-day or walk-in, require at least one session per child
     if (!(registrationMode === 'book_future' && bookingDates.length > 1)) {
       const missingSession = data.children.some(c => !c.selectedSessions || c.selectedSessions.length === 0);
@@ -347,6 +355,8 @@ export const GroundRegistrationTab: React.FC = () => {
           timestamp: Date.now()
         }),
         consent_given: true,
+        participation_consent_given: true,
+        participation_consent_at: new Date().toISOString(),
         status: 'active',
         admin_notes: data.paymentNotes || `Ground registration. Paid: KES ${amountPaid}/${totalAmount}`
       };
@@ -856,6 +866,13 @@ export const GroundRegistrationTab: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {/* Participation / Permission Form */}
+            <ParticipationConsentDialog
+              checked={participationConsent}
+              onCheckedChange={setParticipationConsent}
+              variant="child"
+            />
 
             {/* Email Toggle */}
             <div className="flex items-center space-x-2">

@@ -663,18 +663,39 @@ export const RegistrationDetailsDialog: React.FC<RegistrationDetailsDialogProps>
           </div>
 
           {/* Consent Status */}
-          <div>
-            <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
-              {registration.consent_given ? (
-                <ShieldCheck className="h-5 w-5 text-green-600" />
-              ) : (
-                <ShieldX className="h-5 w-5 text-amber-500" />
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                {registration.consent_given ? (
+                  <ShieldCheck className="h-5 w-5 text-green-600" />
+                ) : (
+                  <ShieldX className="h-5 w-5 text-amber-500" />
+                )}
+                Photography & Video Consent
+              </h3>
+              <Badge variant={registration.consent_given ? 'default' : 'secondary'}>
+                {registration.consent_given ? 'Consent Given' : 'Not Consented'}
+              </Badge>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                {(registration as any).participation_consent_given ? (
+                  <ShieldCheck className="h-5 w-5 text-green-600" />
+                ) : (
+                  <ShieldX className="h-5 w-5 text-amber-500" />
+                )}
+                Participation / Permission Form
+              </h3>
+              <Badge variant={(registration as any).participation_consent_given ? 'default' : 'secondary'}>
+                {(registration as any).participation_consent_given ? 'Accepted' : 'Not recorded'}
+              </Badge>
+              {(registration as any).participation_consent_given && (registration as any).participation_consent_at && (
+                <p className="text-xs text-muted-foreground mt-2">
+                  Accepted on {new Date((registration as any).participation_consent_at).toLocaleString()}
+                </p>
               )}
-              Photography & Video Consent
-            </h3>
-            <Badge variant={registration.consent_given ? 'default' : 'secondary'}>
-              {registration.consent_given ? 'Consent Given' : 'Not Consented'}
-            </Badge>
+            </div>
           </div>
 
           <Separator />

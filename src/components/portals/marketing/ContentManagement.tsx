@@ -488,8 +488,9 @@ const ContentManagement = () => {
                 <CardDescription>
                   Build the public Programs overview page. Add custom sections or card grids that
                   describe each programme and link straight to its registration form
-                  (Camps, School Adventures, Kenyan Experiences, Group Activities, Homeschooling).
-                  If no sections exist, the page falls back to the default programme cards.
+                  (Camps, School Adventures, Kenyan Experiences, Group Activities, Homeschooling),
+                  edit typography, toggle visibility, and drag to reorder. If no sections exist,
+                  the page shows a short "being prepared" message.
                 </CardDescription>
               </div>
               <Button onClick={() => { setEditingProgramsPageItem(null); setProgramsPageEditorOpen(true); }}>
