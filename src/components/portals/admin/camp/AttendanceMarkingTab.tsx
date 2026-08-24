@@ -17,6 +17,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { getChildBookedDates, isChildBookedOnDate } from '@/utils/registrationDate';
 import { Search, CheckCircle, XCircle, Clock, QrCode, Calendar, Users, CalendarDays, Mail, Download, FileText } from 'lucide-react';
 import { campRegistrationService } from '@/services/campRegistrationService';
 import { attendanceService } from '@/services/attendanceService';
@@ -154,8 +155,7 @@ export const AttendanceMarkingTab: React.FC = () => {
       if (locationFilter !== 'all' && (reg.location || 'Kurura Gate F') !== locationFilter) continue;
 
       for (const child of reg.children) {
-        const selectedDates = child.selectedDates || [];
-        if (selectedDates.includes(selectedDate)) {
+        if (isChildBookedOnDate(child, selectedDate)) {
           const defaultSession = (reg.camp_type === 'little-forest' || (reg.location || '') === 'Ngong Sanctuary') ? 'half' : 'full';
           let session: string = defaultSession;
           if (child.selectedSessions && typeof child.selectedSessions === 'object' && !Array.isArray(child.selectedSessions)) {
@@ -186,8 +186,7 @@ export const AttendanceMarkingTab: React.FC = () => {
     const expected: ExpectedChild[] = [];
     for (const reg of registrations) {
       for (const child of reg.children) {
-        const selectedDates = child.selectedDates || [];
-        if (selectedDates.includes(selectedDate)) {
+        if (isChildBookedOnDate(child, selectedDate)) {
           const defaultSession = (reg.camp_type === 'little-forest' || (reg.location || '') === 'Ngong Sanctuary') ? 'half' : 'full';
           let session: string = defaultSession;
           if (child.selectedSessions && typeof child.selectedSessions === 'object' && !Array.isArray(child.selectedSessions)) {
@@ -298,7 +297,7 @@ export const AttendanceMarkingTab: React.FC = () => {
 
       let checkedInCount = 0, alreadyCheckedInCount = 0, notExpectedCount = 0;
       for (const child of registration.children) {
-        if (!(child.selectedDates || []).includes(selectedDate)) { notExpectedCount++; continue; }
+        if (!isChildBookedOnDate(child, selectedDate)) { notExpectedCount++; continue; }
         const hasCheckedIn = await attendanceService.hasCheckedInOnDate(registration.id!, child.childName, selectedDate);
         if (!hasCheckedIn) {
           await attendanceService.checkInForDate(registration.id!, child.childName, user.id, selectedDate);
@@ -423,7 +422,7 @@ export const AttendanceMarkingTab: React.FC = () => {
   }, [filteredExpectedChildren, attendanceStatus, selectedDate, totalExpected, totalPresent, totalAbsent, paidExpectedCount, unpaidExpectedCount]);
 
   const formatChildDates = (child: CampChild): string => {
-    const dates = child.selectedDates || [];
+    const dates = getChildBookedDates(child);
     if (dates.length === 0) return 'No dates selected';
     if (dates.length <= 3) return dates.map(d => format(parseISO(d), 'MMM d')).join(', ');
     return `${dates.length} days`;
@@ -500,8 +499,8 @@ export const AttendanceMarkingTab: React.FC = () => {
                           const siblings = (item.registration.children || []).filter(
                             c => c.childName !== item.child.childName
                           );
-                          const otherToday = siblings.filter(c => (c.selectedDates || []).includes(selectedDate));
-                          const otherOtherDays = siblings.filter(c => !(c.selectedDates || []).includes(selectedDate));
+                          const otherToday = siblings.filter(c => isChildBookedOnDate(c, selectedDate));
+                          const otherOtherDays = siblings.filter(c => !isChildBookedOnDate(c, selectedDate));
                           if (siblings.length === 0) return null;
                           const parts: string[] = [];
                           if (otherToday.length) parts.push(`${otherToday.length} sibling${otherToday.length > 1 ? 's' : ''} today`);
@@ -510,7 +509,7 @@ export const AttendanceMarkingTab: React.FC = () => {
                             parts.push(`${otherOtherDays.length} on other date(s): ${names}`);
                           }
                           return (
-                            <div className="text-[10px] text-muted-foreground mt-0.5" title={siblings.map(s => `${s.childName}: ${(s.selectedDates || []).join(', ')}`).join('\n')}>
+                            <div className="text-[10px] text-muted-foreground mt-0.5" title={siblings.map(s => `${s.childName}: ${getChildBookedDates(s).join(', ')}`).join('\n')}>
                               {parts.join(' · ')}
                             </div>
                           );
@@ -528,7 +527,7 @@ export const AttendanceMarkingTab: React.FC = () => {
                       <TableCell>
                         <div className="flex items-center gap-1 text-xs">
                           <CalendarDays className="h-3 w-3 text-muted-foreground" />
-                          <span title={item.child.selectedDates?.join(', ')}>
+                          <span title={getChildBookedDates(item.child).join(', ')}>
                             {formatChildDates(item.child)}
                           </span>
                         </div>
