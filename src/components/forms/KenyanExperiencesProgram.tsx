@@ -594,7 +594,7 @@ const KenyanExperiencesProgram = () => {
                     id="phone"
                     {...register("phone")}
                     className="mt-2"
-                    placeholder={config?.formConfig?.fields?.phone?.placeholder || "+254 700 000 000"}
+                    placeholder={config?.formConfig?.fields?.phone?.placeholder || "+254 114705763"}
                   />
                   {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>}
                 </div>

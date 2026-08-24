@@ -84,7 +84,7 @@ export function printCampReceipt(opts: ReceiptOptions) {
 <div class="wrap">
   <div class="noprint"><button onclick="window.print()">Print Receipt</button></div>
   <div class="header">
-    <div class="brand">Amuse Bush Camp Kenya<small>Sigiria Karura Forest Gate F entrance (Sigiria coffee house) / Ngong Road Forest Sanctuary</small></div>
+    <div class="brand">Amuse Kenya<small>Sigiria Karura Forest Gate F entrance (Sigiria coffee house) / Ngong Road Forest Sanctuary</small></div>
     <div class="meta">
       <strong>RECEIPT</strong>
       <div>#${escapeHtml(receiptNo)}</div>
@@ -125,7 +125,7 @@ export function printCampReceipt(opts: ReceiptOptions) {
   </div>
 
   <div class="footer">
-    Thank you for choosing Amuse Bush Camp Kenya. For queries: accounts@amusekenya.co.ke
+    Thank you for choosing Amuse Kenya. For queries: accounts@amusekenya.co.ke
   </div>
 </div>
 <script>window.onload = () => setTimeout(() => window.print(), 250);</script>

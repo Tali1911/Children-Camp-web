@@ -72,7 +72,7 @@ const defaultConfig: TeamBuildingPageConfig = {
       decor: { label: 'Decoration Package' },
       catering: { label: 'Catering Services' },
       email: { label: 'Email Address', placeholder: 'your@email.com' },
-      phone: { label: 'Phone Number', placeholder: '+254 700 000 000' }
+      phone: { label: 'Phone Number', placeholder: '+254 114705763' }
     },
     buttons: {
       submit: 'Book Experience',

@@ -533,7 +533,7 @@ const TeamBuildingProgram = () => {
                   <Label htmlFor="phone" className="text-base font-medium">
                     Phone *{autoFilledFields.has('phone') && <AutoFilledBadge />}
                   </Label>
-                  <Input id="phone" {...register("phone")} className="mt-2" placeholder="+254 700 000 000" />
+                  <Input id="phone" {...register("phone")} className="mt-2" placeholder="+254 114705763" />
                   {errors.phone && <p className="text-destructive text-sm mt-1">{errors.phone.message}</p>}
                 </div>
               </div>

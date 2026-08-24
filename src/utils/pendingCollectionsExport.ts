@@ -44,9 +44,9 @@ function formatDateList(dates: string[]): string {
 }
 
 const COMPANY = {
-  name: 'Amuse Bush Camp Kenya',
+  name: 'Amuse Kenya',
   email: 'accounts@amusekenya.co.ke',
-  phone: '+254 700 000 000',
+  phone: '+254 114705763',
   address: 'Sigiria Karura Forest Gate F entrance (Sigiria coffee house), Nairobi',
 };
 
@@ -117,7 +117,7 @@ export function downloadPendingInvoicePDF(item: AccountsActionItem) {
   doc.setFontSize(9);
   const noteY = finalY + 24;
   doc.text('Payment Instructions:', 14, noteY);
-  doc.text('M-Pesa Paybill: 247247 • Account: AMUSE', 14, noteY + 5);
+  doc.text('M-PesaBuyGoods Till: 4572520', 14, noteY + 5);
   doc.text(`Reference: ${invoiceNo}`, 14, noteY + 10);
   if (item.notes) {
     doc.text(`Notes: ${item.notes}`, 14, noteY + 18);
@@ -262,7 +262,7 @@ export async function downloadFamilyInvoicePDF(items: AccountsActionItem[]) {
   doc.setFontSize(9);
   const noteY = finalY + 24;
   doc.text('Payment Instructions:', 14, noteY);
-  doc.text('M-Pesa Paybill: 247247 • Account: AMUSE', 14, noteY + 5);
+  doc.text('M-PesaBuyGoods Till: 4572520', 14, noteY + 5);
   doc.text(`Reference: ${invoiceNo}`, 14, noteY + 10);
 
   doc.setFontSize(8);
