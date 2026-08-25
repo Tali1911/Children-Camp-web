@@ -508,7 +508,7 @@ export const PendingCollections: React.FC = () => {
               {statusFilter === 'pending' ? 'No pending collections!' : 'No items found'}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[70vh]">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -662,14 +662,14 @@ export const PendingCollections: React.FC = () => {
 
       {/* Family Action Dialog */}
       <Dialog open={!!actionDialog} onOpenChange={() => closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>
               {actionDialog === 'invoice' ? 'Send Family Invoice' : 'Record Family Payment'}
             </DialogTitle>
           </DialogHeader>
           {selectedParentKey && selectedFamilyItems.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
               <div className="bg-muted/50 rounded-lg p-3 space-y-1">
                 <div className="font-medium">{selectedFamilyItems[0].parent_name}</div>
                 <div className="text-sm text-muted-foreground">{selectedFamilyItems[0].email}</div>

@@ -699,7 +699,7 @@ const ClientStatements: React.FC = () => {
         </div>
 
         {/* Statement Table */}
-        <div className="overflow-x-auto border rounded-lg">
+        <div className="overflow-auto max-h-[55vh] border rounded-lg">
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/50">
@@ -805,7 +805,7 @@ const ClientStatements: React.FC = () => {
               {searchTerm ? 'No clients found matching your search' : 'No attendance records found'}
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[70vh]">
               <Table>
                 <TableHeader>
                   <TableRow>
