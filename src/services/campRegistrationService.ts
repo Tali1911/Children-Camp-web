@@ -537,15 +537,18 @@ export const campRegistrationService = {
     if (ids.length === 0) return [];
     const protectedIds = new Set<string>();
 
-    // Any completed payment pointing at these registrations
+    // Only COMPLETED real payments protect a registration. Abandoned online
+    // checkout attempts (source 'camp_registration_attempt', or pending /
+    // initiated / failed rows) represent no money received and must not block
+    // deleting an accidental registration.
     for (let i = 0; i < ids.length; i += 150) {
       const chunk = ids.slice(i, i + 150);
       const { data } = await supabase
         .from('payments' as any)
-        .select('registration_id, status')
+        .select('registration_id, status, source')
         .in('registration_id', chunk);
       for (const p of (data || []) as any[]) {
-        if (p?.registration_id && (p.status || 'completed') !== 'failed') {
+        if (p?.registration_id && isCompletedPayment(p)) {
           protectedIds.add(p.registration_id);
         }
       }
@@ -575,7 +578,9 @@ export const campRegistrationService = {
     const blocked = await this.findPaidProtectedIds(ids);
     if (blocked.length > 0) {
       throw new Error(
-        `${blocked.length} registration(s) have payments recorded and cannot be deleted. Cancel them instead (set status to "cancelled").`
+        `${blocked.length} registration(s) have completed payments recorded and cannot be deleted. ` +
+        `If the payment was recorded by mistake, set the payment status to "unpaid" first, then delete. ` +
+        `Otherwise cancel the registration instead (set status to "cancelled").`
       );
     }
 
@@ -584,6 +589,13 @@ export const campRegistrationService = {
       .from('camp_attendance')
       .delete()
       .in('registration_id', ids);
+
+    // Remove abandoned payment attempts so they don't linger as orphans
+    await (supabase as any)
+      .from('payments')
+      .delete()
+      .in('registration_id', ids)
+      .eq('source', 'camp_registration_attempt');
 
     // Then delete all registrations
     const { error } = await supabase

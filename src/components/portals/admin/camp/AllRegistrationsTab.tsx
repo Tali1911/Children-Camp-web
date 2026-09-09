@@ -250,7 +250,7 @@ export const AllRegistrationsTab: React.FC = () => {
       loadRegistrations();
     } catch (error) {
       console.error('Error deleting registration:', error);
-      toast.error('Failed to delete registration');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete registration');
     }
   };
 
@@ -273,7 +273,7 @@ export const AllRegistrationsTab: React.FC = () => {
       loadRegistrations();
     } catch (error) {
       console.error('Error deleting registrations:', error);
-      toast.error('Failed to delete registrations');
+      toast.error(error instanceof Error ? error.message : 'Failed to delete registrations');
     }
   };
 

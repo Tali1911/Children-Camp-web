@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useDragScroll } from '@/hooks/useDragScroll';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ export const PendingCollections: React.FC = () => {
   // Date range filter (filters by attendance/check-in date = created_at)
   const [dateFrom, setDateFrom] = useState<string>('');
   const [dateTo, setDateTo] = useState<string>('');
+  const tableScroll = useDragScroll();
 
   const handleSendTestDigest = async () => {
     try {
@@ -368,7 +370,7 @@ export const PendingCollections: React.FC = () => {
   const completedLabel = hasActiveFilters ? 'Completed (filtered)' : 'Completed Today';
 
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 max-w-full space-y-4">
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -508,8 +510,12 @@ export const PendingCollections: React.FC = () => {
               {statusFilter === 'pending' ? 'No pending collections!' : 'No items found'}
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table>
+              <Table
+                containerRef={tableScroll.ref}
+                containerProps={tableScroll.handlers}
+                containerClassName="max-h-[60vh] overflow-x-scroll overflow-y-auto overscroll-contain touch-pan-y cursor-grab active:cursor-grabbing [scrollbar-gutter:stable_both-edges] sm:max-h-[65vh] lg:max-h-[70vh]"
+                className="min-w-[64rem]"
+              >
                 <TableHeader>
                   <TableRow>
                     <TableHead>Child</TableHead>
@@ -655,21 +661,20 @@ export const PendingCollections: React.FC = () => {
                   })}
                 </TableBody>
               </Table>
-            </div>
           )}
         </CardContent>
       </Card>
 
       {/* Family Action Dialog */}
       <Dialog open={!!actionDialog} onOpenChange={() => closeDialog()}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] flex flex-col overflow-x-auto">
           <DialogHeader>
             <DialogTitle>
               {actionDialog === 'invoice' ? 'Send Family Invoice' : 'Record Family Payment'}
             </DialogTitle>
           </DialogHeader>
           {selectedParentKey && selectedFamilyItems.length > 0 && (
-            <div className="space-y-4">
+            <div className="space-y-4 flex-1 overflow-y-auto pr-1">
               <div className="bg-muted/50 rounded-lg p-3 space-y-1">
                 <div className="font-medium">{selectedFamilyItems[0].parent_name}</div>
                 <div className="text-sm text-muted-foreground">{selectedFamilyItems[0].email}</div>
